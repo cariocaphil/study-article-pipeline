@@ -88,7 +88,7 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
                 p.add_run(f" — {phrase.translation}")
                 # Sentence context on the next line, indented
                 context_p = doc.add_paragraph(style="List Bullet")
-                context_p.add_run(f""{phrase.sentence_context}"").italic = True
+                context_p.add_run(f'"{phrase.sentence_context}"').italic = True
                 context_p.paragraph_format.left_indent = Cm(1)
 
         # Page break between articles (except after the last one)
