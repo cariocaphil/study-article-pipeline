@@ -1,0 +1,105 @@
+"""
+Filter agent.
+For each candidate URL:
+  1. Fetches the page content via Claude's web search.
+  2. Confirms it is a genuine review or critical article.
+  3. Extracts: title, author, source_name, full_text.
+Discards URLs that fail the review check.
+"""
+
+import json
+import anthropic
+
+
+def filter_articles(
+    urls: list[str],
+    source_language: str,
+    client: anthropic.Anthropic,
+) -> list[dict]:
+
+    results = []
+
+    for url in urls:
+        print(f"[filter_agent] Checking: {url}")
+
+        prompt = f"""
+You are helping a language learner collect review articles for study.
+
+Fetch this URL and assess it: {url}
+
+Answer these questions:
+1. Is this a genuine review or critical analysis — not a synopsis, trailer page,
+   ticketing site, or listicle? Answer yes or no.
+2. Is the article primarily written in {source_language}? Answer yes or no.
+3. What is the article title?
+4. Who is the author? Look for a byline. If not found, return null.
+5. What is the domain/publication name? (e.g. "fiocondutor.com.pt")
+6. What is the full article text? Return the complete body text, preserving
+   paragraphs. Do not summarise. Do not include navigation, ads, or comments.
+
+Return ONLY a JSON object with these exact keys, no other text:
+{{
+  "is_review": true or false,
+  "is_correct_language": true or false,
+  "title": "...",
+  "author": "..." or null,
+  "source_name": "...",
+  "full_text": "..."
+}}
+"""
+
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=4000,
+            tools=[{"type": "web_search_20250305", "name": "web_search"}],
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        full_text = " ".join(
+            block.text for block in response.content if hasattr(block, "text")
+        )
+
+        try:
+            clean = full_text.strip().strip("```json").strip("```").strip()
+            start = clean.index("{")
+            end = clean.rindex("}") + 1
+            data = json.loads(clean[start:end])
+        except (ValueError, json.JSONDecodeError) as e:
+            print(f"[filter_agent] Could not parse response for {url}: {e}")
+            continue
+
+        if not data.get("is_review") or not data.get("is_correct_language"):
+            print(f"[filter_agent] Rejected: {url}")
+            continue
+
+        results.append({
+            "title": data.get("title", ""),
+            "author": data.get("author"),
+            "url": url,
+            "source_name": data.get("source_name", ""),
+            "full_text": data.get("full_text", ""),
+        })
+        print(f"[filter_agent] Accepted: {data.get('title', url)}")
+
+    return results
+
+
+# ── Manual test ───────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import os
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+    # Paste one URL from the search agent output to test
+    test_urls = [
+        "https://www.magazine-hd.com/apps/wp/entroncamento-critica-filme-pedro-cabeleira-ana-vilaca/",
+    ]
+
+    articles = filter_articles(test_urls, "portuguese", client)
+    for a in articles:
+        print(f"\nTitle: {a['title']}")
+        print(f"Author: {a['author']}")
+        print(f"Source: {a['source_name']}")
+        print(f"Text preview: {a['full_text'][:300]}...")
