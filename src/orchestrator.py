@@ -94,10 +94,19 @@ def run_pipeline(
 
 # ── Manual test ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) < 5:
+        print(
+            "Usage: python -m src.orchestrator <topic> <source_language> "
+            "<translation_language> <cefr_level> [n_articles]"
+        )
+        sys.exit(1)
+
     run_pipeline(
-        topic="Entroncamento",
-        source_language="portuguese",
-        translation_language="german",
-        user_level="C1",
-        n_articles=5,
+        topic=sys.argv[1],
+        source_language=sys.argv[2],
+        translation_language=sys.argv[3],
+        user_level=sys.argv[4],
+        n_articles=int(sys.argv[5]) if len(sys.argv) > 5 else 5,
     )

@@ -4,8 +4,9 @@ Finds candidate article URLs written in the source language about the given topi
 Returns a list of raw URLs — no content fetching happens here.
 """
 
-import json
 import anthropic
+
+from src.utils.json_utils import extract_json
 
 
 def search_articles(
@@ -43,15 +44,9 @@ Example format: ["https://...", "https://...", "https://..."]
     )
 
     try:
-        clean = full_text.strip().strip("```json").strip("```").strip()
-        start = clean.index("[")
-        end = clean.rindex("]") + 1
-        urls = json.loads(clean[start:end])
-    except (ValueError, json.JSONDecodeError) as e:
-        raise ValueError(
-            f"Search agent could not parse URL list.\n"
-            f"Raw response: {full_text}\nError: {e}"
-        )
+        urls = extract_json(full_text, "[", "]")
+    except ValueError as e:
+        raise ValueError(f"Search agent could not parse URL list.\n{e}")
 
     if not isinstance(urls, list) or len(urls) == 0:
         raise ValueError(f"Search agent returned no URLs for topic '{topic}'.")

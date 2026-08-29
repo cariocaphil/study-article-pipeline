@@ -5,9 +5,9 @@ that are at or above the user's CEFR level.
 Returns a list of ExtractedPhrase objects.
 """
 
-import json
 import anthropic
 from src.schemas.article import ExtractedPhrase, CEFRLevel, PhraseCategory
+from src.utils.json_utils import extract_json
 
 
 def extract_phrases(
@@ -67,17 +67,9 @@ Example format:
     )
 
     try:
-        clean = full_response.strip().strip("```json").strip("```").strip()
-        clean = clean.replace("\u201c", '\\"').replace("\u201d", '\\"')
-        clean = clean.replace("\u2018", "\\'").replace("\u2019", "\\'")
-        start = clean.index("[")
-        end = clean.rindex("]") + 1
-        raw_phrases = json.loads(clean[start:end])
-    except (ValueError, json.JSONDecodeError) as e:
-        raise ValueError(
-            f"Extract agent could not parse phrase list.\n"
-            f"Raw response: {full_response}\nError: {e}"
-        )
+        raw_phrases = extract_json(full_response, "[", "]")
+    except ValueError as e:
+        raise ValueError(f"Extract agent could not parse phrase list.\n{e}")
 
     phrases = []
     for item in raw_phrases:
