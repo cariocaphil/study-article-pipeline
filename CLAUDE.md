@@ -19,6 +19,7 @@ and compiles everything into a printable Word document for language study.
 | Search      | src/agents/search_agent.py  | Find candidate article URLs in the source language |
 | Filter      | src/agents/filter_agent.py  | Confirm each URL is a real review, fetch full text + author |
 | Extract     | src/agents/extract_agent.py | Pull phrases above user's CEFR level, with translations |
+| Review      | src/agents/review_agent.py  | Independently audit extracted phrases for quality, drop low-quality items |
 | Compile     | src/agents/compile_agent.py | Produce the final .docx |
 
 ## Schema
@@ -45,6 +46,7 @@ Skills are located in `.claude/skills/`. Claude Code should load them when relev
 
 | Skill | File | When to apply |
 |---|---|---|
-| Document formatter | `.claude/skills/docx-formatter.md` | Any time the compile agent or document layout is discussed or modified |
+| Document formatter | `.claude/skills/docx-formatted.md` | Any time the compile agent or document layout is discussed or modified |
 | Article filter criteria | `.claude/skills/article-filter-criteria.md` | Already injected at runtime in filter_agent.py |
 | CEFR extraction guide | `.claude/skills/cefr-extraction-guide.md` | Already injected at runtime in extract_agent.py |
+| Phrase quality reviewer | `.claude/skills/phrase-quality-reviewer.md` | Already injected at runtime in review_agent.py |

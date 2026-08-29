@@ -14,6 +14,7 @@ from src.schemas.article import (
 from src.agents.search_agent import search_articles
 from src.agents.filter_agent import filter_articles
 from src.agents.extract_agent import extract_phrases
+from src.agents.review_agent import review_phrases
 from src.agents.compile_agent import compile_document
 
 load_dotenv()
@@ -65,6 +66,7 @@ def run_pipeline(
             user_level=level,
             client=client,
         )
+        phrases = review_phrases(phrases, topic, client)
         articles.append(Article(
             title=raw["title"],
             author=raw["author"],
