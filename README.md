@@ -50,6 +50,20 @@ All data passed between agents is validated through Pydantic models in
 
 ## Usage
 
+### Web app (recommended)
+
+Launch the Streamlit UI:
+
+```bash
+uv run streamlit run app.py
+```
+
+Fill in the topic, source language, translation language, and your CEFR
+level in the browser, then click **Generate study document** and download
+the resulting `.docx` once the pipeline finishes.
+
+### Command line
+
 Run the orchestrator directly:
 
 ```bash
@@ -70,7 +84,7 @@ command defined in `.claude/commands/find-articles.md`:
 /find-articles "Entroncamento" portuguese german C1 5
 ```
 
-Arguments:
+Arguments (CLI and web app):
 
 | Argument | Description | Example |
 |----------|-------------|---------|
@@ -103,20 +117,21 @@ uv run pytest
 ## Project structure
 
 ```
+app.py                        # Streamlit web UI entry point
 src/
-├── orchestrator.py         # wires agents together, CLI entry point
+├── orchestrator.py           # wires agents together, CLI entry point
 ├── agents/
-│   ├── search_agent.py     # finds candidate article URLs
-│   ├── filter_agent.py     # validates + fetches article content
-│   ├── extract_agent.py    # extracts phrases above CEFR level
-│   └── compile_agent.py    # generates the .docx
+│   ├── search_agent.py       # finds candidate article URLs
+│   ├── filter_agent.py       # validates + fetches article content
+│   ├── extract_agent.py      # extracts phrases above CEFR level
+│   └── compile_agent.py      # generates the .docx
 ├── schemas/
-│   └── article.py          # Pydantic models shared between agents
+│   └── article.py            # Pydantic models shared between agents
 └── utils/
-    └── json_utils.py       # robust JSON extraction from LLM responses
+    └── json_utils.py         # robust JSON extraction from LLM responses
 tests/
 └── test_json_utils.py
-output/                      # generated .docx files land here
+output/                        # generated .docx files land here
 ```
 
 ## Notes
