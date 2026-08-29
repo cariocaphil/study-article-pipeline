@@ -89,7 +89,14 @@ def run_pipeline(
     output_path = os.path.join("output", filename)
     os.makedirs("output", exist_ok=True)
 
-    return compile_document(pipeline_output, output_path)
+    compile_document(pipeline_output, output_path)
+
+    # Trigger post-run hook
+    import subprocess
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    subprocess.run(["bash", f"{project_root}/.claude/hooks/post-run.sh"], cwd=project_root)
+
+    return output_path
 
 
 # ── Manual test ───────────────────────────────────────────────────────────────
