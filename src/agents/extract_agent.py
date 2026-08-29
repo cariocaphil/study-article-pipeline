@@ -7,6 +7,7 @@ Returns a list of ExtractedPhrase objects.
 
 import anthropic
 from src.schemas.article import ExtractedPhrase, CEFRLevel, PhraseCategory
+from src.utils import load_skill
 from src.utils.json_utils import extract_json
 
 
@@ -18,9 +19,14 @@ def extract_phrases(
     client: anthropic.Anthropic,
 ) -> list[ExtractedPhrase]:
 
+    cefr_guide = load_skill("cefr-extraction-guide")
+
     prompt = f"""
 You are a language teaching assistant helping a {user_level} level {source_language} learner
 identify vocabulary and expressions worth studying.
+
+## CEFR Level Reference
+{cefr_guide}
 
 Here is an article in {source_language}:
 

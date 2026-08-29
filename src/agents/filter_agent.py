@@ -9,6 +9,7 @@ Discards URLs that fail the review check.
 
 import anthropic
 
+from src.utils import load_skill
 from src.utils.json_utils import extract_json
 
 
@@ -18,6 +19,8 @@ def filter_articles(
     client: anthropic.Anthropic,
 ) -> list[dict]:
 
+    filter_criteria = load_skill("article-filter-criteria")
+
     results = []
 
     for url in urls:
@@ -25,6 +28,9 @@ def filter_articles(
 
         prompt = f"""
 You are helping a language learner collect review articles for study.
+
+## Article Acceptance Criteria
+{filter_criteria}
 
 Fetch this URL and assess it: {url}
 
