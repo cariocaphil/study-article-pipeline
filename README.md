@@ -8,14 +8,15 @@ Word document for language study.
 
 ## How it works
 
-Four agents run in sequence, each owning one stage of the pipeline:
+Five agents run in sequence, each owning one stage of the pipeline:
 
 | Stage | Agent | File | Responsibility |
 |-------|-------|------|-----------------|
 | 1 | Search | `src/agents/search_agent.py` | Find candidate article URLs written in the source language |
 | 2 | Filter | `src/agents/filter_agent.py` | Confirm each URL is a genuine review, fetch full text + author |
 | 3 | Extract | `src/agents/extract_agent.py` | Pull vocabulary/constructions/idioms at or above your CEFR level, with translations |
-| 4 | Compile | `src/agents/compile_agent.py` | Produce the final `.docx` |
+| 4 | Review | `src/agents/review_agent.py` | Independently audit extracted phrases for quality, drop low-quality items |
+| 5 | Compile | `src/agents/compile_agent.py` | Produce the final `.docx` |
 
 `src/orchestrator.py` wires these together, handles CLI input, and enforces
 the fallback rule: if fewer than 3 articles pass the filter stage, the
@@ -24,6 +25,11 @@ low-quality matches.
 
 All data passed between agents is validated through Pydantic models in
 `src/schemas/article.py` (`Article`, `ExtractedPhrase`, `PipelineOutput`).
+
+Several agents load evaluation criteria from skill files in
+`.claude/skills/` at runtime (e.g. the review agent uses
+`phrase-quality-reviewer.md` to flag proper nouns, topic derivatives, and
+near-duplicates before phrases reach the final document).
 
 ## Requirements
 
@@ -127,18 +133,24 @@ app.py                        # Streamlit web UI entry point
 .claude/
 ├── commands/
 │   └── find-articles.md      # slash command definition
-└── hooks/
-    └── post-run.sh           # opens latest .docx after CLI pipeline run
+├── hooks/
+│   └── post-run.sh           # opens latest .docx after CLI pipeline run
+└── skills/                   # agent evaluation criteria (loaded at runtime)
+    ├── article-filter-criteria.md
+    ├── cefr-extraction-guide.md
+    └── phrase-quality-reviewer.md
 src/
 ├── orchestrator.py           # wires agents together, CLI entry point
 ├── agents/
 │   ├── search_agent.py       # finds candidate article URLs
 │   ├── filter_agent.py       # validates + fetches article content
 │   ├── extract_agent.py      # extracts phrases above CEFR level
+│   ├── review_agent.py       # audits phrase quality, drops low-value items
 │   └── compile_agent.py      # generates the .docx
 ├── schemas/
 │   └── article.py            # Pydantic models shared between agents
 └── utils/
+    ├── __init__.py           # load_skill() helper
     └── json_utils.py         # robust JSON extraction from LLM responses
 tests/
 ├── test_app.py               # Streamlit UI tests (AppTest)
