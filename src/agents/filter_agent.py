@@ -7,8 +7,9 @@ For each candidate URL:
 Discards URLs that fail the review check.
 """
 
-import json
 import anthropic
+
+from src.utils.json_utils import extract_json
 
 
 def filter_articles(
@@ -60,11 +61,8 @@ Return ONLY a JSON object with these exact keys, no other text:
         )
 
         try:
-            clean = full_text.strip().strip("```json").strip("```").strip()
-            start = clean.index("{")
-            end = clean.rindex("}") + 1
-            data = json.loads(clean[start:end])
-        except (ValueError, json.JSONDecodeError) as e:
+            data = extract_json(full_text, "{", "}")
+        except ValueError as e:
             print(f"[filter_agent] Could not parse response for {url}: {e}")
             continue
 

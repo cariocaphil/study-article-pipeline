@@ -10,3 +10,11 @@ dependencies = [
     "python-docx>=1.2.0",
     "python-dotenv>=1.2.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
