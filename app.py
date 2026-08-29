@@ -3,20 +3,49 @@ import os
 from src.orchestrator import run_pipeline
 
 st.set_page_config(
-    page_title="Study Article Collection Doc Generator",
+    page_title="Study Article Collection",
     page_icon="📚",
     layout="centered",
 )
 
-st.title("📚 Study Article Collection Doc Generator")
-st.markdown("Find native-language review articles and generate a printable study document.")
+st.title("📚 Study Article Collection")
+st.markdown("**Prepare for language lessons through real-world reading.**")
+
+st.markdown(
+    "Choose a topic, select the language you're learning and your preferred "
+    "translation language, and create a printable study document from "
+    "authentic native-language articles."
+)
+
+st.markdown(
+    "Each article is presented together with its own language-learning "
+    "material, extracted directly from the text:"
+)
+
+st.markdown(
+    "- Key vocabulary with translations\n"
+    "- Useful idioms and expressions\n"
+    "- Notable grammatical constructions and sentence patterns"
+)
+
+st.markdown(
+    "The vocabulary, expressions, and constructions appear directly after "
+    "the article they come from, so you can learn them in context rather "
+    "than as an isolated word list."
+)
+
+st.markdown(
+    "The goal is simple: read up on a topic, discover how native speakers "
+    "talk about it, and come to your language lesson with both ideas and "
+    "useful language ready to discuss."
+)
 
 st.divider()
 
 # ── Inputs ────────────────────────────────────────────────────────────────────
 topic = st.text_input(
     "Topic",
-    placeholder='e.g. "Entroncamento", "Pedro Páramo", "Saramago"',
+    placeholder='e.g. "Entroncamento", "Romería", "O riso e a faca"',
 )
 
 col1, col2 = st.columns(2)
@@ -24,7 +53,7 @@ col1, col2 = st.columns(2)
 with col1:
     source_language = st.selectbox(
         "Source language",
-        ["portuguese", "spanish", "french", "italian", "german"],
+        ["portuguese", "spanish", "catalan", "french", "italian", "german"],
     )
 
 with col2:
