@@ -19,3 +19,6 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+markers = [
+    "slow: marks tests that make real Anthropic API calls (deselect with '-m \"not slow\"')",
+]
