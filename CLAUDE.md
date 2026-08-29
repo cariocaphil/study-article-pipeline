@@ -39,3 +39,12 @@ Do not pad the document with low-quality matches.
 
 ## Environment
 ANTHROPIC_API_KEY in .env — never commit this file.
+
+## Skills
+Skills are located in `.claude/skills/`. Claude Code should load them when relevant.
+
+| Skill | File | When to apply |
+|---|---|---|
+| Document formatter | `.claude/skills/docx-formatter.md` | Any time the compile agent or document layout is discussed or modified |
+| Article filter criteria | `.claude/skills/article-filter-criteria.md` | Already injected at runtime in filter_agent.py |
+| CEFR extraction guide | `.claude/skills/cefr-extraction-guide.md` | Already injected at runtime in extract_agent.py |
