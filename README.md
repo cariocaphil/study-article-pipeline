@@ -106,6 +106,12 @@ Each document includes, per article: title, author, source, and a table of
 extracted phrases with sentence context, translation, category
 (vocab/construction/idiom), and estimated CEFR level.
 
+After a successful CLI run, the orchestrator triggers a post-run hook
+(`.claude/hooks/post-run.sh`) that opens the most recently generated
+`.docx` in `output/`. On macOS this uses `open`; on Linux use `xdg-open`,
+on Windows use `start` (edit the script if needed). The Streamlit app does
+not auto-open files — use the download button instead.
+
 ## Testing
 
 Run the test suite with:
@@ -118,6 +124,11 @@ uv run pytest
 
 ```
 app.py                        # Streamlit web UI entry point
+.claude/
+├── commands/
+│   └── find-articles.md      # slash command definition
+└── hooks/
+    └── post-run.sh           # opens latest .docx after CLI pipeline run
 src/
 ├── orchestrator.py           # wires agents together, CLI entry point
 ├── agents/
@@ -130,7 +141,8 @@ src/
 └── utils/
     └── json_utils.py         # robust JSON extraction from LLM responses
 tests/
-└── test_json_utils.py
+├── test_app.py               # Streamlit UI tests (AppTest)
+└── test_json_utils.py        # JSON repair/parsing tests
 output/                        # generated .docx files land here
 ```
 
