@@ -41,6 +41,11 @@ When adding a new client-side tool: define the function in `src/tools/`,
 register its schema in the agent, handle `tool_use` in the loop, and filter
 the final parsed output to only items the tool marked as valid.
 
+`extract_agent.py` also retries when the model returns prose instead of
+parseable JSON: it sends a continuation prompt and re-calls the API (up to 3
+parse attempts) before raising. Apply the same pattern if another agent's tool
+loop can end with planning text rather than structured output.
+
 ## Schema
 All inter-agent data passes through Pydantic models in src/schemas/article.py.
 Never pass raw strings between agents.
