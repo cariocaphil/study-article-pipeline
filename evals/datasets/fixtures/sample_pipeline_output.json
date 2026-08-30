@@ -1,0 +1,31 @@
+{
+  "topic": "Entroncamento",
+  "source_language": "portuguese",
+  "translation_language": "german",
+  "user_level": "C1",
+  "articles": [
+    {
+      "title": "Entroncamento, a Crítica",
+      "author": "Matilde Sousa",
+      "url": "https://example.com/entroncamento-review",
+      "source_name": "example.com",
+      "full_text": "Em Entroncamento acompanhamos Laura, que foge de um passado turbulento. Contudo, começa a entrar em pequenos esquemas e crimes.",
+      "phrases": [
+        {
+          "phrase": "passado turbulento",
+          "sentence_context": "Em Entroncamento acompanhamos Laura, que foge de um passado turbulento.",
+          "translation": "turbulente Vergangenheit",
+          "category": "vocab",
+          "estimated_level": "C1"
+        },
+        {
+          "phrase": "entrar em pequenos esquemas",
+          "sentence_context": "Laura decide entrar em esquemas cada vez maiores.",
+          "translation": "in kleine Machenschaften verwickelt werden",
+          "category": "idiom",
+          "estimated_level": "C1"
+        }
+      ]
+    }
+  ]
+}
