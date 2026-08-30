@@ -224,6 +224,155 @@ tests/
 output/                        # generated .docx files land here
 ```
 
+## Roadmap
+
+PR numbers match merged GitHub pull requests. Future work continues from **PR 15**.
+
+### Initial Setup ✅
+
+- [x] Initialize Python project with uv
+- [x] Set up project structure and `.env` configuration
+
+### PR 1 — Pydantic Schema ✅
+
+- [x] Add `Article`, `ExtractedPhrase`, and `PipelineOutput` models
+- [x] Add CEFR level and phrase category enums
+
+### PR 2 — Search Agent ✅
+
+- [x] Add search agent with Anthropic web search
+- [x] Return candidate article URLs as structured JSON
+
+### PR 3 — Filter Agent ✅
+
+- [x] Add filter agent to validate and fetch article content
+- [x] Extract title, author, source, and full text per URL
+
+### PR 4 — Extract Agent ✅
+
+- [x] Add extract agent for vocabulary, constructions, and idioms
+- [x] Apply CEFR level floor filtering
+
+### PR 5 — Compile Agent ✅
+
+- [x] Add compile agent with `python-docx`
+- [x] Generate printable study documents per article
+
+### PR 6 — Orchestrator ✅
+
+- [x] Wire agents together in sequence
+- [x] Add CLI entry point and slash command
+- [x] Enforce minimum article fallback rule (≥ 3 filtered articles)
+- [x] Add robust JSON parsing for LLM responses (`json_utils`)
+
+### PR 7 — Streamlit Frontend ✅
+
+- [x] Add Streamlit UI (`app.py`)
+- [x] Wire form inputs to orchestrator pipeline
+- [x] Add download button for generated `.docx`
+- [x] Add AppTest coverage for layout and pipeline mocking
+
+### PR 8 — Post-Run Hook ✅
+
+- [x] Add post-run hook to open latest `.docx` after CLI runs
+- [x] Document macOS / Linux / Windows open commands
+
+### PR 9 — Claude Code Skills ✅
+
+- [x] Add skill files under `.claude/skills/`
+- [x] Inject filter, extract, and review criteria at runtime
+
+### PR 10 — Review Agent ✅
+
+- [x] Add review agent for phrase quality checks
+- [x] Add `phrase-quality-reviewer` skill
+- [x] Integrate review step between extract and compile
+- [x] Flag proper nouns, topic derivatives, and near-duplicates
+
+### PR 11 — Agent Test Suite ✅
+
+- [x] Add pytest configuration and shared fixtures
+- [x] Add unit tests for JSON repair and compile agent
+- [x] Add slow integration tests for live Anthropic API calls
+- [x] Add Streamlit AppTest coverage
+
+### PR 12 — Client-Side Validation Tools ✅
+
+- [x] Add `validate_url_reachable` for search agent
+- [x] Add `verify_quote` for extract agent
+- [x] Add `validate_translation` for extract agent
+- [x] Wire client-side tool-use loops into search and extract agents
+- [x] Add continuation retry when extract agent returns prose instead of JSON
+- [x] Add mocked tool-loop tests for search and extract agents
+
+### PR 13 — Eval: Quote Faithfulness ✅
+
+- [x] Add `evals/` evaluation harness (`EvalResult`, `EvalReport`, CLI runner)
+- [x] Add quote faithfulness evaluator (verbatim `sentence_context` check)
+- [x] Add sample `PipelineOutput` fixture and deterministic tests
+- [x] Store eval results under `evals/results/` (`report.json`, `scores.json`, `failures.jsonl`)
+
+### PR 14 — Eval: Filter Classification ✅
+
+- [x] Add labeled URL golden dataset (`evals/datasets/filter/urls.jsonl`)
+- [x] Add filter classification evaluator (accuracy, precision, recall, F1)
+- [x] Support offline scoring via cached predictions
+- [x] Support live scoring via `--live` (calls `filter_agent` per URL)
+
+### PR 15 — Eval: Review Actions
+
+- [ ] Add golden phrase-list dataset with expected keep/remove labels
+- [ ] Add review actions evaluator (removal precision/recall)
+- [ ] Add deterministic tests and CLI registration
+
+### PR 16 — Eval: Extract Phrase Recall
+
+- [ ] Add human-labeled gold phrases for fixed article excerpts
+- [ ] Add extract recall@k evaluator against gold dataset
+- [ ] Document labeling process and run live eval against extract agent
+
+### PR 17 — Eval: Translation Quality & Regression Comparison
+
+- [ ] Add translation adequacy rubric and LLM-as-judge evaluator
+- [ ] Add `compare_runs` CLI to diff scores across eval runs
+- [ ] Add optional nightly workflow for live eval suites
+
+### PR 18 — Continuous Integration
+
+- [ ] Add GitHub Actions workflow
+- [ ] Set up Python and uv in CI
+- [ ] Run fast pytest suite on pushes and pull requests (`pytest -m "not slow"`)
+- [ ] Run deterministic evals in CI (no API key required)
+- [ ] Add linting with Ruff
+
+### PR 19 — Containerization
+
+- [ ] Add Containerfile for the Streamlit app
+- [ ] Package the application and its dependencies
+- [ ] Build and run locally as a container
+- [ ] Expose Streamlit on port 8501
+- [ ] Document the local container workflow
+
+### PR 20 — Azure Container Apps Deployment
+
+- [ ] Create Azure resource group and Container Registry
+- [ ] Build a Linux AMD64 container image
+- [ ] Push the image to ACR
+- [ ] Create a Container Apps Environment and Container App
+- [ ] Configure managed-identity access to ACR
+- [ ] Configure external HTTPS ingress on port 8501
+- [ ] Verify the app through its public Azure URL
+
+### PR 21 — Continuous Deployment
+
+- [ ] Create Microsoft Entra application for GitHub Actions
+- [ ] Configure GitHub OIDC federated credential for `main`
+- [ ] Grant deployment identity `Contributor` and `AcrPush` access
+- [ ] Configure Azure identifiers as GitHub Actions secrets
+- [ ] Add deployment workflow (build → push SHA-tagged image → deploy to ACA)
+- [ ] Trigger CD after successful CI on `main`
+- [ ] Verify the complete automated deployment flow
+
 ## Notes
 
 - Web search results and LLM parsing are inherently non-deterministic —
