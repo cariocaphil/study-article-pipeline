@@ -161,3 +161,21 @@ def load_filter_dataset(path: Path):
 
 def load_filter_predictions(path: Path) -> dict[str, bool]:
     return {record["id"]: bool(record["accepted"]) for record in load_jsonl(path)}
+
+
+def load_review_dataset(path: Path):
+    from evals.evaluators.review_actions import ReviewCase
+
+    return [
+        ReviewCase(
+            id=record["id"],
+            topic=record["topic"],
+            phrases=record["phrases"],
+            expected_actions=record["expected_actions"],
+        )
+        for record in load_jsonl(path)
+    ]
+
+
+def load_review_predictions(path: Path) -> dict[str, dict[str, str]]:
+    return {record["id"]: record["actions"] for record in load_jsonl(path)}

@@ -12,9 +12,12 @@ from evals.evaluators.base import (
     load_filter_dataset,
     load_filter_predictions,
     load_pipeline_output,
+    load_review_dataset,
+    load_review_predictions,
 )
 from evals.evaluators.filter_classification import FilterClassificationEvaluator
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
+from evals.evaluators.review_actions import ReviewActionsEvaluator
 from evals.runners.run_evals import run_suite
 
 FIXTURE_PATH = (
@@ -33,6 +36,16 @@ FILTER_PREDICTIONS_PATH = (
     / "datasets"
     / "fixtures"
     / "filter_predictions.jsonl"
+)
+REVIEW_DATASET_PATH = (
+    Path(__file__).resolve().parent.parent / "evals" / "datasets" / "review" / "phrase_lists.jsonl"
+)
+REVIEW_PREDICTIONS_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "fixtures"
+    / "review_predictions.jsonl"
 )
 
 
@@ -147,3 +160,48 @@ class TestFilterClassificationEvaluator:
 
         assert result.evaluator == "filter_classification"
         assert result.metrics["accuracy"] == pytest.approx(11 / 12)
+
+
+class TestReviewActionsEvaluator:
+    def test_scores_cached_predictions_with_intentional_errors(self):
+        cases = load_review_dataset(REVIEW_DATASET_PATH)
+        predictions = load_review_predictions(REVIEW_PREDICTIONS_PATH)
+
+        result = ReviewActionsEvaluator(pass_threshold=1.0).run(cases, predictions)
+
+        assert result.metrics["total_phrases"] == 12
+        assert result.metrics["action_correct"] == 10
+        assert result.metrics["action_accuracy"] == pytest.approx(10 / 12)
+        assert result.metrics["removal_true_positive"] == 2
+        assert result.metrics["removal_false_positive"] == 1
+        assert result.metrics["removal_false_negative"] == 1
+        assert result.score == pytest.approx(2 / 3)
+        assert result.metrics["removal_precision"] == pytest.approx(2 / 3)
+        assert result.metrics["removal_recall"] == pytest.approx(2 / 3)
+        assert result.passed is False
+        assert len(result.failures) == 2
+        failure_categories = {failure.category for failure in result.failures}
+        assert failure_categories == {"false_remove", "missed_remove"}
+
+    def test_passes_when_all_predictions_match_labels(self):
+        cases = load_review_dataset(REVIEW_DATASET_PATH)
+        predictions = {
+            case.id: case.expected_actions
+            for case in cases
+        }
+
+        result = ReviewActionsEvaluator().run(cases, predictions)
+
+        assert result.score == 1.0
+        assert result.passed is True
+        assert result.failures == []
+
+    def test_run_suite_offline_review_actions(self):
+        result = run_suite(
+            "review_actions",
+            REVIEW_DATASET_PATH,
+            predictions_path=REVIEW_PREDICTIONS_PATH,
+        )
+
+        assert result.evaluator == "review_actions"
+        assert result.metrics["removal_f1"] == pytest.approx(2 / 3)

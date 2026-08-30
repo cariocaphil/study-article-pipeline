@@ -169,6 +169,17 @@ uv run python -m evals.runners.run_evals \
 
 Add `--live` to score the real filter agent (requires `ANTHROPIC_API_KEY`).
 
+Run review actions offline against cached predictions:
+
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite review_actions \
+  --input evals/datasets/review/phrase_lists.jsonl \
+  --predictions evals/datasets/fixtures/review_predictions.jsonl
+```
+
+Add `--live` to score the real review agent (requires `ANTHROPIC_API_KEY`).
+
 Results are saved under `evals/results/` (gitignored).
 
 ## Project structure
@@ -178,8 +189,9 @@ app.py                        # Streamlit web UI entry point
 evals/
 ├── datasets/
 │   ├── filter/urls.jsonl       # labeled accept/reject URL dataset
+│   ├── review/phrase_lists.jsonl  # labeled keep/review/remove phrase lists
 │   └── fixtures/               # sample PipelineOutput + cached predictions
-├── evaluators/                 # quote_faithfulness, filter_classification
+├── evaluators/                 # quote_faithfulness, filter_classification, review_actions
 └── runners/run_evals.py        # CLI entry point
 .claude/
 ├── commands/
@@ -226,7 +238,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 15**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 16**.
 
 ### Initial Setup ✅
 
@@ -319,11 +331,13 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 15
 - [x] Support offline scoring via cached predictions
 - [x] Support live scoring via `--live` (calls `filter_agent` per URL)
 
-### PR 15 — Eval: Review Actions
+### PR 15 — Eval: Review Actions ✅
 
-- [ ] Add golden phrase-list dataset with expected keep/remove labels
-- [ ] Add review actions evaluator (removal precision/recall)
-- [ ] Add deterministic tests and CLI registration
+- [x] Add golden phrase-list dataset with expected keep/review/remove labels
+- [x] Add review actions evaluator (removal precision/recall, action accuracy)
+- [x] Support offline scoring via cached predictions
+- [x] Support live scoring via `--live` (calls `review_agent` per phrase list)
+- [x] Add deterministic tests and CLI registration
 
 ### PR 16 — Eval: Extract Phrase Recall
 

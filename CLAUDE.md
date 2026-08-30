@@ -83,6 +83,7 @@ API calls required.
 |-----------|-------|--------|
 | `quote_faithfulness` | `PipelineOutput` JSON | % of phrases whose `sentence_context` is verbatim in `full_text` |
 | `filter_classification` | labeled URL dataset (`.jsonl`) | accuracy, precision, recall, F1 on accept/reject decisions |
+| `review_actions` | labeled phrase-list dataset (`.jsonl`) | removal precision/recall/F1 and per-action accuracy |
 
 Run locally:
 ```bash
@@ -94,11 +95,17 @@ uv run python -m evals.runners.run_evals \
   --suite filter_classification \
   --input evals/datasets/filter/urls.jsonl \
   --predictions evals/datasets/fixtures/filter_predictions.jsonl
+
+uv run python -m evals.runners.run_evals \
+  --suite review_actions \
+  --input evals/datasets/review/phrase_lists.jsonl \
+  --predictions evals/datasets/fixtures/review_predictions.jsonl
 ```
 
-Use `--live` with `filter_classification` to score the real filter agent
-(API key required). Offline scoring uses cached predictions in
-`evals/datasets/fixtures/filter_predictions.jsonl`.
+Use `--live` with `filter_classification` or `review_actions` to score the real
+agents (API key required). Offline scoring uses cached predictions in
+`evals/datasets/fixtures/filter_predictions.jsonl` and
+`evals/datasets/fixtures/review_predictions.jsonl`.
 
 Results are written to `evals/results/{run_id}/` (`report.json`, `scores.json`,
 `failures.jsonl`). Fast eval tests live in `tests/test_evals.py`.
