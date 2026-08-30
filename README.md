@@ -158,6 +158,17 @@ uv run python -m evals.runners.run_evals \
   --input evals/datasets/fixtures/sample_pipeline_output.json
 ```
 
+Run filter classification offline against cached predictions:
+
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite filter_classification \
+  --input evals/datasets/filter/urls.jsonl \
+  --predictions evals/datasets/fixtures/filter_predictions.jsonl
+```
+
+Add `--live` to score the real filter agent (requires `ANTHROPIC_API_KEY`).
+
 Results are saved under `evals/results/` (gitignored).
 
 ## Project structure
@@ -165,9 +176,11 @@ Results are saved under `evals/results/` (gitignored).
 ```
 app.py                        # Streamlit web UI entry point
 evals/
-├── datasets/fixtures/        # sample PipelineOutput JSON for eval runs
-├── evaluators/               # quote_faithfulness and future evaluators
-└── runners/run_evals.py      # CLI entry point
+├── datasets/
+│   ├── filter/urls.jsonl       # labeled accept/reject URL dataset
+│   └── fixtures/               # sample PipelineOutput + cached predictions
+├── evaluators/                 # quote_faithfulness, filter_classification
+└── runners/run_evals.py        # CLI entry point
 .claude/
 ├── commands/
 │   └── find-articles.md      # slash command definition
