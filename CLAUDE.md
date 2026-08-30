@@ -22,6 +22,25 @@ and compiles everything into a printable Word document for language study.
 | Review      | src/agents/review_agent.py  | Independently audit extracted phrases for quality, drop low-quality items |
 | Compile     | src/agents/compile_agent.py | Produce the final .docx |
 
+## Tools
+Validation tools live in `src/tools/`. They are **client-executed**: the agent
+implements a tool-use loop (send prompt → handle `tool_use` blocks → run local
+Python → return `tool_result` → continue until final response). Only items
+that passed tool validation are kept.
+
+| Tool | File | Used by | What it checks |
+|------|------|---------|----------------|
+| `validate_url_reachable(url)` | `src/tools/validate_url_reachable.py` | `search_agent.py` | HTTP HEAD request; URL responds 2xx/3xx |
+| `verify_quote(sentence, article_text)` | `src/tools/verify_quote.py` | `extract_agent.py` | `sentence_context` is a verbatim quote from the article |
+| `validate_translation(phrase, translation)` | `src/tools/validate_translation.py` | `extract_agent.py` | Translation is non-empty and not a lazy copy of the source phrase |
+
+`search_agent.py` also uses Anthropic's server-executed `web_search` tool.
+`filter_agent.py` uses `web_search` only (no custom tools).
+
+When adding a new client-side tool: define the function in `src/tools/`,
+register its schema in the agent, handle `tool_use` in the loop, and filter
+the final parsed output to only items the tool marked as valid.
+
 ## Schema
 All inter-agent data passes through Pydantic models in src/schemas/article.py.
 Never pass raw strings between agents.
