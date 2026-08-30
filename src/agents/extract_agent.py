@@ -5,10 +5,79 @@ that are at or above the user's CEFR level.
 Returns a list of ExtractedPhrase objects.
 """
 
+import json
+
 import anthropic
 from src.schemas.article import ExtractedPhrase, CEFRLevel, PhraseCategory
+from src.tools.validate_translation import validate_translation
+from src.tools.verify_quote import verify_quote
 from src.utils import load_skill
 from src.utils.json_utils import extract_json
+
+VERIFY_QUOTE_TOOL = {
+    "name": "verify_quote",
+    "description": (
+        "Check whether a sentence appears verbatim in the article text. "
+        "Returns true if the sentence is an exact quote from the article, "
+        "false otherwise."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "sentence": {
+                "type": "string",
+                "description": "The sentence to verify against the article.",
+            }
+        },
+        "required": ["sentence"],
+    },
+}
+
+
+VALIDATE_TRANSLATION_TOOL = {
+    "name": "validate_translation",
+    "description": (
+        "Check whether a translation is valid for the source phrase. "
+        "Returns true if the translation is non-empty and not identical "
+        "to the source phrase, false otherwise."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "phrase": {
+                "type": "string",
+                "description": "The source-language phrase.",
+            },
+            "translation": {
+                "type": "string",
+                "description": "The proposed translation.",
+            },
+        },
+        "required": ["phrase", "translation"],
+    },
+}
+
+
+def _run_verify_quote_tool(tool_input: dict, article_text: str) -> bool:
+    return verify_quote(tool_input["sentence"], article_text)
+
+
+def _run_validate_translation_tool(tool_input: dict) -> bool:
+    return validate_translation(tool_input["phrase"], tool_input["translation"])
+
+
+MAX_PARSE_ATTEMPTS = 3
+CONTINUATION_PROMPT = (
+    "Continue by calling verify_quote and validate_translation for each item. "
+    "When finished, return ONLY the final JSON array with no other text, "
+    "markdown, or explanation."
+)
+
+
+def _response_text(response) -> str:
+    return " ".join(
+        block.text for block in response.content if hasattr(block, "text")
+    )
 
 
 def extract_phrases(
@@ -49,6 +118,14 @@ Rules:
 - Aim for 8-15 items per article. Prioritise quality over quantity.
 - Do not include proper nouns or character names.
 
+Before returning the list, verify each sentence_context using the verify_quote tool.
+Only return items whose sentence_context is verified as a verbatim quote from the article.
+Validate each translation using the validate_translation tool.
+Only return items whose translation is validated.
+
+Do not list candidates or explain your process in prose. Use the tools directly,
+then return the final JSON array.
+
 Return ONLY a JSON array of objects with no other text, no markdown, no explanation.
 Example format:
 [
@@ -62,28 +139,88 @@ Example format:
 ]
 """
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    messages = [{"role": "user", "content": prompt}]
+    verification_results: dict[str, bool] = {}
+    translation_results: dict[tuple[str, str], bool] = {}
+    response = None
+    raw_phrases = None
+    parse_attempts = 0
 
-    full_response = " ".join(
-        block.text for block in response.content if hasattr(block, "text")
-    )
+    while True:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            tools=[VERIFY_QUOTE_TOOL, VALIDATE_TRANSLATION_TOOL],
+            messages=messages,
+        )
+        messages.append({"role": "assistant", "content": response.content})
 
-    try:
-        raw_phrases = extract_json(full_response, "[", "]")
-    except ValueError as e:
-        raise ValueError(f"Extract agent could not parse phrase list.\n{e}")
+        if response.stop_reason == "tool_use":
+            tool_results = []
+            for block in response.content:
+                if block.type != "tool_use":
+                    continue
+
+                if block.name == "verify_quote":
+                    verified = _run_verify_quote_tool(block.input, full_text)
+                    verification_results[block.input["sentence"]] = verified
+                    result = verified
+                elif block.name == "validate_translation":
+                    valid = _run_validate_translation_tool(block.input)
+                    translation_key = (block.input["phrase"], block.input["translation"])
+                    translation_results[translation_key] = valid
+                    result = valid
+                else:
+                    continue
+
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": json.dumps(result),
+                    }
+                )
+            if tool_results:
+                messages.append({"role": "user", "content": tool_results})
+                continue
+
+        full_response = _response_text(response)
+        try:
+            raw_phrases = extract_json(full_response, "[", "]")
+            break
+        except ValueError as e:
+            parse_attempts += 1
+            if parse_attempts >= MAX_PARSE_ATTEMPTS:
+                raise ValueError(f"Extract agent could not parse phrase list.\n{e}")
+            messages.append({"role": "user", "content": CONTINUATION_PROMPT})
+            continue
+
+    if not isinstance(raw_phrases, list):
+        raise ValueError("Extract agent could not parse phrase list.\nExtract agent response was not a JSON array.")
 
     phrases = []
     for item in raw_phrases:
+        sentence_context = item.get("sentence_context", "")
+        phrase_text = item.get("phrase", "")
+        translation_text = item.get("translation", "")
+
+        if verification_results.get(sentence_context) is not True:
+            print(
+                f"[extract_agent] Skipping unverified quote: {sentence_context[:80]}"
+            )
+            continue
+
+        if translation_results.get((phrase_text, translation_text)) is not True:
+            print(
+                f"[extract_agent] Skipping invalid translation: {phrase_text[:80]}"
+            )
+            continue
+
         try:
             phrase = ExtractedPhrase(
-                phrase=item["phrase"],
-                sentence_context=item["sentence_context"],
-                translation=item["translation"],
+                phrase=phrase_text,
+                sentence_context=sentence_context,
+                translation=translation_text,
                 category=PhraseCategory(item["category"]),
                 estimated_level=CEFRLevel(item["estimated_level"]),
             )

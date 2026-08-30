@@ -12,9 +12,9 @@ Five agents run in sequence, each owning one stage of the pipeline:
 
 | Stage | Agent | File | Responsibility |
 |-------|-------|------|-----------------|
-| 1 | Search | `src/agents/search_agent.py` | Find candidate article URLs written in the source language |
+| 1 | Search | `src/agents/search_agent.py` | Find candidate article URLs; validate reachability before returning |
 | 2 | Filter | `src/agents/filter_agent.py` | Confirm each URL is a genuine review, fetch full text + author |
-| 3 | Extract | `src/agents/extract_agent.py` | Pull vocabulary/constructions/idioms at or above your CEFR level, with translations |
+| 3 | Extract | `src/agents/extract_agent.py` | Pull vocabulary/constructions/idioms at or above your CEFR level; verify quotes and translations |
 | 4 | Review | `src/agents/review_agent.py` | Independently audit extracted phrases for quality, drop low-quality items |
 | 5 | Compile | `src/agents/compile_agent.py` | Produce the final `.docx` |
 
@@ -30,6 +30,21 @@ Several agents load evaluation criteria from skill files in
 `.claude/skills/` at runtime (e.g. the review agent uses
 `phrase-quality-reviewer.md` to flag proper nouns, topic derivatives, and
 near-duplicates before phrases reach the final document).
+
+### Validation tools
+
+Some agents expose **client-side validation tools** — local Python functions
+Claude can call during extraction. The agent runs a tool-use loop and only
+keeps items that passed validation:
+
+| Tool | Agent | What it checks |
+|------|-------|----------------|
+| `validate_url_reachable` | Search | URL responds to an HTTP HEAD request (2xx/3xx) |
+| `verify_quote` | Extract | `sentence_context` is a verbatim quote from the article |
+| `validate_translation` | Extract | Translation is non-empty and not a lazy copy of the source phrase |
+
+Search and filter agents also use Anthropic's server-executed `web_search`
+tool. Tool implementations live in `src/tools/`.
 
 ## Requirements
 
@@ -120,11 +135,20 @@ not auto-open files — use the download button instead.
 
 ## Testing
 
-Run the test suite with:
+Run the full test suite:
 
 ```bash
 uv run pytest
 ```
+
+Skip slow tests that call the live Anthropic API:
+
+```bash
+uv run pytest -m "not slow"
+```
+
+Tests cover agents, validation tools, JSON repair (`json_utils`), and the
+Streamlit UI (`AppTest`).
 
 ## Project structure
 
@@ -136,25 +160,39 @@ app.py                        # Streamlit web UI entry point
 ├── hooks/
 │   └── post-run.sh           # opens latest .docx after CLI pipeline run
 └── skills/                   # agent evaluation criteria (loaded at runtime)
-    ├── article-filter-criteria.md
-    ├── cefr-extraction-guide.md
-    └── phrase-quality-reviewer.md
+    ├── article-filter-criteria.md   # injected in filter_agent.py
+    ├── cefr-extraction-guide.md     # injected in extract_agent.py
+    ├── docx-formatted.md            # document layout reference for compile_agent.py
+    └── phrase-quality-reviewer.md   # injected in review_agent.py
 src/
 ├── orchestrator.py           # wires agents together, CLI entry point
 ├── agents/
-│   ├── search_agent.py       # finds candidate article URLs
+│   ├── search_agent.py       # finds candidate article URLs (web_search + URL validation)
 │   ├── filter_agent.py       # validates + fetches article content
-│   ├── extract_agent.py      # extracts phrases above CEFR level
+│   ├── extract_agent.py      # extracts phrases (quote + translation validation)
 │   ├── review_agent.py       # audits phrase quality, drops low-value items
 │   └── compile_agent.py      # generates the .docx
+├── tools/                    # client-side validation tools used by agents
+│   ├── validate_url_reachable.py
+│   ├── verify_quote.py
+│   └── validate_translation.py
 ├── schemas/
 │   └── article.py            # Pydantic models shared between agents
 └── utils/
     ├── __init__.py           # load_skill() helper
     └── json_utils.py         # robust JSON extraction from LLM responses
 tests/
+├── conftest.py               # shared fixtures (API client, sample text/phrases)
 ├── test_app.py               # Streamlit UI tests (AppTest)
-└── test_json_utils.py        # JSON repair/parsing tests
+├── test_compile_agent.py
+├── test_extract_agent.py
+├── test_filter_agent.py
+├── test_json_utils.py        # JSON repair/parsing tests
+├── test_review_agent.py
+├── test_search_agent.py
+├── test_validate_translation.py
+├── test_validate_url_reachable.py
+└── test_verify_quote.py
 output/                        # generated .docx files land here
 ```
 
