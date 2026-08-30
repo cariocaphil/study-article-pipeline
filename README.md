@@ -147,13 +147,27 @@ Skip slow tests that call the live Anthropic API:
 uv run pytest -m "not slow"
 ```
 
-Tests cover agents, validation tools, JSON repair (`json_utils`), and the
-Streamlit UI (`AppTest`).
+Tests cover agents, validation tools, JSON repair (`json_utils`), the
+Streamlit UI (`AppTest`), and deterministic evals (`tests/test_evals.py`).
+
+Run the quote faithfulness eval on a saved pipeline output:
+
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite quote_faithfulness \
+  --input evals/datasets/fixtures/sample_pipeline_output.json
+```
+
+Results are saved under `evals/results/` (gitignored).
 
 ## Project structure
 
 ```
 app.py                        # Streamlit web UI entry point
+evals/
+├── datasets/fixtures/        # sample PipelineOutput JSON for eval runs
+├── evaluators/               # quote_faithfulness and future evaluators
+└── runners/run_evals.py      # CLI entry point
 .claude/
 ├── commands/
 │   └── find-articles.md      # slash command definition
@@ -185,6 +199,7 @@ tests/
 ├── conftest.py               # shared fixtures (API client, sample text/phrases)
 ├── test_app.py               # Streamlit UI tests (AppTest)
 ├── test_compile_agent.py
+├── test_evals.py             # deterministic eval harness tests
 ├── test_extract_agent.py
 ├── test_filter_agent.py
 ├── test_json_utils.py        # JSON repair/parsing tests

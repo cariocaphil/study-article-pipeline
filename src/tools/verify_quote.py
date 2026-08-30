@@ -12,7 +12,7 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def verify_quote(sentence: str, article_text: str) -> bool:
+def verify_quote(sentence: str, article_text: str, *, quiet: bool = False) -> bool:
     """
     Return True if sentence appears verbatim in article_text.
 
@@ -26,6 +26,7 @@ def verify_quote(sentence: str, article_text: str) -> bool:
         normalized_article = _normalize(article_text)
         verified = normalized_sentence in normalized_article
 
-    status_label = "verified" if verified else "not found"
-    print(f"[quote_verifier] {sentence} → {status_label}")
+    if not quiet:
+        status_label = "verified" if verified else "not found"
+        print(f"[quote_verifier] {sentence} → {status_label}")
     return verified

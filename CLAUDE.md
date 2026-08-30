@@ -74,3 +74,25 @@ Skills are located in `.claude/skills/`. Claude Code should load them when relev
 | Article filter criteria | `.claude/skills/article-filter-criteria.md` | Already injected at runtime in filter_agent.py |
 | CEFR extraction guide | `.claude/skills/cefr-extraction-guide.md` | Already injected at runtime in extract_agent.py |
 | Phrase quality reviewer | `.claude/skills/phrase-quality-reviewer.md` | Already injected at runtime in review_agent.py |
+
+## Evaluations
+Deterministic evals live in `evals/`. They score saved pipeline outputs — no
+API calls required.
+
+| Evaluator | Input | Metric |
+|-----------|-------|--------|
+| `quote_faithfulness` | `PipelineOutput` JSON | % of phrases whose `sentence_context` is verbatim in `full_text` |
+
+Run locally:
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite quote_faithfulness \
+  --input evals/datasets/fixtures/sample_pipeline_output.json
+```
+
+Results are written to `evals/results/{run_id}/` (`report.json`, `scores.json`,
+`failures.jsonl`). Fast eval tests live in `tests/test_evals.py`.
+
+When adding a new evaluator: implement `run(...) -> EvalResult` in
+`evals/evaluators/`, register it in `evals/runners/run_evals.py`, add a fixture
+or dataset case, and cover it in `tests/test_evals.py`.
