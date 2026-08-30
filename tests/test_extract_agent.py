@@ -247,6 +247,54 @@ class TestExtractPhrasesToolLoop:
 
         assert phrases == []
 
+    def test_continues_when_model_returns_planning_text_before_json(
+        self, mock_verify, mock_validate
+    ):
+        article = "Laura foge de um passado turbulento."
+        verified_sentence = "Laura foge de um passado turbulento."
+        mock_verify.return_value = True
+        mock_validate.return_value = True
+
+        client = MagicMock()
+        client.messages.create.side_effect = [
+            _response(
+                [_text_block("Let me verify all sentence contexts first.")],
+                "end_turn",
+            ),
+            _response(
+                [
+                    _verify_quote_tool_use("tool-1", verified_sentence),
+                    _validate_translation_tool_use("tool-2", "turbulento", "turbulent"),
+                ],
+                "tool_use",
+            ),
+            _response(
+                [
+                    _text_block(
+                        _phrases_json(
+                            _phrase_item(
+                                "turbulento",
+                                verified_sentence,
+                                translation="turbulent",
+                            )
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+        ]
+
+        phrases = extract_phrases(
+            full_text=article,
+            source_language="portuguese",
+            translation_language="german",
+            user_level=CEFRLevel.C1,
+            client=client,
+        )
+
+        assert len(phrases) == 1
+        assert client.messages.create.call_count == 3
+
     def test_raises_when_final_response_is_not_parseable_json(
         self, mock_verify, mock_validate
     ):
@@ -265,6 +313,8 @@ class TestExtractPhrasesToolLoop:
                 "tool_use",
             ),
             _response([_text_block("Sorry, I could not extract phrases.")], "end_turn"),
+            _response([_text_block("Still working on it.")], "end_turn"),
+            _response([_text_block("Still not ready.")], "end_turn"),
         ]
 
         with pytest.raises(ValueError, match="could not parse phrase list"):

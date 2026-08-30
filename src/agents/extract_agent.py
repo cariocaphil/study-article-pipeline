@@ -66,6 +66,20 @@ def _run_validate_translation_tool(tool_input: dict) -> bool:
     return validate_translation(tool_input["phrase"], tool_input["translation"])
 
 
+MAX_PARSE_ATTEMPTS = 3
+CONTINUATION_PROMPT = (
+    "Continue by calling verify_quote and validate_translation for each item. "
+    "When finished, return ONLY the final JSON array with no other text, "
+    "markdown, or explanation."
+)
+
+
+def _response_text(response) -> str:
+    return " ".join(
+        block.text for block in response.content if hasattr(block, "text")
+    )
+
+
 def extract_phrases(
     full_text: str,
     source_language: str,
@@ -109,6 +123,9 @@ Only return items whose sentence_context is verified as a verbatim quote from th
 Validate each translation using the validate_translation tool.
 Only return items whose translation is validated.
 
+Do not list candidates or explain your process in prose. Use the tools directly,
+then return the final JSON array.
+
 Return ONLY a JSON array of objects with no other text, no markdown, no explanation.
 Example format:
 [
@@ -126,6 +143,8 @@ Example format:
     verification_results: dict[str, bool] = {}
     translation_results: dict[tuple[str, str], bool] = {}
     response = None
+    raw_phrases = None
+    parse_attempts = 0
 
     while True:
         response = client.messages.create(
@@ -165,16 +184,19 @@ Example format:
                 messages.append({"role": "user", "content": tool_results})
                 continue
 
-        break
+        full_response = _response_text(response)
+        try:
+            raw_phrases = extract_json(full_response, "[", "]")
+            break
+        except ValueError as e:
+            parse_attempts += 1
+            if parse_attempts >= MAX_PARSE_ATTEMPTS:
+                raise ValueError(f"Extract agent could not parse phrase list.\n{e}")
+            messages.append({"role": "user", "content": CONTINUATION_PROMPT})
+            continue
 
-    full_response = " ".join(
-        block.text for block in response.content if hasattr(block, "text")
-    )
-
-    try:
-        raw_phrases = extract_json(full_response, "[", "]")
-    except ValueError as e:
-        raise ValueError(f"Extract agent could not parse phrase list.\n{e}")
+    if not isinstance(raw_phrases, list):
+        raise ValueError("Extract agent could not parse phrase list.\nExtract agent response was not a JSON array.")
 
     phrases = []
     for item in raw_phrases:
