@@ -133,3 +133,31 @@ def load_pipeline_output(path: Path):
 
     data = json.loads(path.read_text(encoding="utf-8"))
     return PipelineOutput.model_validate(data)
+
+
+def load_jsonl(path: Path) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line:
+            records.append(json.loads(line))
+    return records
+
+
+def load_filter_dataset(path: Path):
+    from evals.evaluators.filter_classification import FilterCase
+
+    return [
+        FilterCase(
+            id=record["id"],
+            url=record["url"],
+            source_language=record["source_language"],
+            expected=record["expected"],
+            reason=record.get("reason", ""),
+        )
+        for record in load_jsonl(path)
+    ]
+
+
+def load_filter_predictions(path: Path) -> dict[str, bool]:
+    return {record["id"]: bool(record["accepted"]) for record in load_jsonl(path)}

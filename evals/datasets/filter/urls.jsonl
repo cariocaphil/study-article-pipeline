@@ -1,0 +1,12 @@
+{"id": "filter-001", "url": "https://www.magazine-hd.com/apps/wp/entroncamento-critica-filme-pedro-cabeleira-ana-vilaca/", "source_language": "portuguese", "expected": "accept", "reason": "genuine Portuguese film review"}
+{"id": "filter-002", "url": "https://www.theguardian.com/film/1994/sep/23/shawshank-redemption-review", "source_language": "english", "expected": "accept", "reason": "genuine English film review"}
+{"id": "filter-003", "url": "https://en.wikipedia.org/wiki/The_Shawshank_Redemption", "source_language": "english", "expected": "reject", "reason": "plot summary encyclopedia page, not a review"}
+{"id": "filter-004", "url": "https://www.imdb.com/title/tt0111161/", "source_language": "english", "expected": "reject", "reason": "database entry, not a critical review article"}
+{"id": "filter-005", "url": "https://www.youtube.com/watch?v=6hB3S9bIaco", "source_language": "english", "expected": "reject", "reason": "video/trailer page, not a review article"}
+{"id": "filter-006", "url": "https://en.wikipedia.org/wiki/Entroncamento_(film)", "source_language": "portuguese", "expected": "reject", "reason": "plot summary encyclopedia page, not a review"}
+{"id": "filter-007", "url": "https://www.google.com/", "source_language": "english", "expected": "reject", "reason": "search homepage, not an article"}
+{"id": "filter-008", "url": "https://github.com/anthropics/anthropic-sdk-python", "source_language": "english", "expected": "reject", "reason": "software repository page, not a review"}
+{"id": "filter-009", "url": "https://www.rottentomatoes.com/m/shawshank_redemption", "source_language": "english", "expected": "reject", "reason": "aggregator score page, not a standalone critical review"}
+{"id": "filter-010", "url": "https://www.amazon.com/", "source_language": "english", "expected": "reject", "reason": "commerce homepage, not a review article"}
+{"id": "filter-011", "url": "https://www.booking.com/", "source_language": "english", "expected": "reject", "reason": "ticketing/booking site, not a review article"}
+{"id": "filter-012", "url": "https://letterboxd.com/film/shawshank-redemption/", "source_language": "english", "expected": "reject", "reason": "social film listing page, not a critical review article"}

@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from evals.evaluators.base import EvalReport, load_pipeline_output
+from evals.evaluators.base import (
+    EvalReport,
+    load_filter_dataset,
+    load_filter_predictions,
+    load_pipeline_output,
+)
+from evals.evaluators.filter_classification import FilterClassificationEvaluator
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.runners.run_evals import run_suite
 
@@ -17,6 +23,16 @@ FIXTURE_PATH = (
     / "datasets"
     / "fixtures"
     / "sample_pipeline_output.json"
+)
+FILTER_DATASET_PATH = (
+    Path(__file__).resolve().parent.parent / "evals" / "datasets" / "filter" / "urls.jsonl"
+)
+FILTER_PREDICTIONS_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "fixtures"
+    / "filter_predictions.jsonl"
 )
 
 
@@ -89,3 +105,45 @@ class TestRunEvalsCLI:
 
         assert result.evaluator == "quote_faithfulness"
         assert result.metrics["faithfulness_rate"] == pytest.approx(0.5)
+
+
+class TestFilterClassificationEvaluator:
+    def test_scores_cached_predictions_with_one_misclassification(self):
+        cases = load_filter_dataset(FILTER_DATASET_PATH)
+        predictions = load_filter_predictions(FILTER_PREDICTIONS_PATH)
+
+        result = FilterClassificationEvaluator(pass_threshold=1.0).run(cases, predictions)
+
+        assert result.metrics["total_cases"] == 12
+        assert result.metrics["correct"] == 11
+        assert result.score == pytest.approx(11 / 12)
+        assert result.metrics["false_positive"] == 1
+        assert result.metrics["precision"] == pytest.approx(2 / 3)
+        assert result.metrics["recall"] == pytest.approx(1.0)
+        assert result.passed is False
+        assert len(result.failures) == 1
+        assert result.failures[0].case_id == "filter-009"
+        assert result.failures[0].category == "false_accept"
+
+    def test_passes_when_all_predictions_match_labels(self):
+        cases = load_filter_dataset(FILTER_DATASET_PATH)
+        predictions = {
+            case.id: case.expected_accept
+            for case in cases
+        }
+
+        result = FilterClassificationEvaluator().run(cases, predictions)
+
+        assert result.score == 1.0
+        assert result.passed is True
+        assert result.failures == []
+
+    def test_run_suite_offline_filter_classification(self):
+        result = run_suite(
+            "filter_classification",
+            FILTER_DATASET_PATH,
+            predictions_path=FILTER_PREDICTIONS_PATH,
+        )
+
+        assert result.evaluator == "filter_classification"
+        assert result.metrics["accuracy"] == pytest.approx(11 / 12)
