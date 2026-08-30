@@ -5,10 +5,36 @@ that are at or above the user's CEFR level.
 Returns a list of ExtractedPhrase objects.
 """
 
+import json
+
 import anthropic
 from src.schemas.article import ExtractedPhrase, CEFRLevel, PhraseCategory
+from src.tools.verify_quote import verify_quote
 from src.utils import load_skill
 from src.utils.json_utils import extract_json
+
+VERIFY_QUOTE_TOOL = {
+    "name": "verify_quote",
+    "description": (
+        "Check whether a sentence appears verbatim in the article text. "
+        "Returns true if the sentence is an exact quote from the article, "
+        "false otherwise."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "sentence": {
+                "type": "string",
+                "description": "The sentence to verify against the article.",
+            }
+        },
+        "required": ["sentence"],
+    },
+}
+
+
+def _run_verify_quote_tool(tool_input: dict, article_text: str) -> bool:
+    return verify_quote(tool_input["sentence"], article_text)
 
 
 def extract_phrases(
@@ -49,6 +75,9 @@ Rules:
 - Aim for 8-15 items per article. Prioritise quality over quantity.
 - Do not include proper nouns or character names.
 
+Before returning the list, verify each sentence_context using the verify_quote tool.
+Only return items whose sentence_context is verified as a verbatim quote from the article.
+
 Return ONLY a JSON array of objects with no other text, no markdown, no explanation.
 Example format:
 [
@@ -62,11 +91,38 @@ Example format:
 ]
 """
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    messages = [{"role": "user", "content": prompt}]
+    verification_results: dict[str, bool] = {}
+    response = None
+
+    while True:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            tools=[VERIFY_QUOTE_TOOL],
+            messages=messages,
+        )
+        messages.append({"role": "assistant", "content": response.content})
+
+        if response.stop_reason == "tool_use":
+            tool_results = []
+            for block in response.content:
+                if block.type != "tool_use" or block.name != "verify_quote":
+                    continue
+                verified = _run_verify_quote_tool(block.input, full_text)
+                verification_results[block.input["sentence"]] = verified
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": json.dumps(verified),
+                    }
+                )
+            if tool_results:
+                messages.append({"role": "user", "content": tool_results})
+                continue
+
+        break
 
     full_response = " ".join(
         block.text for block in response.content if hasattr(block, "text")
@@ -79,10 +135,17 @@ Example format:
 
     phrases = []
     for item in raw_phrases:
+        sentence_context = item.get("sentence_context", "")
+        if verification_results.get(sentence_context) is not True:
+            print(
+                f"[extract_agent] Skipping unverified quote: {sentence_context[:80]}"
+            )
+            continue
+
         try:
             phrase = ExtractedPhrase(
                 phrase=item["phrase"],
-                sentence_context=item["sentence_context"],
+                sentence_context=sentence_context,
                 translation=item["translation"],
                 category=PhraseCategory(item["category"]),
                 estimated_level=CEFRLevel(item["estimated_level"]),
