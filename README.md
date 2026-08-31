@@ -279,7 +279,8 @@ src/
 ├── tools/                    # client-side validation tools used by agents
 │   ├── validate_url_reachable.py
 │   ├── verify_quote.py
-│   └── validate_translation.py
+│   ├── validate_translation.py
+│   └── validate_topic.py
 ├── schemas/
 │   └── article.py            # Pydantic models shared between agents
 └── utils/
@@ -293,9 +294,11 @@ tests/
 ├── test_extract_agent.py
 ├── test_filter_agent.py
 ├── test_json_utils.py        # JSON repair/parsing tests
+├── test_orchestrator.py      # topic input guardrails
 ├── test_review_agent.py
 ├── test_search_agent.py
 ├── test_validate_translation.py
+├── test_validate_topic.py
 ├── test_validate_url_reachable.py
 └── test_verify_quote.py
 output/                        # generated .docx files land here
@@ -303,7 +306,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 20**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 21**.
 
 ### Initial Setup ✅
 
@@ -432,11 +435,11 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 20
 - [x] Add passing and failing fixtures plus deterministic tests
 - [x] Register `pipeline_quality` suite in the eval CLI
 
-### PR 20 — Input Guardrails
+### PR 20 — Input Guardrails ✅
 
-- [ ] Add `validate_topic()` client-side tool
-- [ ] Reject empty, oversized, or unsafe topic strings in the orchestrator
-- [ ] Align CLI validation with existing Streamlit checks
+- [x] Add `validate_topic()` client-side tool
+- [x] Reject empty, oversized, or unsafe topic strings in the orchestrator
+- [x] Align CLI validation with existing Streamlit checks
 
 ### PR 21 — Continuous Integration
 

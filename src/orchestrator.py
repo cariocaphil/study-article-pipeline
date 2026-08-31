@@ -16,6 +16,7 @@ from src.agents.filter_agent import filter_articles
 from src.agents.extract_agent import extract_phrases
 from src.agents.review_agent import review_phrases
 from src.agents.compile_agent import compile_document
+from src.tools.validate_topic import filename_safe_topic, topic_validation_error
 
 load_dotenv()
 
@@ -32,6 +33,11 @@ def run_pipeline(
     """
     Runs the full pipeline and returns the path to the generated .docx.
     """
+
+    validation_error = topic_validation_error(topic)
+    if validation_error:
+        raise ValueError(validation_error)
+    topic = topic.strip()
 
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     level = CEFRLevel(user_level.upper())
@@ -86,7 +92,7 @@ def run_pipeline(
     )
 
     filename = (
-        f"{topic.replace(' ', '_')}_{source_language}_{translation_language}_{level.value}.docx"
+        f"{filename_safe_topic(topic)}_{source_language}_{translation_language}_{level.value}.docx"
     )
     output_path = os.path.join("output", filename)
     os.makedirs("output", exist_ok=True)
@@ -112,10 +118,14 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    run_pipeline(
-        topic=sys.argv[1],
-        source_language=sys.argv[2],
-        translation_language=sys.argv[3],
-        user_level=sys.argv[4],
-        n_articles=int(sys.argv[5]) if len(sys.argv) > 5 else 5,
-    )
+    try:
+        run_pipeline(
+            topic=sys.argv[1],
+            source_language=sys.argv[2],
+            translation_language=sys.argv[3],
+            user_level=sys.argv[4],
+            n_articles=int(sys.argv[5]) if len(sys.argv) > 5 else 5,
+        )
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)

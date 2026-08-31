@@ -85,6 +85,16 @@ class TestGenerateButton:
         mock_run.assert_not_called()
         assert [e.value for e in app.error] == ["Please enter a topic."]
 
+    def test_unsafe_topic_shows_error_without_running_pipeline(self, app):
+        app.text_input[0].input("Entroncamento/Film")
+        with patch("src.orchestrator.run_pipeline") as mock_run:
+            app.button[0].click().run(timeout=30)
+
+        mock_run.assert_not_called()
+        assert [e.value for e in app.error] == [
+            "Topic contains characters that are not allowed."
+        ]
+
     def test_successful_run_shows_success_and_download_button(self, app):
         app.text_input[0].input("Entroncamento")
 

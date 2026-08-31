@@ -1,6 +1,9 @@
-import streamlit as st
 import os
+
+import streamlit as st
+
 from src.orchestrator import run_pipeline
+from src.tools.validate_topic import topic_validation_error
 
 st.set_page_config(
     page_title="Study Article Collection",
@@ -83,8 +86,9 @@ st.divider()
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 if st.button("Generate study document", type="primary", use_container_width=True):
-    if not topic.strip():
-        st.error("Please enter a topic.")
+    topic_error = topic_validation_error(topic)
+    if topic_error:
+        st.error(topic_error)
     else:
         with st.spinner("Running pipeline — this takes 2-3 minutes..."):
             log_output = st.empty()
