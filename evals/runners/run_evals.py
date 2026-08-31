@@ -12,9 +12,9 @@ Examples:
         --predictions evals/datasets/fixtures/filter_predictions.jsonl
 
     uv run python -m evals.runners.run_evals \\
-        --suite filter_classification \\
-        --input evals/datasets/filter/urls.jsonl \\
-        --live
+        --suite review_actions \\
+        --input evals/datasets/review/phrase_lists.jsonl \\
+        --predictions evals/datasets/fixtures/review_predictions.jsonl
 """
 
 from __future__ import annotations
@@ -33,13 +33,19 @@ from evals.evaluators.base import (
     load_filter_dataset,
     load_filter_predictions,
     load_pipeline_output,
+    load_review_dataset,
+    load_review_predictions,
     new_run_id,
 )
 from evals.evaluators.filter_classification import (
     FilterClassificationEvaluator,
-    collect_live_predictions,
+    collect_live_predictions as collect_filter_live_predictions,
 )
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
+from evals.evaluators.review_actions import (
+    ReviewActionsEvaluator,
+    collect_live_predictions as collect_review_live_predictions,
+)
 
 load_dotenv()
 
@@ -52,11 +58,25 @@ DEFAULT_FILTER_DATASET = PROJECT_ROOT / "evals" / "datasets" / "filter" / "urls.
 DEFAULT_FILTER_PREDICTIONS = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "filter_predictions.jsonl"
 )
+DEFAULT_REVIEW_DATASET = (
+    PROJECT_ROOT / "evals" / "datasets" / "review" / "phrase_lists.jsonl"
+)
+DEFAULT_REVIEW_PREDICTIONS = (
+    PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "review_predictions.jsonl"
+)
 
 SUITE_DEFAULTS = {
     "quote_faithfulness": DEFAULT_PIPELINE_FIXTURE,
     "filter_classification": DEFAULT_FILTER_DATASET,
+    "review_actions": DEFAULT_REVIEW_DATASET,
 }
+
+SUITE_PREDICTION_DEFAULTS = {
+    "filter_classification": DEFAULT_FILTER_PREDICTIONS,
+    "review_actions": DEFAULT_REVIEW_PREDICTIONS,
+}
+
+LIVE_SUITES = {"filter_classification", "review_actions"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -76,13 +96,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--predictions",
         type=Path,
-        default=DEFAULT_FILTER_PREDICTIONS,
-        help="Cached filter predictions for offline filter_classification runs",
+        default=None,
+        help="Cached predictions for offline filter_classification or review_actions runs",
     )
     parser.add_argument(
         "--live",
         action="store_true",
-        help="Call filter_agent live for filter_classification (requires API key)",
+        help="Call the live agent for filter_classification or review_actions",
     )
     parser.add_argument(
         "--output-dir",
@@ -133,13 +153,34 @@ def run_suite(
                     "ANTHROPIC_API_KEY is required for --live filter_classification runs."
                 )
             client = anthropic.Anthropic(api_key=api_key)
-            predictions = collect_live_predictions(cases, client)
+            predictions = collect_filter_live_predictions(cases, client)
         else:
             if predictions_path is None:
                 raise ValueError(
                     "filter_classification requires --predictions unless --live is set."
                 )
             predictions = load_filter_predictions(predictions_path)
+
+        return evaluator.run(cases, predictions)
+
+    if suite == "review_actions":
+        cases = load_review_dataset(input_path)
+        evaluator = ReviewActionsEvaluator(pass_threshold=pass_threshold)
+
+        if live:
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY is required for --live review_actions runs."
+                )
+            client = anthropic.Anthropic(api_key=api_key)
+            predictions = collect_review_live_predictions(cases, client)
+        else:
+            if predictions_path is None:
+                raise ValueError(
+                    "review_actions requires --predictions unless --live is set."
+                )
+            predictions = load_review_predictions(predictions_path)
 
         return evaluator.run(cases, predictions)
 
@@ -154,12 +195,17 @@ def main(argv: list[str] | None = None) -> int:
     if not input_path.exists():
         parser.error(f"Input file not found: {input_path}")
 
-    predictions_path = args.predictions.resolve() if args.predictions else None
-    if args.suite == "filter_classification" and not args.live:
+    predictions_path = (
+        args.predictions or SUITE_PREDICTION_DEFAULTS.get(args.suite)
+    )
+    if predictions_path is not None:
+        predictions_path = predictions_path.resolve()
+
+    if args.suite in SUITE_PREDICTION_DEFAULTS and not args.live:
         if predictions_path is None or not predictions_path.exists():
             parser.error(
                 f"Predictions file not found: {predictions_path}. "
-                "Use --live to score against the live filter agent."
+                f"Use --live to score against the live {args.suite} agent."
             )
 
     try:
