@@ -16,11 +16,15 @@ from evals.evaluators.base import (
     load_pipeline_output,
     load_review_dataset,
     load_review_predictions,
+    load_translation_dataset,
+    load_translation_predictions,
 )
 from evals.evaluators.extract_phrase_recall import ExtractPhraseRecallEvaluator
 from evals.evaluators.filter_classification import FilterClassificationEvaluator
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import ReviewActionsEvaluator
+from evals.evaluators.translation_quality import TranslationQualityEvaluator
+from evals.runners.compare_runs import compare_runs
 from evals.runners.run_evals import run_suite
 
 FIXTURE_PATH = (
@@ -63,6 +67,20 @@ EXTRACT_PREDICTIONS_PATH = (
     / "datasets"
     / "fixtures"
     / "extract_predictions.jsonl"
+)
+TRANSLATION_DATASET_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "translation"
+    / "phrases.jsonl"
+)
+TRANSLATION_PREDICTIONS_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "fixtures"
+    / "translation_judge_predictions.jsonl"
 )
 
 
@@ -260,3 +278,102 @@ class TestExtractPhraseRecallEvaluator:
 
         assert result.evaluator == "extract_phrase_recall"
         assert result.metrics["recall"] == pytest.approx(6 / 9)
+
+
+class TestTranslationQualityEvaluator:
+    def test_scores_cached_judge_predictions_with_one_misclassification(self):
+        cases = load_translation_dataset(TRANSLATION_DATASET_PATH)
+        predictions = load_translation_predictions(TRANSLATION_PREDICTIONS_PATH)
+
+        result = TranslationQualityEvaluator(pass_threshold=1.0).run(cases, predictions)
+
+        assert result.metrics["total_cases"] == 10
+        assert result.metrics["correct"] == 9
+        assert result.score == pytest.approx(0.9)
+        assert result.passed is False
+        assert len(result.failures) == 1
+        assert result.failures[0].case_id == "translation-006"
+        assert result.failures[0].category == "false_inadequate"
+
+    def test_passes_when_all_judge_predictions_match_labels(self):
+        from evals.evaluators.translation_quality import TranslationJudgment
+
+        cases = load_translation_dataset(TRANSLATION_DATASET_PATH)
+        predictions = {
+            case.id: TranslationJudgment(adequate=case.expected_adequate)
+            for case in cases
+        }
+
+        result = TranslationQualityEvaluator().run(cases, predictions)
+
+        assert result.score == 1.0
+        assert result.passed is True
+        assert result.failures == []
+
+    def test_run_suite_offline_translation_quality(self):
+        result = run_suite(
+            "translation_quality",
+            TRANSLATION_DATASET_PATH,
+            predictions_path=TRANSLATION_PREDICTIONS_PATH,
+        )
+
+        assert result.evaluator == "translation_quality"
+        assert result.metrics["accuracy"] == pytest.approx(0.9)
+
+
+class TestCompareRuns:
+    def test_detects_regression_and_improvement(self, tmp_path):
+        baseline_dir = tmp_path / "baseline"
+        candidate_dir = tmp_path / "candidate"
+        baseline_dir.mkdir()
+        candidate_dir.mkdir()
+
+        (baseline_dir / "scores.json").write_text(
+            json.dumps(
+                {
+                    "run_id": "baseline-run",
+                    "scores": {
+                        "filter_classification": {
+                            "passed": True,
+                            "score": 0.9,
+                            "metrics": {},
+                        },
+                        "translation_quality": {
+                            "passed": True,
+                            "score": 1.0,
+                            "metrics": {},
+                        },
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        (candidate_dir / "scores.json").write_text(
+            json.dumps(
+                {
+                    "run_id": "candidate-run",
+                    "scores": {
+                        "filter_classification": {
+                            "passed": False,
+                            "score": 0.8,
+                            "metrics": {},
+                        },
+                        "translation_quality": {
+                            "passed": True,
+                            "score": 1.0,
+                            "metrics": {},
+                        },
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        baseline = json.loads((baseline_dir / "scores.json").read_text(encoding="utf-8"))
+        candidate = json.loads((candidate_dir / "scores.json").read_text(encoding="utf-8"))
+        comparisons = compare_runs(baseline, candidate)
+
+        by_evaluator = {item.evaluator: item for item in comparisons}
+        assert by_evaluator["filter_classification"].status == "regressed"
+        assert by_evaluator["filter_classification"].delta == pytest.approx(-0.1)
+        assert by_evaluator["translation_quality"].status == "unchanged"
