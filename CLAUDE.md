@@ -33,6 +33,7 @@ that passed tool validation are kept.
 | `validate_url_reachable(url)` | `src/tools/validate_url_reachable.py` | `search_agent.py` | HTTP HEAD request; URL responds 2xx/3xx |
 | `verify_quote(sentence, article_text)` | `src/tools/verify_quote.py` | `extract_agent.py` | `sentence_context` is a verbatim quote from the article |
 | `validate_translation(phrase, translation)` | `src/tools/validate_translation.py` | `extract_agent.py` | Translation is non-empty and not a lazy copy of the source phrase |
+| `validate_topic(topic)` | `src/tools/validate_topic.py` | `orchestrator.py` | Topic is non-empty, within length limits, and safe for filenames/prompts |
 
 `search_agent.py` also uses Anthropic's server-executed `web_search` tool.
 `filter_agent.py` uses `web_search` only (no custom tools).
