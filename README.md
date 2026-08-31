@@ -221,6 +221,16 @@ Gold URLs are stable review links a human verified for each topic. Recall
 measures whether search returned those known-good candidates (filter still
 judges page content afterward).
 
+Run composite pipeline quality on a saved `PipelineOutput`:
+
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite pipeline_quality \
+  --input evals/datasets/fixtures/sample_pipeline_output.json
+```
+
+Use `evals/datasets/fixtures/pipeline_output_good.json` for a passing example.
+
 Compare two saved eval runs:
 
 ```bash
@@ -243,7 +253,7 @@ evals/
 │   ├── translation/phrases.jsonl  # human-labeled translation adequacy cases
 │   ├── search/gold_urls.jsonl  # stable gold review URLs per topic
 │   └── fixtures/               # sample PipelineOutput + cached predictions
-├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall, translation_quality, search_url_recall
+├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall, translation_quality, search_url_recall, pipeline_quality
 └── runners/
     ├── run_evals.py            # CLI entry point
     └── compare_runs.py         # diff scores between two saved runs
@@ -293,7 +303,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 19**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 20**.
 
 ### Initial Setup ✅
 
@@ -408,14 +418,27 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 19
 - [x] Add `compare_runs` CLI to diff scores across eval runs
 - [x] Support live LLM judge runs via `--live` (local, API key required)
 
-### PR 18 — Eval: Search URL Recall
+### PR 18 — Eval: Search URL Recall ✅
 
 - [x] Add stable gold URL dataset for fixed search topics
 - [x] Add search URL recall evaluator against gold links
 - [x] Support offline scoring via cached predictions
 - [x] Support live scoring via `--live` (calls `search_agent` per topic)
 
-### PR 19 — Continuous Integration
+### PR 19 — Eval: Pipeline Quality ✅
+
+- [x] Add composite pipeline quality evaluator on saved `PipelineOutput`
+- [x] Score structure, phrase coverage, quote faithfulness, translation validity, and level-floor compliance
+- [x] Add passing and failing fixtures plus deterministic tests
+- [x] Register `pipeline_quality` suite in the eval CLI
+
+### PR 20 — Input Guardrails
+
+- [ ] Add `validate_topic()` client-side tool
+- [ ] Reject empty, oversized, or unsafe topic strings in the orchestrator
+- [ ] Align CLI validation with existing Streamlit checks
+
+### PR 21 — Continuous Integration
 
 - [ ] Add GitHub Actions workflow
 - [ ] Set up Python and uv in CI
@@ -423,7 +446,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 19
 - [ ] Run deterministic evals in CI (no API key required)
 - [ ] Add linting with Ruff
 
-### PR 20 — Containerization
+### PR 22 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -431,7 +454,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 19
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 21 — Azure Container Apps Deployment
+### PR 23 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -441,7 +464,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 19
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 22 — Continuous Deployment
+### PR 24 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`

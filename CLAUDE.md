@@ -88,6 +88,7 @@ API calls required.
 | `extract_phrase_recall` | gold phrase dataset (`.jsonl`) | phrase recall against human labels |
 | `translation_quality` | labeled translation dataset (`.jsonl`) | judge accuracy vs human adequacy labels |
 | `search_url_recall` | gold URL dataset (`.jsonl`) | URL recall against stable review links |
+| `pipeline_quality` | `PipelineOutput` JSON | composite score: structure, phrase coverage, quotes, translations, level floor |
 
 Run locally:
 ```bash
@@ -119,6 +120,10 @@ uv run python -m evals.runners.run_evals \
   --suite search_url_recall \
   --input evals/datasets/search/gold_urls.jsonl \
   --predictions evals/datasets/fixtures/search_predictions.jsonl
+
+uv run python -m evals.runners.run_evals \
+  --suite pipeline_quality \
+  --input evals/datasets/fixtures/sample_pipeline_output.json
 ```
 
 Use `--live` with `filter_classification`, `review_actions`,

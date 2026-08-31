@@ -1,0 +1,63 @@
+{
+  "topic": "Entroncamento",
+  "source_language": "portuguese",
+  "translation_language": "german",
+  "user_level": "C1",
+  "articles": [
+    {
+      "title": "Entroncamento, a Crítica",
+      "author": "Matilde Sousa",
+      "url": "https://example.com/entroncamento-review-1",
+      "source_name": "example.com",
+      "full_text": "Em Entroncamento acompanhamos Laura, que foge de um passado turbulento. Contudo, começa a entrar em pequenos esquemas e crimes.",
+      "phrases": [
+        {
+          "phrase": "passado turbulento",
+          "sentence_context": "Em Entroncamento acompanhamos Laura, que foge de um passado turbulento.",
+          "translation": "turbulente Vergangenheit",
+          "category": "vocab",
+          "estimated_level": "C1"
+        },
+        {
+          "phrase": "entrar em pequenos esquemas",
+          "sentence_context": "Contudo, começa a entrar em pequenos esquemas e crimes.",
+          "translation": "in kleine Machenschaften verwickelt werden",
+          "category": "idiom",
+          "estimated_level": "C1"
+        }
+      ]
+    },
+    {
+      "title": "Entroncamento: comunidades marginalizadas",
+      "author": "Ana Silva",
+      "url": "https://example.com/entroncamento-review-2",
+      "source_name": "example.com",
+      "full_text": "Na forma como apresenta estas comunidades marginalizadas, o filme mostra a marginalização destas comunidades ao longo da narrativa.",
+      "phrases": [
+        {
+          "phrase": "comunidades marginalizadas",
+          "sentence_context": "Na forma como apresenta estas comunidades marginalizadas, o filme mostra a marginalização destas comunidades ao longo da narrativa.",
+          "translation": "marginalisierte Gemeinschaften",
+          "category": "vocab",
+          "estimated_level": "C1"
+        }
+      ]
+    },
+    {
+      "title": "Entroncamento: teia de cumplicidades",
+      "author": "João Costa",
+      "url": "https://example.com/entroncamento-review-3",
+      "source_name": "example.com",
+      "full_text": "Laura fica envolvida numa teia de cumplicidades difícil de escapar ao longo do filme.",
+      "phrases": [
+        {
+          "phrase": "teia de cumplicidades",
+          "sentence_context": "Laura fica envolvida numa teia de cumplicidades difícil de escapar ao longo do filme.",
+          "translation": "Netz aus Komplizenschaften",
+          "category": "idiom",
+          "estimated_level": "C1"
+        }
+      ]
+    }
+  ]
+}
