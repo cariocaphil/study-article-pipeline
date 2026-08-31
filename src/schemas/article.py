@@ -1,6 +1,6 @@
-from pydantic import BaseModel
 from enum import Enum
-from typing import Optional
+
+from pydantic import BaseModel
 
 
 class CEFRLevel(str, Enum):
@@ -27,20 +27,20 @@ class PhraseCategory(str, Enum):
 
 
 class ExtractedPhrase(BaseModel):
-    phrase: str                    # the word, expression, or construction
-    sentence_context: str          # the sentence it appeared in
-    translation: str               # in the user's target language
+    phrase: str  # the word, expression, or construction
+    sentence_context: str  # the sentence it appeared in
+    translation: str  # in the user's target language
     category: PhraseCategory
-    estimated_level: CEFRLevel     # agent's estimate of this item's difficulty
+    estimated_level: CEFRLevel  # agent's estimate of this item's difficulty
 
 
 class Article(BaseModel):
     title: str
-    author: Optional[str] = None   # None if not found on the page
+    author: str | None = None  # None if not found on the page
     url: str
-    source_name: str               # e.g. "fiocondutor.com.pt"
-    full_text: str                 # full article body
-    phrases: list[ExtractedPhrase] # filtered to >= user's CEFR level
+    source_name: str  # e.g. "fiocondutor.com.pt"
+    full_text: str  # full article body
+    phrases: list[ExtractedPhrase]  # filtered to >= user's CEFR level
 
 
 class PipelineOutput(BaseModel):

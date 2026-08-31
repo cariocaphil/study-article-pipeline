@@ -4,8 +4,9 @@ Takes a validated PipelineOutput and produces a printable .docx file.
 """
 
 from docx import Document
-from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Cm
+
 from src.schemas.article import PipelineOutput
 
 
@@ -25,9 +26,7 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
         section.right_margin = Cm(4)  # wider right margin for your pen notes
 
     # ── Document title ────────────────────────────────────────────────────────
-    title = doc.add_heading(
-        f'Study Article Collection regarding "{output.topic}"', level=1
-    )
+    title = doc.add_heading(f'Study Article Collection regarding "{output.topic}"', level=1)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # ── Metadata line ─────────────────────────────────────────────────────────
@@ -43,7 +42,6 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
 
     # ── Articles ──────────────────────────────────────────────────────────────
     for i, article in enumerate(output.articles, start=1):
-
         # Article heading
         doc.add_heading(f"Article {i}", level=2)
 
@@ -83,7 +81,9 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
         else:
             for phrase in article.phrases:
                 p = doc.add_paragraph(style="List Bullet")
-                p.add_run(f"[{phrase.category.value}] [{phrase.estimated_level.value}] ").bold = True
+                p.add_run(
+                    f"[{phrase.category.value}] [{phrase.estimated_level.value}] "
+                ).bold = True
                 p.add_run(f"{phrase.phrase}").bold = True
                 p.add_run(f" — {phrase.translation}")
                 # Sentence context on the next line, indented
@@ -102,9 +102,7 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
 
 # ── Manual test ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    from src.schemas.article import (
-        Article, ExtractedPhrase, CEFRLevel, PhraseCategory
-    )
+    from src.schemas.article import Article, CEFRLevel, ExtractedPhrase, PhraseCategory
 
     sample = PipelineOutput(
         topic="Entroncamento",

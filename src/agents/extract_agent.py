@@ -8,7 +8,8 @@ Returns a list of ExtractedPhrase objects.
 import json
 
 import anthropic
-from src.schemas.article import ExtractedPhrase, CEFRLevel, PhraseCategory
+
+from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
 from src.tools.validate_translation import validate_translation
 from src.tools.verify_quote import verify_quote
 from src.utils import load_skill
@@ -75,9 +76,7 @@ CONTINUATION_PROMPT = (
 
 
 def _response_text(response) -> str:
-    return " ".join(
-        block.text for block in response.content if hasattr(block, "text")
-    )
+    return " ".join(block.text for block in response.content if hasattr(block, "text"))
 
 
 def extract_phrases(
@@ -196,7 +195,9 @@ Example format:
             continue
 
     if not isinstance(raw_phrases, list):
-        raise ValueError("Extract agent could not parse phrase list.\nExtract agent response was not a JSON array.")
+        raise ValueError(
+            "Extract agent could not parse phrase list.\nExtract agent response was not a JSON array."
+        )
 
     phrases = []
     for item in raw_phrases:
@@ -205,15 +206,11 @@ Example format:
         translation_text = item.get("translation", "")
 
         if verification_results.get(sentence_context) is not True:
-            print(
-                f"[extract_agent] Skipping unverified quote: {sentence_context[:80]}"
-            )
+            print(f"[extract_agent] Skipping unverified quote: {sentence_context[:80]}")
             continue
 
         if translation_results.get((phrase_text, translation_text)) is not True:
-            print(
-                f"[extract_agent] Skipping invalid translation: {phrase_text[:80]}"
-            )
+            print(f"[extract_agent] Skipping invalid translation: {phrase_text[:80]}")
             continue
 
         try:
@@ -238,6 +235,7 @@ Example format:
 # ── Manual test ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import os
+
     from dotenv import load_dotenv
 
     load_dotenv()

@@ -7,12 +7,11 @@ translation validity, and CEFR level-floor compliance.
 
 from __future__ import annotations
 
-from src.schemas.article import PipelineOutput
-from src.tools.validate_translation import validate_translation
-
 from evals.evaluators.base import EvalFailure, EvalResult
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.utils import safe_divide
+from src.schemas.article import PipelineOutput
+from src.tools.validate_translation import validate_translation
 
 DEFAULT_PASS_THRESHOLD = 1.0
 MIN_ARTICLES = 3
@@ -85,9 +84,9 @@ class PipelineQualityEvaluator:
             phrase_coverage = 0.0
         subscores["phrase_coverage"] = phrase_coverage
 
-        quote_result = QuoteFaithfulnessEvaluator(
-            pass_threshold=self.pass_threshold
-        ).run(pipeline_output, case_id=case_id)
+        quote_result = QuoteFaithfulnessEvaluator(pass_threshold=self.pass_threshold).run(
+            pipeline_output, case_id=case_id
+        )
         subscores["quote_faithfulness"] = quote_result.score
         failures.extend(quote_result.failures)
 
@@ -132,12 +131,8 @@ class PipelineQualityEvaluator:
                         )
                     )
 
-        subscores["translation_validity"] = safe_divide(
-            valid_translations, total_phrases
-        )
-        subscores["level_floor_compliance"] = safe_divide(
-            level_compliant_phrases, total_phrases
-        )
+        subscores["translation_validity"] = safe_divide(valid_translations, total_phrases)
+        subscores["level_floor_compliance"] = safe_divide(level_compliant_phrases, total_phrases)
 
         score = sum(subscores.values()) / len(subscores)
 

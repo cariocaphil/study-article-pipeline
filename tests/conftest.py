@@ -67,8 +67,7 @@ def sample_phrases() -> list[ExtractedPhrase]:
         ExtractedPhrase(
             phrase="Entroncamento",
             sentence_context=(
-                'Em "Entroncamento" acompanhamos Laura, que foge de um '
-                "passado turbulento."
+                'Em "Entroncamento" acompanhamos Laura, que foge de um passado turbulento.'
             ),
             translation="Entroncamento (Ortsname)",
             category=PhraseCategory.vocab,

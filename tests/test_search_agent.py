@@ -67,11 +67,7 @@ class TestSearchArticlesToolLoop:
         client.messages.create.side_effect = [
             _response([_tool_use("tool-1", validated_url)], "tool_use"),
             _response(
-                [
-                    _text_block(
-                        '["https://example.com/validated", "https://example.com/skipped"]'
-                    )
-                ],
+                [_text_block('["https://example.com/validated", "https://example.com/skipped"]')],
                 "end_turn",
             ),
         ]

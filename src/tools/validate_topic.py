@@ -12,9 +12,7 @@ MAX_TOPIC_LENGTH = 200
 
 UNSAFE_TOPIC_CHARS = re.compile(r'[/\\:*"<>|\x00]')
 FILENAME_UNSAFE_CHARS = re.compile(r'[/\\:*?"<>|]')
-INJECTION_PATTERN = re.compile(
-    r"(?i)(ignore\s+(all\s+)?previous|system\s*:|<\s*/?\s*script\b|```)"
-)
+INJECTION_PATTERN = re.compile(r"(?i)(ignore\s+(all\s+)?previous|system\s*:|<\s*/?\s*script\b|```)")
 
 
 def topic_validation_error(topic: str) -> str | None:

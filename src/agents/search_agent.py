@@ -100,9 +100,7 @@ Example format: ["https://...", "https://...", "https://..."]
 
         break
 
-    full_text = " ".join(
-        block.text for block in response.content if hasattr(block, "text")
-    )
+    full_text = " ".join(block.text for block in response.content if hasattr(block, "text"))
 
     try:
         urls = extract_json(full_text, "[", "]")
@@ -126,6 +124,7 @@ Example format: ["https://...", "https://...", "https://..."]
 # ── Manual test ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import os
+
     from dotenv import load_dotenv
 
     load_dotenv()

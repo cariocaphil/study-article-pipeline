@@ -171,9 +171,7 @@ def load_review_dataset(path: Path):
         ReviewCase(
             id=record["id"],
             topic=record["topic"],
-            phrases=[
-                ExtractedPhrase.model_validate(item) for item in record["phrases"]
-            ],
+            phrases=[ExtractedPhrase.model_validate(item) for item in record["phrases"]],
             expected_actions=record["expected_actions"],
         )
         for record in load_jsonl(path)

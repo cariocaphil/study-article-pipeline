@@ -13,8 +13,7 @@ import pytest
 from src.agents.filter_agent import filter_articles
 
 GOOD_REVIEW_URL = (
-    "https://www.magazine-hd.com/apps/wp/"
-    "entroncamento-critica-filme-pedro-cabeleira-ana-vilaca/"
+    "https://www.magazine-hd.com/apps/wp/entroncamento-critica-filme-pedro-cabeleira-ana-vilaca/"
 )
 SYNOPSIS_URL = "https://en.wikipedia.org/wiki/The_Shawshank_Redemption"
 

@@ -2,8 +2,6 @@
 Tests for src/tools/validate_translation.py.
 """
 
-import pytest
-
 from src.tools.validate_translation import validate_translation
 
 

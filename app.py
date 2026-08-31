@@ -100,7 +100,7 @@ if st.button("Generate study document", type="primary", use_container_width=True
                     user_level=user_level,
                     n_articles=n_articles,
                 )
-                st.success(f"Document generated successfully.")
+                st.success("Document generated successfully.")
 
                 # ── Download button ───────────────────────────────────────────
                 with open(output_path, "rb") as f:

@@ -32,15 +32,12 @@ def _sample_pipeline_output() -> PipelineOutput:
                 url="https://example.com/entroncamento-review",
                 source_name="example.com",
                 full_text=(
-                    "Em Entroncamento acompanhamos Laura, que foge de um "
-                    "passado turbulento."
+                    "Em Entroncamento acompanhamos Laura, que foge de um passado turbulento."
                 ),
                 phrases=[
                     ExtractedPhrase(
                         phrase="entrar em pequenos esquemas",
-                        sentence_context=(
-                            "começa a entrar em pequenos esquemas e crimes"
-                        ),
+                        sentence_context=("começa a entrar em pequenos esquemas e crimes"),
                         translation="in kleine Machenschaften verwickelt werden",
                         category=PhraseCategory.idiom,
                         estimated_level=CEFRLevel.C1,
