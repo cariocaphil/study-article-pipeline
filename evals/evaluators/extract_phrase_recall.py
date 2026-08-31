@@ -13,6 +13,7 @@ from typing import Callable
 import anthropic
 
 from evals.evaluators.base import EvalFailure, EvalResult
+from evals.evaluators.utils import safe_divide
 from src.schemas.article import CEFRLevel, ExtractedPhrase
 
 DEFAULT_PASS_THRESHOLD = 1.0
@@ -27,12 +28,6 @@ class ExtractRecallCase:
     translation_language: str
     user_level: CEFRLevel
     gold_phrases: list[str]
-
-
-def _safe_divide(numerator: float, denominator: float) -> float:
-    if denominator == 0:
-        return 0.0
-    return numerator / denominator
 
 
 def _normalize_phrase(phrase: str) -> str:
@@ -98,7 +93,7 @@ class ExtractPhraseRecallEvaluator:
                         )
                     )
 
-        recall = _safe_divide(matched_gold, total_gold)
+        recall = safe_divide(matched_gold, total_gold)
 
         metrics = {
             "total_gold_phrases": total_gold,

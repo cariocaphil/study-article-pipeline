@@ -13,6 +13,7 @@ from typing import Callable
 import anthropic
 
 from evals.evaluators.base import EvalFailure, EvalResult
+from evals.evaluators.utils import safe_divide
 
 DEFAULT_PASS_THRESHOLD = 1.0
 
@@ -28,12 +29,6 @@ class FilterCase:
     @property
     def expected_accept(self) -> bool:
         return self.expected == "accept"
-
-
-def _safe_divide(numerator: float, denominator: float) -> float:
-    if denominator == 0:
-        return 0.0
-    return numerator / denominator
 
 
 class FilterClassificationEvaluator:
@@ -103,10 +98,10 @@ class FilterClassificationEvaluator:
 
         total = len(cases)
         correct = true_positive + true_negative
-        accuracy = _safe_divide(correct, total)
-        precision = _safe_divide(true_positive, true_positive + false_positive)
-        recall = _safe_divide(true_positive, true_positive + false_negative)
-        f1 = _safe_divide(2 * precision * recall, precision + recall)
+        accuracy = safe_divide(correct, total)
+        precision = safe_divide(true_positive, true_positive + false_positive)
+        recall = safe_divide(true_positive, true_positive + false_negative)
+        f1 = safe_divide(2 * precision * recall, precision + recall)
 
         metrics = {
             "total_cases": total,
