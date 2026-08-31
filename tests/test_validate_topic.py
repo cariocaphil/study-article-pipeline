@@ -19,6 +19,13 @@ def test_validate_topic_accepts_normal_title():
 def test_validate_topic_accepts_title_with_punctuation():
     assert validate_topic("O riso e a faca") is True
     assert validate_topic("Entroncamento (2024)") is True
+    assert validate_topic("Que Horas Ela Volta?") is True
+
+
+def test_filename_safe_topic_strips_question_mark_for_output():
+    from src.tools.validate_topic import filename_safe_topic
+
+    assert filename_safe_topic("Que Horas Ela Volta?") == "Que_Horas_Ela_Volta"
 
 
 def test_validate_topic_rejects_empty_topic():

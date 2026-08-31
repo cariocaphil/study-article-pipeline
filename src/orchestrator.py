@@ -16,7 +16,7 @@ from src.agents.filter_agent import filter_articles
 from src.agents.extract_agent import extract_phrases
 from src.agents.review_agent import review_phrases
 from src.agents.compile_agent import compile_document
-from src.tools.validate_topic import topic_validation_error
+from src.tools.validate_topic import filename_safe_topic, topic_validation_error
 
 load_dotenv()
 
@@ -92,7 +92,7 @@ def run_pipeline(
     )
 
     filename = (
-        f"{topic.replace(' ', '_')}_{source_language}_{translation_language}_{level.value}.docx"
+        f"{filename_safe_topic(topic)}_{source_language}_{translation_language}_{level.value}.docx"
     )
     output_path = os.path.join("output", filename)
     os.makedirs("output", exist_ok=True)

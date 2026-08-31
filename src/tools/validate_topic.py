@@ -10,7 +10,8 @@ import re
 
 MAX_TOPIC_LENGTH = 200
 
-UNSAFE_TOPIC_CHARS = re.compile(r'[/\\:*?"<>|\x00]')
+UNSAFE_TOPIC_CHARS = re.compile(r'[/\\:*"<>|\x00]')
+FILENAME_UNSAFE_CHARS = re.compile(r'[/\\:*?"<>|]')
 INJECTION_PATTERN = re.compile(
     r"(?i)(ignore\s+(all\s+)?previous|system\s*:|<\s*/?\s*script\b|```)"
 )
@@ -30,6 +31,14 @@ def topic_validation_error(topic: str) -> str | None:
     if INJECTION_PATTERN.search(stripped):
         return "Topic contains disallowed content."
     return None
+
+
+def filename_safe_topic(topic: str) -> str:
+    """
+    Strip filesystem-unsafe characters and spaces for output filenames.
+    """
+    sanitized = FILENAME_UNSAFE_CHARS.sub("", topic.strip())
+    return sanitized.replace(" ", "_")
 
 
 def validate_topic(topic: str, *, quiet: bool = False) -> bool:
