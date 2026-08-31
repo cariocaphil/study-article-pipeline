@@ -165,12 +165,15 @@ def load_filter_predictions(path: Path) -> dict[str, bool]:
 
 def load_review_dataset(path: Path):
     from evals.evaluators.review_actions import ReviewCase
+    from src.schemas.article import ExtractedPhrase
 
     return [
         ReviewCase(
             id=record["id"],
             topic=record["topic"],
-            phrases=record["phrases"],
+            phrases=[
+                ExtractedPhrase.model_validate(item) for item in record["phrases"]
+            ],
             expected_actions=record["expected_actions"],
         )
         for record in load_jsonl(path)

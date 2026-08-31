@@ -8,21 +8,24 @@ Removal precision and recall are the primary metrics.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Callable, Literal
 
 import anthropic
 
 from evals.evaluators.base import EvalFailure, EvalResult
+from src.schemas.article import ExtractedPhrase
 
 DEFAULT_PASS_THRESHOLD = 1.0
+
+ReviewAction = Literal["keep", "review", "remove"]
 
 
 @dataclass
 class ReviewCase:
     id: str
     topic: str
-    phrases: list[dict[str, Any]]
-    expected_actions: dict[str, str] = field(default_factory=dict)
+    phrases: list[ExtractedPhrase]
+    expected_actions: dict[str, ReviewAction] = field(default_factory=dict)
 
 
 def _safe_divide(numerator: float, denominator: float) -> float:
@@ -31,7 +34,7 @@ def _safe_divide(numerator: float, denominator: float) -> float:
     return numerator / denominator
 
 
-def _is_removed(action: str) -> bool:
+def _is_removed(action: ReviewAction) -> bool:
     return action == "remove"
 
 
@@ -44,7 +47,7 @@ class ReviewActionsEvaluator:
     def run(
         self,
         cases: list[ReviewCase],
-        predictions: dict[str, dict[str, str]],
+        predictions: dict[str, dict[str, ReviewAction]],
     ) -> EvalResult:
         failures: list[EvalFailure] = []
         removal_tp = 0
@@ -67,7 +70,7 @@ class ReviewActionsEvaluator:
                 continue
 
             for phrase_item in case.phrases:
-                phrase = phrase_item["phrase"]
+                phrase = phrase_item.phrase
                 expected_action = case.expected_actions.get(phrase)
                 predicted_action = case_predictions.get(phrase)
 
@@ -167,21 +170,22 @@ def collect_live_predictions(
     cases: list[ReviewCase],
     client: anthropic.Anthropic,
     *,
-    review_fn: Callable[..., list] | None = None,
-) -> dict[str, dict[str, str]]:
+    review_fn: Callable[
+        [list[ExtractedPhrase], str, anthropic.Anthropic], list[ExtractedPhrase]
+    ]
+    | None = None,
+) -> dict[str, dict[str, ReviewAction]]:
     from src.agents.review_agent import review_phrases
-    from src.schemas.article import ExtractedPhrase
 
     run_review = review_fn or review_phrases
-    predictions: dict[str, dict[str, str]] = {}
+    predictions: dict[str, dict[str, ReviewAction]] = {}
 
     for case in cases:
-        phrases = [ExtractedPhrase.model_validate(item) for item in case.phrases]
-        kept = run_review(phrases, case.topic, client)
+        kept = run_review(case.phrases, case.topic, client)
         kept_phrases = {phrase.phrase for phrase in kept}
         predictions[case.id] = {
             phrase.phrase: "keep" if phrase.phrase in kept_phrases else "remove"
-            for phrase in phrases
+            for phrase in case.phrases
         }
 
     return predictions
