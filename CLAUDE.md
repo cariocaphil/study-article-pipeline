@@ -87,6 +87,7 @@ API calls required.
 | `review_actions` | labeled phrase-list dataset (`.jsonl`) | removal precision/recall/F1 and per-action accuracy |
 | `extract_phrase_recall` | gold phrase dataset (`.jsonl`) | phrase recall against human labels |
 | `translation_quality` | labeled translation dataset (`.jsonl`) | judge accuracy vs human adequacy labels |
+| `search_url_recall` | gold URL dataset (`.jsonl`) | URL recall against stable review links |
 
 Run locally:
 ```bash
@@ -113,12 +114,17 @@ uv run python -m evals.runners.run_evals \
   --suite translation_quality \
   --input evals/datasets/translation/phrases.jsonl \
   --predictions evals/datasets/fixtures/translation_judge_predictions.jsonl
+
+uv run python -m evals.runners.run_evals \
+  --suite search_url_recall \
+  --input evals/datasets/search/gold_urls.jsonl \
+  --predictions evals/datasets/fixtures/search_predictions.jsonl
 ```
 
 Use `--live` with `filter_classification`, `review_actions`,
-`extract_phrase_recall`, or `translation_quality` to score the real agents or
-judge (API key required). Offline scoring uses cached predictions in
-`evals/datasets/fixtures/`.
+`extract_phrase_recall`, `translation_quality`, or `search_url_recall` to
+score the real agents or judge (API key required). Offline scoring uses cached
+predictions in `evals/datasets/fixtures/`.
 
 Compare two saved runs:
 ```bash

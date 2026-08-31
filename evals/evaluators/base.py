@@ -235,6 +235,25 @@ def load_translation_predictions(path: Path):
     }
 
 
+def load_search_recall_dataset(path: Path):
+    from evals.evaluators.search_url_recall import SearchRecallCase
+
+    return [
+        SearchRecallCase(
+            id=record["id"],
+            topic=record["topic"],
+            source_language=record["source_language"],
+            n_articles=int(record["n_articles"]),
+            gold_urls=record["gold_urls"],
+        )
+        for record in load_jsonl(path)
+    ]
+
+
+def load_search_predictions(path: Path) -> dict[str, list[str]]:
+    return {record["id"]: record["urls"] for record in load_jsonl(path)}
+
+
 def load_scores(path: Path) -> dict[str, Any]:
     scores_path = path / "scores.json" if path.is_dir() else path
     return json.loads(scores_path.read_text(encoding="utf-8"))

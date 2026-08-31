@@ -16,6 +16,8 @@ from evals.evaluators.base import (
     load_pipeline_output,
     load_review_dataset,
     load_review_predictions,
+    load_search_predictions,
+    load_search_recall_dataset,
     load_translation_dataset,
     load_translation_predictions,
 )
@@ -23,6 +25,7 @@ from evals.evaluators.extract_phrase_recall import ExtractPhraseRecallEvaluator
 from evals.evaluators.filter_classification import FilterClassificationEvaluator
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import ReviewActionsEvaluator
+from evals.evaluators.search_url_recall import SearchUrlRecallEvaluator
 from evals.evaluators.translation_quality import TranslationQualityEvaluator
 from evals.runners.compare_runs import compare_runs
 from evals.runners.run_evals import run_suite
@@ -81,6 +84,20 @@ TRANSLATION_PREDICTIONS_PATH = (
     / "datasets"
     / "fixtures"
     / "translation_judge_predictions.jsonl"
+)
+SEARCH_DATASET_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "search"
+    / "gold_urls.jsonl"
+)
+SEARCH_PREDICTIONS_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "fixtures"
+    / "search_predictions.jsonl"
 )
 
 
@@ -319,6 +336,57 @@ class TestTranslationQualityEvaluator:
 
         assert result.evaluator == "translation_quality"
         assert result.metrics["accuracy"] == pytest.approx(0.9)
+
+
+class TestSearchUrlRecallEvaluator:
+    def test_scores_cached_predictions_with_one_missed_gold_url(self):
+        cases = load_search_recall_dataset(SEARCH_DATASET_PATH)
+        predictions = load_search_predictions(SEARCH_PREDICTIONS_PATH)
+
+        result = SearchUrlRecallEvaluator(pass_threshold=1.0).run(cases, predictions)
+
+        assert result.metrics["total_gold_urls"] == 3
+        assert result.metrics["matched_gold_urls"] == 2
+        assert result.score == pytest.approx(2 / 3)
+        assert result.passed is False
+        assert len(result.failures) == 1
+        assert result.failures[0].case_id == "search-003"
+        assert result.failures[0].category == "missed_gold_url"
+
+    def test_normalizes_urls_when_matching(self):
+        cases = load_search_recall_dataset(SEARCH_DATASET_PATH)[:1]
+        gold_url = cases[0].gold_urls[0]
+        predictions = {
+            cases[0].id: [gold_url.rstrip("/") + "/"]
+        }
+
+        result = SearchUrlRecallEvaluator().run(cases, predictions)
+
+        assert result.score == 1.0
+        assert result.passed is True
+
+    def test_passes_when_all_gold_urls_are_predicted(self):
+        cases = load_search_recall_dataset(SEARCH_DATASET_PATH)
+        predictions = {
+            case.id: case.gold_urls
+            for case in cases
+        }
+
+        result = SearchUrlRecallEvaluator().run(cases, predictions)
+
+        assert result.score == 1.0
+        assert result.passed is True
+        assert result.failures == []
+
+    def test_run_suite_offline_search_url_recall(self):
+        result = run_suite(
+            "search_url_recall",
+            SEARCH_DATASET_PATH,
+            predictions_path=SEARCH_PREDICTIONS_PATH,
+        )
+
+        assert result.evaluator == "search_url_recall"
+        assert result.metrics["recall"] == pytest.approx(2 / 3)
 
 
 class TestCompareRuns:
