@@ -84,6 +84,7 @@ API calls required.
 | `quote_faithfulness` | `PipelineOutput` JSON | % of phrases whose `sentence_context` is verbatim in `full_text` |
 | `filter_classification` | labeled URL dataset (`.jsonl`) | accuracy, precision, recall, F1 on accept/reject decisions |
 | `review_actions` | labeled phrase-list dataset (`.jsonl`) | removal precision/recall/F1 and per-action accuracy |
+| `extract_phrase_recall` | gold phrase dataset (`.jsonl`) | phrase recall and recall@k against human labels |
 
 Run locally:
 ```bash
@@ -100,12 +101,16 @@ uv run python -m evals.runners.run_evals \
   --suite review_actions \
   --input evals/datasets/review/phrase_lists.jsonl \
   --predictions evals/datasets/fixtures/review_predictions.jsonl
+
+uv run python -m evals.runners.run_evals \
+  --suite extract_phrase_recall \
+  --input evals/datasets/extract/gold_phrases.jsonl \
+  --predictions evals/datasets/fixtures/extract_predictions.jsonl
 ```
 
-Use `--live` with `filter_classification` or `review_actions` to score the real
-agents (API key required). Offline scoring uses cached predictions in
-`evals/datasets/fixtures/filter_predictions.jsonl` and
-`evals/datasets/fixtures/review_predictions.jsonl`.
+Use `--live` with `filter_classification`, `review_actions`, or
+`extract_phrase_recall` to score the real agents (API key required). Offline
+scoring uses cached predictions in `evals/datasets/fixtures/`.
 
 Results are written to `evals/results/{run_id}/` (`report.json`, `scores.json`,
 `failures.jsonl`). Fast eval tests live in `tests/test_evals.py`.

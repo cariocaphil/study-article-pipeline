@@ -9,12 +9,15 @@ import pytest
 
 from evals.evaluators.base import (
     EvalReport,
+    load_extract_predictions,
+    load_extract_recall_dataset,
     load_filter_dataset,
     load_filter_predictions,
     load_pipeline_output,
     load_review_dataset,
     load_review_predictions,
 )
+from evals.evaluators.extract_phrase_recall import ExtractPhraseRecallEvaluator
 from evals.evaluators.filter_classification import FilterClassificationEvaluator
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import ReviewActionsEvaluator
@@ -46,6 +49,20 @@ REVIEW_PREDICTIONS_PATH = (
     / "datasets"
     / "fixtures"
     / "review_predictions.jsonl"
+)
+EXTRACT_DATASET_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "extract"
+    / "gold_phrases.jsonl"
+)
+EXTRACT_PREDICTIONS_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "fixtures"
+    / "extract_predictions.jsonl"
 )
 
 
@@ -205,3 +222,42 @@ class TestReviewActionsEvaluator:
 
         assert result.evaluator == "review_actions"
         assert result.metrics["removal_f1"] == pytest.approx(2 / 3)
+
+
+class TestExtractPhraseRecallEvaluator:
+    def test_scores_cached_predictions_with_intentional_misses(self):
+        cases = load_extract_recall_dataset(EXTRACT_DATASET_PATH)
+        predictions = load_extract_predictions(EXTRACT_PREDICTIONS_PATH)
+
+        result = ExtractPhraseRecallEvaluator(pass_threshold=1.0).run(cases, predictions)
+
+        assert result.metrics["total_gold_phrases"] == 9
+        assert result.metrics["matched_gold_phrases"] == 6
+        assert result.score == pytest.approx(6 / 9)
+        assert result.metrics["recall_at_k"] == pytest.approx(6 / 9)
+        assert result.passed is False
+        assert len(result.failures) == 3
+        assert all(failure.category == "missed_gold_phrase" for failure in result.failures)
+
+    def test_passes_when_all_gold_phrases_are_predicted(self):
+        cases = load_extract_recall_dataset(EXTRACT_DATASET_PATH)
+        predictions = {
+            case.id: case.gold_phrases
+            for case in cases
+        }
+
+        result = ExtractPhraseRecallEvaluator().run(cases, predictions)
+
+        assert result.score == 1.0
+        assert result.passed is True
+        assert result.failures == []
+
+    def test_run_suite_offline_extract_phrase_recall(self):
+        result = run_suite(
+            "extract_phrase_recall",
+            EXTRACT_DATASET_PATH,
+            predictions_path=EXTRACT_PREDICTIONS_PATH,
+        )
+
+        assert result.evaluator == "extract_phrase_recall"
+        assert result.metrics["recall"] == pytest.approx(6 / 9)
