@@ -193,9 +193,7 @@ Add `--live` to score the real extract agent (requires `ANTHROPIC_API_KEY`).
 
 Gold phrases are labeled manually for fixed article excerpts. Each case lists
 phrases a human annotator would expect the extract agent to surface at the given
-CEFR level. Recall is the fraction of gold phrases found in the agent output;
-`recall@k` applies the same check to the first *k* predicted phrases (default
-*k*=10, configurable via `--recall-k`).
+CEFR level. Recall is the fraction of gold phrases found in the agent output.
 
 Results are saved under `evals/results/` (gitignored).
 
@@ -360,7 +358,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 17
 ### PR 16 — Eval: Extract Phrase Recall ✅
 
 - [x] Add human-labeled gold phrases for fixed article excerpts
-- [x] Add extract recall@k evaluator against gold dataset
+- [x] Add extract phrase recall evaluator against gold dataset
 - [x] Support offline scoring via cached predictions
 - [x] Support live scoring via `--live` (calls `extract_agent` per excerpt)
 - [x] Document labeling process and add deterministic tests

@@ -2,8 +2,7 @@
 Extract phrase recall evaluator.
 
 Scores extract agent output against human-labeled gold phrases for fixed
-article excerpts. Primary metric is phrase recall; recall@k is reported for a
-configurable k (default 10).
+article excerpts. Primary metric is phrase recall.
 """
 
 from __future__ import annotations
@@ -17,7 +16,6 @@ from evals.evaluators.base import EvalFailure, EvalResult
 from src.schemas.article import CEFRLevel, ExtractedPhrase
 
 DEFAULT_PASS_THRESHOLD = 1.0
-DEFAULT_RECALL_K = 10
 
 
 @dataclass
@@ -46,21 +44,15 @@ def _match_phrase(gold_phrase: str, predicted_phrases: set[str]) -> bool:
     return normalized_gold in predicted_phrases
 
 
-def _predicted_phrase_set(phrases: list[str], *, limit: int | None = None) -> set[str]:
-    selected = phrases if limit is None else phrases[:limit]
-    return {_normalize_phrase(phrase) for phrase in selected}
+def _predicted_phrase_set(phrases: list[str]) -> set[str]:
+    return {_normalize_phrase(phrase) for phrase in phrases}
 
 
 class ExtractPhraseRecallEvaluator:
     name = "extract_phrase_recall"
 
-    def __init__(
-        self,
-        pass_threshold: float = DEFAULT_PASS_THRESHOLD,
-        recall_k: int = DEFAULT_RECALL_K,
-    ) -> None:
+    def __init__(self, pass_threshold: float = DEFAULT_PASS_THRESHOLD) -> None:
         self.pass_threshold = pass_threshold
-        self.recall_k = recall_k
 
     def run(
         self,
@@ -70,7 +62,6 @@ class ExtractPhraseRecallEvaluator:
         failures: list[EvalFailure] = []
         matched_gold = 0
         total_gold = 0
-        matched_gold_at_k = 0
 
         for case in cases:
             case_predictions = predictions.get(case.id)
@@ -85,20 +76,15 @@ class ExtractPhraseRecallEvaluator:
                 )
                 continue
 
-            predicted_all = _predicted_phrase_set(case_predictions)
-            predicted_at_k = _predicted_phrase_set(case_predictions, limit=self.recall_k)
+            predicted_phrases = _predicted_phrase_set(case_predictions)
 
             for gold_phrase in case.gold_phrases:
                 total_gold += 1
-                matched = _match_phrase(gold_phrase, predicted_all)
-                matched_at_k = _match_phrase(gold_phrase, predicted_at_k)
+                matched = _match_phrase(gold_phrase, predicted_phrases)
 
                 if matched:
                     matched_gold += 1
-                if matched_at_k:
-                    matched_gold_at_k += 1
-
-                if not matched:
+                else:
                     failures.append(
                         EvalFailure(
                             case_id=case.id,
@@ -113,14 +99,11 @@ class ExtractPhraseRecallEvaluator:
                     )
 
         recall = _safe_divide(matched_gold, total_gold)
-        recall_at_k = _safe_divide(matched_gold_at_k, total_gold)
 
         metrics = {
             "total_gold_phrases": total_gold,
             "matched_gold_phrases": matched_gold,
             "recall": recall,
-            "recall_k": self.recall_k,
-            "recall_at_k": recall_at_k,
             "pass_threshold": self.pass_threshold,
         }
 

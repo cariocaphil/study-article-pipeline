@@ -234,7 +234,6 @@ class TestExtractPhraseRecallEvaluator:
         assert result.metrics["total_gold_phrases"] == 9
         assert result.metrics["matched_gold_phrases"] == 6
         assert result.score == pytest.approx(6 / 9)
-        assert result.metrics["recall_at_k"] == pytest.approx(6 / 9)
         assert result.passed is False
         assert len(result.failures) == 3
         assert all(failure.category == "missed_gold_phrase" for failure in result.failures)

@@ -45,7 +45,6 @@ from evals.evaluators.base import (
     new_run_id,
 )
 from evals.evaluators.extract_phrase_recall import (
-    DEFAULT_RECALL_K,
     ExtractPhraseRecallEvaluator,
     collect_live_predictions as collect_extract_live_predictions,
 )
@@ -146,12 +145,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional label for this run (stored in report config)",
     )
-    parser.add_argument(
-        "--recall-k",
-        type=int,
-        default=DEFAULT_RECALL_K,
-        help="Top-k cutoff for extract_phrase_recall recall@k metric",
-    )
     return parser
 
 
@@ -162,7 +155,6 @@ def run_suite(
     pass_threshold: float = 1.0,
     predictions_path: Path | None = None,
     live: bool = False,
-    recall_k: int = DEFAULT_RECALL_K,
 ):
     if suite == "quote_faithfulness":
         pipeline_output = load_pipeline_output(input_path)
@@ -213,10 +205,7 @@ def run_suite(
 
     if suite == "extract_phrase_recall":
         cases = load_extract_recall_dataset(input_path)
-        evaluator = ExtractPhraseRecallEvaluator(
-            pass_threshold=pass_threshold,
-            recall_k=recall_k,
-        )
+        evaluator = ExtractPhraseRecallEvaluator(pass_threshold=pass_threshold)
 
         if live:
             api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -266,7 +255,6 @@ def main(argv: list[str] | None = None) -> int:
             pass_threshold=args.pass_threshold,
             predictions_path=predictions_path,
             live=args.live,
-            recall_k=args.recall_k,
         )
     except ValueError as exc:
         parser.error(str(exc))
@@ -288,8 +276,6 @@ def main(argv: list[str] | None = None) -> int:
         report.config["predictions"] = str(predictions_path)
     if args.tag:
         report.config["tag"] = args.tag
-    if args.suite == "extract_phrase_recall":
-        report.config["recall_k"] = args.recall_k
 
     run_dir = args.output_dir.resolve() / report.run_id
     run_dir = report.save(run_dir)

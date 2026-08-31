@@ -84,7 +84,7 @@ API calls required.
 | `quote_faithfulness` | `PipelineOutput` JSON | % of phrases whose `sentence_context` is verbatim in `full_text` |
 | `filter_classification` | labeled URL dataset (`.jsonl`) | accuracy, precision, recall, F1 on accept/reject decisions |
 | `review_actions` | labeled phrase-list dataset (`.jsonl`) | removal precision/recall/F1 and per-action accuracy |
-| `extract_phrase_recall` | gold phrase dataset (`.jsonl`) | phrase recall and recall@k against human labels |
+| `extract_phrase_recall` | gold phrase dataset (`.jsonl`) | phrase recall against human labels |
 
 Run locally:
 ```bash
