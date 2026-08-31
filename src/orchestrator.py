@@ -5,17 +5,16 @@ Handles inputs, fallback logic, and file naming.
 """
 
 import os
+
 import anthropic
 from dotenv import load_dotenv
 
-from src.schemas.article import (
-    Article, CEFRLevel, PipelineOutput
-)
-from src.agents.search_agent import search_articles
-from src.agents.filter_agent import filter_articles
-from src.agents.extract_agent import extract_phrases
-from src.agents.review_agent import review_phrases
 from src.agents.compile_agent import compile_document
+from src.agents.extract_agent import extract_phrases
+from src.agents.filter_agent import filter_articles
+from src.agents.review_agent import review_phrases
+from src.agents.search_agent import search_articles
+from src.schemas.article import Article, CEFRLevel, PipelineOutput
 from src.tools.validate_topic import filename_safe_topic, topic_validation_error
 
 load_dotenv()
@@ -42,13 +41,13 @@ def run_pipeline(
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     level = CEFRLevel(user_level.upper())
 
-    print(f"\n── Starting pipeline ──────────────────────────────────────")
+    print("\n── Starting pipeline ──────────────────────────────────────")
     print(f"Topic: {topic}")
     print(f"Source language: {source_language}")
     print(f"Translation language: {translation_language}")
     print(f"User level: {level.value}")
     print(f"Articles requested: {n_articles}")
-    print(f"───────────────────────────────────────────────────────────\n")
+    print("───────────────────────────────────────────────────────────\n")
 
     # ── Step 1: Search ────────────────────────────────────────────────────────
     urls = search_articles(topic, source_language, n_articles, client)
@@ -73,14 +72,16 @@ def run_pipeline(
             client=client,
         )
         phrases = review_phrases(phrases, topic, client)
-        articles.append(Article(
-            title=raw["title"],
-            author=raw["author"],
-            url=raw["url"],
-            source_name=raw["source_name"],
-            full_text=raw["full_text"],
-            phrases=phrases,
-        ))
+        articles.append(
+            Article(
+                title=raw["title"],
+                author=raw["author"],
+                url=raw["url"],
+                source_name=raw["source_name"],
+                full_text=raw["full_text"],
+                phrases=phrases,
+            )
+        )
 
     # ── Step 4: Compile ───────────────────────────────────────────────────────
     pipeline_output = PipelineOutput(
@@ -101,6 +102,7 @@ def run_pipeline(
 
     # Trigger post-run hook
     import subprocess
+
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     subprocess.run(["bash", f"{project_root}/.claude/hooks/post-run.sh"], cwd=project_root)
 

@@ -2,8 +2,6 @@
 Tests for src/tools/verify_quote.py.
 """
 
-import pytest
-
 from src.tools.verify_quote import verify_quote
 
 ARTICLE_TEXT = """
@@ -15,17 +13,12 @@ começa a entrar em pequenos esquemas e crimes.
 
 
 def test_verify_quote_returns_true_for_exact_match():
-    sentence = (
-        'Em "Entroncamento" acompanhamos Laura, que foge de um passado turbulento,'
-    )
+    sentence = 'Em "Entroncamento" acompanhamos Laura, que foge de um passado turbulento,'
     assert verify_quote(sentence, ARTICLE_TEXT) is True
 
 
 def test_verify_quote_returns_true_when_whitespace_differs():
-    sentence = (
-        "Em \"Entroncamento\" acompanhamos Laura,\n"
-        "que foge de um passado turbulento,"
-    )
+    sentence = 'Em "Entroncamento" acompanhamos Laura,\nque foge de um passado turbulento,'
     assert verify_quote(sentence, ARTICLE_TEXT) is True
 
 

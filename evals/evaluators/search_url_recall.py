@@ -7,8 +7,8 @@ Primary metric is URL recall: did search surface the known-good links?
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 from urllib.parse import urlparse, urlunparse
 
 import anthropic

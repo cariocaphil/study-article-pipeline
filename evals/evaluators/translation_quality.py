@@ -7,8 +7,8 @@ Supports offline scoring from cached judge predictions or live judge runs.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import anthropic
 
@@ -168,15 +168,11 @@ Example:
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
     )
-    raw_text = " ".join(
-        block.text for block in response.content if hasattr(block, "text")
-    )
+    raw_text = " ".join(block.text for block in response.content if hasattr(block, "text"))
     parsed = extract_json(raw_text, "{", "}")
 
     if not isinstance(parsed, dict) or "adequate" not in parsed:
-        raise ValueError(
-            f"Translation judge could not parse verdict for {case.id}: {raw_text}"
-        )
+        raise ValueError(f"Translation judge could not parse verdict for {case.id}: {raw_text}")
 
     return TranslationJudgment(
         adequate=bool(parsed["adequate"]),
@@ -188,8 +184,7 @@ def collect_live_predictions(
     cases: list[TranslationCase],
     client: anthropic.Anthropic,
     *,
-    judge_fn: Callable[[TranslationCase, anthropic.Anthropic], TranslationJudgment]
-    | None = None,
+    judge_fn: Callable[[TranslationCase, anthropic.Anthropic], TranslationJudgment] | None = None,
 ) -> dict[str, TranslationJudgment]:
     run_judge = judge_fn or judge_translation
     return {case.id: run_judge(case, client) for case in cases}

@@ -66,11 +66,7 @@ REVIEW_PREDICTIONS_PATH = (
     / "review_predictions.jsonl"
 )
 EXTRACT_DATASET_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "evals"
-    / "datasets"
-    / "extract"
-    / "gold_phrases.jsonl"
+    Path(__file__).resolve().parent.parent / "evals" / "datasets" / "extract" / "gold_phrases.jsonl"
 )
 EXTRACT_PREDICTIONS_PATH = (
     Path(__file__).resolve().parent.parent
@@ -80,11 +76,7 @@ EXTRACT_PREDICTIONS_PATH = (
     / "extract_predictions.jsonl"
 )
 TRANSLATION_DATASET_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "evals"
-    / "datasets"
-    / "translation"
-    / "phrases.jsonl"
+    Path(__file__).resolve().parent.parent / "evals" / "datasets" / "translation" / "phrases.jsonl"
 )
 TRANSLATION_PREDICTIONS_PATH = (
     Path(__file__).resolve().parent.parent
@@ -94,11 +86,7 @@ TRANSLATION_PREDICTIONS_PATH = (
     / "translation_judge_predictions.jsonl"
 )
 SEARCH_DATASET_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "evals"
-    / "datasets"
-    / "search"
-    / "gold_urls.jsonl"
+    Path(__file__).resolve().parent.parent / "evals" / "datasets" / "search" / "gold_urls.jsonl"
 )
 SEARCH_PREDICTIONS_PATH = (
     Path(__file__).resolve().parent.parent
@@ -200,10 +188,7 @@ class TestFilterClassificationEvaluator:
 
     def test_passes_when_all_predictions_match_labels(self):
         cases = load_filter_dataset(FILTER_DATASET_PATH)
-        predictions = {
-            case.id: case.expected_accept
-            for case in cases
-        }
+        predictions = {case.id: case.expected_accept for case in cases}
 
         result = FilterClassificationEvaluator().run(cases, predictions)
 
@@ -245,10 +230,7 @@ class TestReviewActionsEvaluator:
 
     def test_passes_when_all_predictions_match_labels(self):
         cases = load_review_dataset(REVIEW_DATASET_PATH)
-        predictions = {
-            case.id: case.expected_actions
-            for case in cases
-        }
+        predictions = {case.id: case.expected_actions for case in cases}
 
         result = ReviewActionsEvaluator().run(cases, predictions)
 
@@ -283,10 +265,7 @@ class TestExtractPhraseRecallEvaluator:
 
     def test_passes_when_all_gold_phrases_are_predicted(self):
         cases = load_extract_recall_dataset(EXTRACT_DATASET_PATH)
-        predictions = {
-            case.id: case.gold_phrases
-            for case in cases
-        }
+        predictions = {case.id: case.gold_phrases for case in cases}
 
         result = ExtractPhraseRecallEvaluator().run(cases, predictions)
 
@@ -325,8 +304,7 @@ class TestTranslationQualityEvaluator:
 
         cases = load_translation_dataset(TRANSLATION_DATASET_PATH)
         predictions = {
-            case.id: TranslationJudgment(adequate=case.expected_adequate)
-            for case in cases
+            case.id: TranslationJudgment(adequate=case.expected_adequate) for case in cases
         }
 
         result = TranslationQualityEvaluator().run(cases, predictions)
@@ -364,9 +342,7 @@ class TestSearchUrlRecallEvaluator:
     def test_normalizes_urls_when_matching(self):
         cases = load_search_recall_dataset(SEARCH_DATASET_PATH)[:1]
         gold_url = cases[0].gold_urls[0]
-        predictions = {
-            cases[0].id: [gold_url.rstrip("/") + "/"]
-        }
+        predictions = {cases[0].id: [gold_url.rstrip("/") + "/"]}
 
         result = SearchUrlRecallEvaluator().run(cases, predictions)
 
@@ -375,10 +351,7 @@ class TestSearchUrlRecallEvaluator:
 
     def test_passes_when_all_gold_urls_are_predicted(self):
         cases = load_search_recall_dataset(SEARCH_DATASET_PATH)
-        predictions = {
-            case.id: case.gold_urls
-            for case in cases
-        }
+        predictions = {case.id: case.gold_urls for case in cases}
 
         result = SearchUrlRecallEvaluator().run(cases, predictions)
 

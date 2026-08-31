@@ -64,16 +64,12 @@ def _phrase_item(
 @patch("src.agents.extract_agent.validate_translation")
 @patch("src.agents.extract_agent.verify_quote")
 class TestExtractPhrasesToolLoop:
-    def test_returns_only_verified_quotes_and_translations(
-        self, mock_verify, mock_validate
-    ):
+    def test_returns_only_verified_quotes_and_translations(self, mock_verify, mock_validate):
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
         unverified_sentence = "Laura foge de um passado calmo."
         mock_verify.side_effect = lambda sentence, _: sentence == verified_sentence
-        mock_validate.side_effect = (
-            lambda phrase, translation: translation != phrase
-        )
+        mock_validate.side_effect = lambda phrase, translation: translation != phrase
 
         client = MagicMock()
         client.messages.create.side_effect = [
@@ -157,15 +153,11 @@ class TestExtractPhrasesToolLoop:
         assert len(phrases) == 1
         assert phrases[0].sentence_context == verified_sentence
 
-    def test_drops_items_not_validated_by_translation_tool(
-        self, mock_verify, mock_validate
-    ):
+    def test_drops_items_not_validated_by_translation_tool(self, mock_verify, mock_validate):
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
-        mock_validate.side_effect = (
-            lambda phrase, translation: translation == "turbulent"
-        )
+        mock_validate.side_effect = lambda phrase, translation: translation == "turbulent"
 
         client = MagicMock()
         client.messages.create.side_effect = [
@@ -208,9 +200,7 @@ class TestExtractPhrasesToolLoop:
         assert len(phrases) == 1
         assert phrases[0].phrase == "turbulento"
 
-    def test_skips_items_below_user_level_after_validation(
-        self, mock_verify, mock_validate
-    ):
+    def test_skips_items_below_user_level_after_validation(self, mock_verify, mock_validate):
         article = "Laura foge de um passado turbulento."
         sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
@@ -229,7 +219,9 @@ class TestExtractPhrasesToolLoop:
                 [
                     _text_block(
                         _phrases_json(
-                            _phrase_item("Laura", sentence, translation="Laura", estimated_level="B1")
+                            _phrase_item(
+                                "Laura", sentence, translation="Laura", estimated_level="B1"
+                            )
                         )
                     )
                 ],
@@ -295,9 +287,7 @@ class TestExtractPhrasesToolLoop:
         assert len(phrases) == 1
         assert client.messages.create.call_count == 3
 
-    def test_raises_when_final_response_is_not_parseable_json(
-        self, mock_verify, mock_validate
-    ):
+    def test_raises_when_final_response_is_not_parseable_json(self, mock_verify, mock_validate):
         article = "Laura foge de um passado turbulento."
         sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True

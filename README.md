@@ -147,6 +147,17 @@ Skip slow tests that call the live Anthropic API:
 uv run pytest -m "not slow"
 ```
 
+Run lint checks locally:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+```
+
+CI runs on pushes and pull requests to `main` via GitHub Actions
+(`.github/workflows/ci.yml`): Ruff lint/format, fast pytest, and offline
+eval smoke tests. No API key is required.
+
 Tests cover agents, validation tools, JSON repair (`json_utils`), the
 Streamlit UI (`AppTest`), and deterministic evals (`tests/test_evals.py`).
 
@@ -245,6 +256,8 @@ Results are saved under `evals/results/` (gitignored).
 
 ```
 app.py                        # Streamlit web UI entry point
+.github/
+└── workflows/ci.yml          # GitHub Actions: Ruff, pytest, offline evals
 evals/
 ├── datasets/
 │   ├── filter/urls.jsonl       # labeled accept/reject URL dataset
@@ -306,7 +319,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 21**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 22**.
 
 ### Initial Setup ✅
 
@@ -441,13 +454,13 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 21
 - [x] Reject empty, oversized, or unsafe topic strings in the orchestrator
 - [x] Align CLI validation with existing Streamlit checks
 
-### PR 21 — Continuous Integration
+### PR 21 — Continuous Integration ✅
 
-- [ ] Add GitHub Actions workflow
-- [ ] Set up Python and uv in CI
-- [ ] Run fast pytest suite on pushes and pull requests (`pytest -m "not slow"`)
-- [ ] Run deterministic evals in CI (no API key required)
-- [ ] Add linting with Ruff
+- [x] Add GitHub Actions workflow
+- [x] Set up Python and uv in CI
+- [x] Run fast pytest suite on pushes and pull requests (`pytest -m "not slow"`)
+- [x] Run deterministic evals in CI (no API key required)
+- [x] Add linting with Ruff
 
 ### PR 22 — Containerization
 

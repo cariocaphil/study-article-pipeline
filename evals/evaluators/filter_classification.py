@@ -7,8 +7,8 @@ Supports offline scoring from cached predictions or live runs via filter_agent.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import anthropic
 

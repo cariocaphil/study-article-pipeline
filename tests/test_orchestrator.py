@@ -26,8 +26,9 @@ def test_run_pipeline_rejects_unsafe_topic_before_search():
 
 
 def test_run_pipeline_strips_topic_before_search():
-    with patch("src.orchestrator.search_articles", return_value=[]) as mock_search, patch(
-        "src.orchestrator.filter_articles", return_value=[]
+    with (
+        patch("src.orchestrator.search_articles", return_value=[]) as mock_search,
+        patch("src.orchestrator.filter_articles", return_value=[]),
     ):
         with pytest.raises(ValueError, match="Pipeline stopped"):
             run_pipeline("  Entroncamento  ", "portuguese", "german", "C1")

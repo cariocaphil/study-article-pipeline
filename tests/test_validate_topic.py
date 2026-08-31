@@ -2,8 +2,6 @@
 Tests for src/tools/validate_topic.py.
 """
 
-import pytest
-
 from src.tools.validate_topic import (
     MAX_TOPIC_LENGTH,
     topic_validation_error,
@@ -47,9 +45,7 @@ def test_validate_topic_rejects_oversized_topic():
 def test_validate_topic_rejects_unsafe_filename_characters():
     for topic in ["Entroncamento/Film", "topic\\name", "bad:topic", "bad|topic"]:
         assert validate_topic(topic) is False
-        assert topic_validation_error(topic) == (
-            "Topic contains characters that are not allowed."
-        )
+        assert topic_validation_error(topic) == ("Topic contains characters that are not allowed.")
 
 
 def test_validate_topic_rejects_basic_injection_patterns():
@@ -66,9 +62,7 @@ def test_validate_topic_rejects_script_markup_as_unsafe_characters():
     topic = "<script>alert(1)</script>"
 
     assert validate_topic(topic) is False
-    assert topic_validation_error(topic) == (
-        "Topic contains characters that are not allowed."
-    )
+    assert topic_validation_error(topic) == ("Topic contains characters that are not allowed.")
 
 
 def test_validate_topic_logs_valid(capsys):

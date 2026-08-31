@@ -47,8 +47,7 @@ class TestExtractJsonEmbeddedQuotes:
         # Simulates raw (unescaped) LLM output: a straight quote embedded
         # inside a string value, as opposed to a properly escaped \".
         raw = (
-            '{"sentence_context": '
-            '"Este e o primeiro filme que filmou o "Entroncamento" no pais."}'
+            '{"sentence_context": "Este e o primeiro filme que filmou o "Entroncamento" no pais."}'
         )
         data = extract_json(raw, "{", "}")
         assert data["sentence_context"] == (
@@ -97,7 +96,7 @@ class TestExtractJsonQuoteFollowedByComma:
         raw = (
             '{"full_text": "na noite lisboeta, de bebedeira e ganza, '
             '"depois de acabado o curso o que e que voces estao a pensarfazer?", '
-            'com o ruido ambiente abafando a sua voz - '
+            "com o ruido ambiente abafando a sua voz - "
             '"nao consigo ouvir, tens de falar mais alto" - ou como Maria."}'
         )
         data = extract_json(raw, "{", "}")
@@ -118,9 +117,7 @@ class TestExtractJsonQuoteFollowedByComma:
         assert data["translation"] == "he said hello in the movie"
 
     def test_quote_before_new_array_element_still_closes_string(self):
-        raw = (
-            '[{"sentence_context": "ele disse "ola""}, {"sentence_context": "tchau"}]'
-        )
+        raw = '[{"sentence_context": "ele disse "ola""}, {"sentence_context": "tchau"}]'
         data = extract_json(raw, "[", "]")
         assert data[0]["sentence_context"] == 'ele disse "ola"'
         assert data[1]["sentence_context"] == "tchau"

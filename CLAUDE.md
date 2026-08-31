@@ -142,6 +142,8 @@ uv run python -m evals.runners.compare_runs \
 Results are written to `evals/results/{run_id}/` (`report.json`, `scores.json`,
 `failures.jsonl`). Fast eval tests live in `tests/test_evals.py`.
 
+CI runs offline eval suites as smoke tests (see `.github/workflows/ci.yml`).
+
 Use `--live` with `translation_quality` locally when you want to run the LLM
 judge against the labeled dataset (requires `ANTHROPIC_API_KEY`).
 

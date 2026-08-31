@@ -7,8 +7,9 @@ Removal precision and recall are the primary metrics.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Literal
+from typing import Literal
 
 import anthropic
 
@@ -165,9 +166,7 @@ def collect_live_predictions(
     cases: list[ReviewCase],
     client: anthropic.Anthropic,
     *,
-    review_fn: Callable[
-        [list[ExtractedPhrase], str, anthropic.Anthropic], list[ExtractedPhrase]
-    ]
+    review_fn: Callable[[list[ExtractedPhrase], str, anthropic.Anthropic], list[ExtractedPhrase]]
     | None = None,
 ) -> dict[str, dict[str, ReviewAction]]:
     from src.agents.review_agent import review_phrases

@@ -7,10 +7,9 @@ the article full_text it was attributed to.
 
 from __future__ import annotations
 
+from evals.evaluators.base import EvalFailure, EvalResult
 from src.schemas.article import PipelineOutput
 from src.tools.verify_quote import verify_quote
-
-from evals.evaluators.base import EvalFailure, EvalResult
 
 DEFAULT_PASS_THRESHOLD = 1.0
 

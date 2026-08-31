@@ -100,9 +100,7 @@ def compare_runs(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Compare eval scores between two saved runs"
-    )
+    parser = argparse.ArgumentParser(description="Compare eval scores between two saved runs")
     parser.add_argument(
         "--baseline",
         type=Path,
@@ -171,9 +169,7 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
 
-    print(
-        f"Comparing {summary['baseline_run_id']} -> {summary['candidate_run_id']}"
-    )
+    print(f"Comparing {summary['baseline_run_id']} -> {summary['candidate_run_id']}")
     for item in comparisons:
         print(
             f"[{item.evaluator}] "

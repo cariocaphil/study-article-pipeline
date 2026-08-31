@@ -42,9 +42,7 @@ class TestAppLayout:
         assert "Key vocabulary with translations" in body
         assert "Useful idioms and expressions" in body
         assert "Notable grammatical constructions and sentence patterns" in body
-        assert (
-            "appear directly after the article they come from" in body
-        )
+        assert "appear directly after the article they come from" in body
         assert "come to your language lesson with both ideas" in body
 
     def test_input_widgets_present_with_expected_defaults(self, app):
@@ -91,9 +89,7 @@ class TestGenerateButton:
             app.button[0].click().run(timeout=30)
 
         mock_run.assert_not_called()
-        assert [e.value for e in app.error] == [
-            "Topic contains characters that are not allowed."
-        ]
+        assert [e.value for e in app.error] == ["Topic contains characters that are not allowed."]
 
     def test_successful_run_shows_success_and_download_button(self, app):
         app.text_input[0].input("Entroncamento")
@@ -103,9 +99,7 @@ class TestGenerateButton:
             with os.fdopen(fd, "wb") as f:
                 f.write(b"fake docx bytes")
 
-            with patch(
-                "src.orchestrator.run_pipeline", return_value=tmp_path
-            ) as mock_run:
+            with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
                 app.button[0].click().run(timeout=30)
 
             mock_run.assert_called_once_with(
@@ -135,9 +129,7 @@ class TestGenerateButton:
     def test_unexpected_error_from_pipeline_shown_with_prefix(self, app):
         app.text_input[0].input("Entroncamento")
 
-        with patch(
-            "src.orchestrator.run_pipeline", side_effect=RuntimeError("boom")
-        ):
+        with patch("src.orchestrator.run_pipeline", side_effect=RuntimeError("boom")):
             app.button[0].click().run(timeout=30)
 
         assert not app.exception
@@ -151,9 +143,7 @@ class TestGenerateButton:
             with os.fdopen(fd, "wb") as f:
                 f.write(b"fake docx bytes")
 
-            with patch(
-                "src.orchestrator.run_pipeline", return_value=tmp_path
-            ) as mock_run:
+            with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
                 app.button[0].click().run(timeout=30)
 
             assert mock_run.call_args.kwargs["topic"] == "Entroncamento"

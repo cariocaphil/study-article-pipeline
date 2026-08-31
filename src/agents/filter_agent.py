@@ -62,9 +62,7 @@ Return ONLY a JSON object with these exact keys, no other text:
             messages=[{"role": "user", "content": prompt}],
         )
 
-        full_text = " ".join(
-            block.text for block in response.content if hasattr(block, "text")
-        )
+        full_text = " ".join(block.text for block in response.content if hasattr(block, "text"))
 
         try:
             data = extract_json(full_text, "{", "}")
@@ -76,13 +74,15 @@ Return ONLY a JSON object with these exact keys, no other text:
             print(f"[filter_agent] Rejected: {url}")
             continue
 
-        results.append({
-            "title": data.get("title", ""),
-            "author": data.get("author"),
-            "url": url,
-            "source_name": data.get("source_name", ""),
-            "full_text": data.get("full_text", ""),
-        })
+        results.append(
+            {
+                "title": data.get("title", ""),
+                "author": data.get("author"),
+                "url": url,
+                "source_name": data.get("source_name", ""),
+                "full_text": data.get("full_text", ""),
+            }
+        )
         print(f"[filter_agent] Accepted: {data.get('title', url)}")
 
     return results
@@ -91,6 +91,7 @@ Return ONLY a JSON object with these exact keys, no other text:
 # ── Manual test ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import os
+
     from dotenv import load_dotenv
 
     load_dotenv()

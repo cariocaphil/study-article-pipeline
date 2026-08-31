@@ -64,24 +64,34 @@ from evals.evaluators.base import (
 )
 from evals.evaluators.extract_phrase_recall import (
     ExtractPhraseRecallEvaluator,
+)
+from evals.evaluators.extract_phrase_recall import (
     collect_live_predictions as collect_extract_live_predictions,
 )
 from evals.evaluators.filter_classification import (
     FilterClassificationEvaluator,
+)
+from evals.evaluators.filter_classification import (
     collect_live_predictions as collect_filter_live_predictions,
 )
 from evals.evaluators.pipeline_quality import PipelineQualityEvaluator
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import (
     ReviewActionsEvaluator,
+)
+from evals.evaluators.review_actions import (
     collect_live_predictions as collect_review_live_predictions,
 )
 from evals.evaluators.search_url_recall import (
     SearchUrlRecallEvaluator,
+)
+from evals.evaluators.search_url_recall import (
     collect_live_predictions as collect_search_live_predictions,
 )
 from evals.evaluators.translation_quality import (
     TranslationQualityEvaluator,
+)
+from evals.evaluators.translation_quality import (
     collect_live_predictions as collect_translation_live_predictions,
 )
 
@@ -96,31 +106,19 @@ DEFAULT_FILTER_DATASET = PROJECT_ROOT / "evals" / "datasets" / "filter" / "urls.
 DEFAULT_FILTER_PREDICTIONS = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "filter_predictions.jsonl"
 )
-DEFAULT_REVIEW_DATASET = (
-    PROJECT_ROOT / "evals" / "datasets" / "review" / "phrase_lists.jsonl"
-)
+DEFAULT_REVIEW_DATASET = PROJECT_ROOT / "evals" / "datasets" / "review" / "phrase_lists.jsonl"
 DEFAULT_REVIEW_PREDICTIONS = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "review_predictions.jsonl"
 )
-DEFAULT_EXTRACT_DATASET = (
-    PROJECT_ROOT / "evals" / "datasets" / "extract" / "gold_phrases.jsonl"
-)
+DEFAULT_EXTRACT_DATASET = PROJECT_ROOT / "evals" / "datasets" / "extract" / "gold_phrases.jsonl"
 DEFAULT_EXTRACT_PREDICTIONS = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "extract_predictions.jsonl"
 )
-DEFAULT_TRANSLATION_DATASET = (
-    PROJECT_ROOT / "evals" / "datasets" / "translation" / "phrases.jsonl"
-)
+DEFAULT_TRANSLATION_DATASET = PROJECT_ROOT / "evals" / "datasets" / "translation" / "phrases.jsonl"
 DEFAULT_TRANSLATION_PREDICTIONS = (
-    PROJECT_ROOT
-    / "evals"
-    / "datasets"
-    / "fixtures"
-    / "translation_judge_predictions.jsonl"
+    PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "translation_judge_predictions.jsonl"
 )
-DEFAULT_SEARCH_DATASET = (
-    PROJECT_ROOT / "evals" / "datasets" / "search" / "gold_urls.jsonl"
-)
+DEFAULT_SEARCH_DATASET = PROJECT_ROOT / "evals" / "datasets" / "search" / "gold_urls.jsonl"
 DEFAULT_SEARCH_PREDICTIONS = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "search_predictions.jsonl"
 )
@@ -247,16 +245,12 @@ def run_suite(
         if live:
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
-                raise ValueError(
-                    "ANTHROPIC_API_KEY is required for --live review_actions runs."
-                )
+                raise ValueError("ANTHROPIC_API_KEY is required for --live review_actions runs.")
             client = anthropic.Anthropic(api_key=api_key)
             predictions = collect_review_live_predictions(cases, client)
         else:
             if predictions_path is None:
-                raise ValueError(
-                    "review_actions requires --predictions unless --live is set."
-                )
+                raise ValueError("review_actions requires --predictions unless --live is set.")
             predictions = load_review_predictions(predictions_path)
 
         return evaluator.run(cases, predictions)
@@ -296,9 +290,7 @@ def run_suite(
             predictions = collect_translation_live_predictions(cases, client)
         else:
             if predictions_path is None:
-                raise ValueError(
-                    "translation_quality requires --predictions unless --live is set."
-                )
+                raise ValueError("translation_quality requires --predictions unless --live is set.")
             predictions = load_translation_predictions(predictions_path)
 
         return evaluator.run(cases, predictions)
@@ -310,16 +302,12 @@ def run_suite(
         if live:
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
-                raise ValueError(
-                    "ANTHROPIC_API_KEY is required for --live search_url_recall runs."
-                )
+                raise ValueError("ANTHROPIC_API_KEY is required for --live search_url_recall runs.")
             client = anthropic.Anthropic(api_key=api_key)
             predictions = collect_search_live_predictions(cases, client)
         else:
             if predictions_path is None:
-                raise ValueError(
-                    "search_url_recall requires --predictions unless --live is set."
-                )
+                raise ValueError("search_url_recall requires --predictions unless --live is set.")
             predictions = load_search_predictions(predictions_path)
 
         return evaluator.run(cases, predictions)
@@ -340,9 +328,7 @@ def main(argv: list[str] | None = None) -> int:
     if not input_path.exists():
         parser.error(f"Input file not found: {input_path}")
 
-    predictions_path = (
-        args.predictions or SUITE_PREDICTION_DEFAULTS.get(args.suite)
-    )
+    predictions_path = args.predictions or SUITE_PREDICTION_DEFAULTS.get(args.suite)
     if predictions_path is not None:
         predictions_path = predictions_path.resolve()
 

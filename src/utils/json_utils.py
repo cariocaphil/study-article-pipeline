@@ -53,9 +53,7 @@ def _is_real_closing_quote(remainder: str) -> bool:
         return True
     if ch == ",":
         after_comma = stripped[1:]
-        return bool(
-            _KEY_START_RE.match(after_comma) or _NEW_ELEMENT_RE.match(after_comma)
-        )
+        return bool(_KEY_START_RE.match(after_comma) or _NEW_ELEMENT_RE.match(after_comma))
     return False
 
 
@@ -121,6 +119,4 @@ def extract_json(text: str, open_char: str = "[", close_char: str = "]"):
     try:
         return json.loads(repaired)
     except json.JSONDecodeError as e:
-        raise ValueError(
-            f"Could not parse JSON from response.\nRaw response: {text}\nError: {e}"
-        )
+        raise ValueError(f"Could not parse JSON from response.\nRaw response: {text}\nError: {e}")

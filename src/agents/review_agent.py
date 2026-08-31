@@ -9,7 +9,8 @@ only the phrase list itself.
 import json
 
 import anthropic
-from src.schemas.article import ExtractedPhrase, CEFRLevel, PhraseCategory
+
+from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
 from src.utils import load_skill
 from src.utils.json_utils import extract_json
 
@@ -65,9 +66,7 @@ Example format:
         messages=[{"role": "user", "content": prompt}],
     )
 
-    full_response = " ".join(
-        block.text for block in response.content if hasattr(block, "text")
-    )
+    full_response = " ".join(block.text for block in response.content if hasattr(block, "text"))
 
     try:
         raw_verdicts = extract_json(full_response, "[", "]")
@@ -109,6 +108,7 @@ Example format:
 # ── Manual test ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import os
+
     from dotenv import load_dotenv
 
     load_dotenv()
@@ -130,8 +130,7 @@ if __name__ == "__main__":
         ExtractedPhrase(
             phrase="Entroncamento",
             sentence_context=(
-                'Em "Entroncamento" acompanhamos Laura, que foge de um '
-                "passado turbulento"
+                'Em "Entroncamento" acompanhamos Laura, que foge de um passado turbulento'
             ),
             translation="Entroncamento (Ortsname)",
             category=PhraseCategory.vocab,

@@ -7,8 +7,8 @@ article excerpts. Primary metric is phrase recall.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import anthropic
 
@@ -115,9 +115,7 @@ def collect_live_predictions(
     cases: list[ExtractRecallCase],
     client: anthropic.Anthropic,
     *,
-    extract_fn: Callable[
-        [str, str, str, CEFRLevel, anthropic.Anthropic], list[ExtractedPhrase]
-    ]
+    extract_fn: Callable[[str, str, str, CEFRLevel, anthropic.Anthropic], list[ExtractedPhrase]]
     | None = None,
 ) -> dict[str, list[str]]:
     from src.agents.extract_agent import extract_phrases
