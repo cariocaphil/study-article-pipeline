@@ -195,6 +195,25 @@ Gold phrases are labeled manually for fixed article excerpts. Each case lists
 phrases a human annotator would expect the extract agent to surface at the given
 CEFR level. Recall is the fraction of gold phrases found in the agent output.
 
+Run translation quality offline against cached judge predictions:
+
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite translation_quality \
+  --input evals/datasets/translation/phrases.jsonl \
+  --predictions evals/datasets/fixtures/translation_judge_predictions.jsonl
+```
+
+Add `--live` to score with the LLM judge (requires `ANTHROPIC_API_KEY`).
+
+Compare two saved eval runs:
+
+```bash
+uv run python -m evals.runners.compare_runs \
+  --baseline evals/results/BASELINE_RUN_ID \
+  --candidate evals/results/CANDIDATE_RUN_ID
+```
+
 Results are saved under `evals/results/` (gitignored).
 
 ## Project structure
@@ -206,9 +225,12 @@ evals/
 │   ├── filter/urls.jsonl       # labeled accept/reject URL dataset
 │   ├── extract/gold_phrases.jsonl  # human-labeled gold phrases for fixed excerpts
 │   ├── review/phrase_lists.jsonl  # labeled keep/review/remove phrase lists
+│   ├── translation/phrases.jsonl  # human-labeled translation adequacy cases
 │   └── fixtures/               # sample PipelineOutput + cached predictions
-├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall
-└── runners/run_evals.py        # CLI entry point
+├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall, translation_quality
+└── runners/
+    ├── run_evals.py            # CLI entry point
+    └── compare_runs.py         # diff scores between two saved runs
 .claude/
 ├── commands/
 │   └── find-articles.md      # slash command definition
@@ -218,7 +240,8 @@ evals/
     ├── article-filter-criteria.md   # injected in filter_agent.py
     ├── cefr-extraction-guide.md     # injected in extract_agent.py
     ├── docx-formatted.md            # document layout reference for compile_agent.py
-    └── phrase-quality-reviewer.md   # injected in review_agent.py
+    ├── phrase-quality-reviewer.md   # injected in review_agent.py
+    └── translation-adequacy-rubric.md  # injected in translation quality judge
 src/
 ├── orchestrator.py           # wires agents together, CLI entry point
 ├── agents/
@@ -254,7 +277,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 17**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 18**.
 
 ### Initial Setup ✅
 
@@ -363,11 +386,11 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 17
 - [x] Support live scoring via `--live` (calls `extract_agent` per excerpt)
 - [x] Document labeling process and add deterministic tests
 
-### PR 17 — Eval: Translation Quality & Regression Comparison
+### PR 17 — Eval: Translation Quality & Regression Comparison ✅
 
-- [ ] Add translation adequacy rubric and LLM-as-judge evaluator
-- [ ] Add `compare_runs` CLI to diff scores across eval runs
-- [ ] Add optional nightly workflow for live eval suites
+- [x] Add translation adequacy rubric and LLM-as-judge evaluator
+- [x] Add `compare_runs` CLI to diff scores across eval runs
+- [x] Support live LLM judge runs via `--live` (local, API key required)
 
 ### PR 18 — Continuous Integration
 

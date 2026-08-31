@@ -74,6 +74,7 @@ Skills are located in `.claude/skills/`. Claude Code should load them when relev
 | Article filter criteria | `.claude/skills/article-filter-criteria.md` | Already injected at runtime in filter_agent.py |
 | CEFR extraction guide | `.claude/skills/cefr-extraction-guide.md` | Already injected at runtime in extract_agent.py |
 | Phrase quality reviewer | `.claude/skills/phrase-quality-reviewer.md` | Already injected at runtime in review_agent.py |
+| Translation adequacy rubric | `.claude/skills/translation-adequacy-rubric.md` | Already injected at runtime in translation quality judge |
 
 ## Evaluations
 Deterministic evals live in `evals/`. They score saved pipeline outputs — no
@@ -85,6 +86,7 @@ API calls required.
 | `filter_classification` | labeled URL dataset (`.jsonl`) | accuracy, precision, recall, F1 on accept/reject decisions |
 | `review_actions` | labeled phrase-list dataset (`.jsonl`) | removal precision/recall/F1 and per-action accuracy |
 | `extract_phrase_recall` | gold phrase dataset (`.jsonl`) | phrase recall against human labels |
+| `translation_quality` | labeled translation dataset (`.jsonl`) | judge accuracy vs human adequacy labels |
 
 Run locally:
 ```bash
@@ -106,14 +108,30 @@ uv run python -m evals.runners.run_evals \
   --suite extract_phrase_recall \
   --input evals/datasets/extract/gold_phrases.jsonl \
   --predictions evals/datasets/fixtures/extract_predictions.jsonl
+
+uv run python -m evals.runners.run_evals \
+  --suite translation_quality \
+  --input evals/datasets/translation/phrases.jsonl \
+  --predictions evals/datasets/fixtures/translation_judge_predictions.jsonl
 ```
 
-Use `--live` with `filter_classification`, `review_actions`, or
-`extract_phrase_recall` to score the real agents (API key required). Offline
-scoring uses cached predictions in `evals/datasets/fixtures/`.
+Use `--live` with `filter_classification`, `review_actions`,
+`extract_phrase_recall`, or `translation_quality` to score the real agents or
+judge (API key required). Offline scoring uses cached predictions in
+`evals/datasets/fixtures/`.
+
+Compare two saved runs:
+```bash
+uv run python -m evals.runners.compare_runs \
+  --baseline evals/results/BASELINE_RUN_ID \
+  --candidate evals/results/CANDIDATE_RUN_ID
+```
 
 Results are written to `evals/results/{run_id}/` (`report.json`, `scores.json`,
 `failures.jsonl`). Fast eval tests live in `tests/test_evals.py`.
+
+Use `--live` with `translation_quality` locally when you want to run the LLM
+judge against the labeled dataset (requires `ANTHROPIC_API_KEY`).
 
 When adding a new evaluator: implement `run(...) -> EvalResult` in
 `evals/evaluators/`, register it in `evals/runners/run_evals.py`, add a fixture

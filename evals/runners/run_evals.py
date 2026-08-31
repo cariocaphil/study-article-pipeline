@@ -20,6 +20,11 @@ Examples:
         --suite extract_phrase_recall \\
         --input evals/datasets/extract/gold_phrases.jsonl \\
         --predictions evals/datasets/fixtures/extract_predictions.jsonl
+
+    uv run python -m evals.runners.run_evals \\
+        --suite translation_quality \\
+        --input evals/datasets/translation/phrases.jsonl \\
+        --predictions evals/datasets/fixtures/translation_judge_predictions.jsonl
 """
 
 from __future__ import annotations
@@ -42,6 +47,8 @@ from evals.evaluators.base import (
     load_pipeline_output,
     load_review_dataset,
     load_review_predictions,
+    load_translation_dataset,
+    load_translation_predictions,
     new_run_id,
 )
 from evals.evaluators.extract_phrase_recall import (
@@ -56,6 +63,10 @@ from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import (
     ReviewActionsEvaluator,
     collect_live_predictions as collect_review_live_predictions,
+)
+from evals.evaluators.translation_quality import (
+    TranslationQualityEvaluator,
+    collect_live_predictions as collect_translation_live_predictions,
 )
 
 load_dotenv()
@@ -81,21 +92,38 @@ DEFAULT_EXTRACT_DATASET = (
 DEFAULT_EXTRACT_PREDICTIONS = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "extract_predictions.jsonl"
 )
+DEFAULT_TRANSLATION_DATASET = (
+    PROJECT_ROOT / "evals" / "datasets" / "translation" / "phrases.jsonl"
+)
+DEFAULT_TRANSLATION_PREDICTIONS = (
+    PROJECT_ROOT
+    / "evals"
+    / "datasets"
+    / "fixtures"
+    / "translation_judge_predictions.jsonl"
+)
 
 SUITE_DEFAULTS = {
     "quote_faithfulness": DEFAULT_PIPELINE_FIXTURE,
     "filter_classification": DEFAULT_FILTER_DATASET,
     "review_actions": DEFAULT_REVIEW_DATASET,
     "extract_phrase_recall": DEFAULT_EXTRACT_DATASET,
+    "translation_quality": DEFAULT_TRANSLATION_DATASET,
 }
 
 SUITE_PREDICTION_DEFAULTS = {
     "filter_classification": DEFAULT_FILTER_PREDICTIONS,
     "review_actions": DEFAULT_REVIEW_PREDICTIONS,
     "extract_phrase_recall": DEFAULT_EXTRACT_PREDICTIONS,
+    "translation_quality": DEFAULT_TRANSLATION_PREDICTIONS,
 }
 
-LIVE_SUITES = {"filter_classification", "review_actions", "extract_phrase_recall"}
+LIVE_SUITES = {
+    "filter_classification",
+    "review_actions",
+    "extract_phrase_recall",
+    "translation_quality",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -116,12 +144,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--predictions",
         type=Path,
         default=None,
-        help="Cached predictions for offline filter_classification, review_actions, or extract_phrase_recall runs",
+        help="Cached predictions for offline filter_classification, review_actions, extract_phrase_recall, or translation_quality runs",
     )
     parser.add_argument(
         "--live",
         action="store_true",
-        help="Call the live agent for filter_classification, review_actions, or extract_phrase_recall",
+        help="Call the live agent or judge for suites that support live scoring",
     )
     parser.add_argument(
         "--output-dir",
@@ -221,6 +249,27 @@ def run_suite(
                     "extract_phrase_recall requires --predictions unless --live is set."
                 )
             predictions = load_extract_predictions(predictions_path)
+
+        return evaluator.run(cases, predictions)
+
+    if suite == "translation_quality":
+        cases = load_translation_dataset(input_path)
+        evaluator = TranslationQualityEvaluator(pass_threshold=pass_threshold)
+
+        if live:
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY is required for --live translation_quality runs."
+                )
+            client = anthropic.Anthropic(api_key=api_key)
+            predictions = collect_translation_live_predictions(cases, client)
+        else:
+            if predictions_path is None:
+                raise ValueError(
+                    "translation_quality requires --predictions unless --live is set."
+                )
+            predictions = load_translation_predictions(predictions_path)
 
         return evaluator.run(cases, predictions)
 

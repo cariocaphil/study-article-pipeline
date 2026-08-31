@@ -204,3 +204,37 @@ def load_extract_recall_dataset(path: Path):
 
 def load_extract_predictions(path: Path) -> dict[str, list[str]]:
     return {record["id"]: record["phrases"] for record in load_jsonl(path)}
+
+
+def load_translation_dataset(path: Path):
+    from evals.evaluators.translation_quality import TranslationCase
+
+    return [
+        TranslationCase(
+            id=record["id"],
+            phrase=record["phrase"],
+            sentence_context=record["sentence_context"],
+            translation=record["translation"],
+            source_language=record["source_language"],
+            translation_language=record["translation_language"],
+            expected_adequate=bool(record["expected_adequate"]),
+        )
+        for record in load_jsonl(path)
+    ]
+
+
+def load_translation_predictions(path: Path):
+    from evals.evaluators.translation_quality import TranslationJudgment
+
+    return {
+        record["id"]: TranslationJudgment(
+            adequate=bool(record["adequate"]),
+            reason=record.get("reason", ""),
+        )
+        for record in load_jsonl(path)
+    }
+
+
+def load_scores(path: Path) -> dict[str, Any]:
+    scores_path = path / "scores.json" if path.is_dir() else path
+    return json.loads(scores_path.read_text(encoding="utf-8"))
