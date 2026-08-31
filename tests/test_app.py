@@ -15,6 +15,8 @@ from unittest.mock import patch
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from src.schemas.article import TopicType
+
 APP_PATH = Path(__file__).resolve().parent.parent / "app.py"
 
 
@@ -49,11 +51,14 @@ class TestAppLayout:
         assert app.text_input[0].label == "Topic"
         assert app.text_input[0].value == ""
 
-        source_language, translation_language, user_level = (
+        topic_type, source_language, translation_language, user_level = (
             app.selectbox[0],
             app.selectbox[1],
             app.selectbox[2],
+            app.selectbox[3],
         )
+        assert topic_type.label == "Topic type"
+        assert topic_type.value == "Film"
         assert source_language.label == "Source language"
         assert source_language.value == "portuguese"
         assert translation_language.label == "Translation language"
@@ -108,11 +113,28 @@ class TestGenerateButton:
                 translation_language="german",
                 user_level="C1",
                 n_articles=5,
+                topic_type=TopicType.film,
             )
             assert not app.exception
             assert [s.value for s in app.success] == ["Document generated successfully."]
             assert len(app.download_button) == 1
             assert app.download_button[0].label == "⬇️ Download your study document"
+        finally:
+            os.remove(tmp_path)
+
+    def test_selected_topic_type_is_passed_to_pipeline(self, app):
+        app.text_input[0].input("Amadeus")
+        app.selectbox[0].select("Theatre production")
+
+        fd, tmp_path = tempfile.mkstemp(suffix=".docx")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(b"fake docx bytes")
+
+            with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
+                app.button[0].click().run(timeout=30)
+
+            assert mock_run.call_args.kwargs["topic_type"] == TopicType.theatre
         finally:
             os.remove(tmp_path)
 

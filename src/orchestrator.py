@@ -14,7 +14,7 @@ from src.agents.extract_agent import extract_phrases
 from src.agents.filter_agent import filter_articles
 from src.agents.review_agent import review_phrases
 from src.agents.search_agent import search_articles
-from src.schemas.article import Article, CEFRLevel, PipelineOutput
+from src.schemas.article import Article, CEFRLevel, PipelineOutput, TopicType
 from src.tools.validate_topic import filename_safe_topic, topic_validation_error
 
 load_dotenv()
@@ -28,6 +28,8 @@ def run_pipeline(
     translation_language: str,
     user_level: str,
     n_articles: int = 5,
+    *,
+    topic_type: TopicType = TopicType.film,
 ) -> str:
     """
     Runs the full pipeline and returns the path to the generated .docx.
@@ -43,6 +45,7 @@ def run_pipeline(
 
     print("\n── Starting pipeline ──────────────────────────────────────")
     print(f"Topic: {topic}")
+    print(f"Topic type: {topic_type.value}")
     print(f"Source language: {source_language}")
     print(f"Translation language: {translation_language}")
     print(f"User level: {level.value}")
@@ -50,7 +53,13 @@ def run_pipeline(
     print("───────────────────────────────────────────────────────────\n")
 
     # ── Step 1: Search ────────────────────────────────────────────────────────
-    urls = search_articles(topic, source_language, n_articles, client)
+    urls = search_articles(
+        topic,
+        source_language,
+        n_articles,
+        client,
+        topic_type=topic_type,
+    )
 
     # ── Step 2: Filter ────────────────────────────────────────────────────────
     raw_articles = filter_articles(urls, source_language, client)
@@ -86,6 +95,7 @@ def run_pipeline(
     # ── Step 4: Compile ───────────────────────────────────────────────────────
     pipeline_output = PipelineOutput(
         topic=topic,
+        topic_type=topic_type,
         source_language=source_language,
         translation_language=translation_language,
         user_level=level,
@@ -116,9 +126,22 @@ if __name__ == "__main__":
     if len(sys.argv) < 5:
         print(
             "Usage: python -m src.orchestrator <topic> <source_language> "
-            "<translation_language> <cefr_level> [n_articles]"
+            "<translation_language> <cefr_level> [topic_type] [n_articles]"
+        )
+        print(
+            "topic_type: film (default), series, book, theatre, album"
         )
         sys.exit(1)
+
+    topic_type = TopicType.film
+    n_articles = 5
+    if len(sys.argv) > 5:
+        if sys.argv[5].isdigit():
+            n_articles = int(sys.argv[5])
+        else:
+            topic_type = TopicType(sys.argv[5])
+            if len(sys.argv) > 6:
+                n_articles = int(sys.argv[6])
 
     try:
         run_pipeline(
@@ -126,7 +149,8 @@ if __name__ == "__main__":
             source_language=sys.argv[2],
             translation_language=sys.argv[3],
             user_level=sys.argv[4],
-            n_articles=int(sys.argv[5]) if len(sys.argv) > 5 else 5,
+            n_articles=n_articles,
+            topic_type=topic_type,
         )
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)

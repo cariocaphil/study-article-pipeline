@@ -8,6 +8,7 @@ import json
 
 import anthropic
 
+from src.schemas.article import TOPIC_TYPE_LABELS, TopicType
 from src.tools.validate_url_reachable import validate_url_reachable
 from src.utils.json_utils import extract_json
 
@@ -35,17 +36,51 @@ def _run_validate_url_tool(tool_input: dict) -> bool:
     return validate_url_reachable(url)
 
 
+def _topic_type_search_guidance(topic_type: TopicType) -> str:
+    guidance = {
+        TopicType.film: (
+            "The topic is a film. Search for film reviews and cinema criticism — "
+            "not TV series, book reviews, theatre reviews, or album reviews."
+        ),
+        TopicType.series: (
+            "The topic is a TV series. Search for television reviews and series "
+            "criticism — not the film adaptation, book, theatre production, or album."
+        ),
+        TopicType.book: (
+            "The topic is a book. Search for literary reviews and book criticism — "
+            "not film or TV adaptations, theatre productions, or album reviews unless "
+            "they are clearly about the book itself."
+        ),
+        TopicType.theatre: (
+            "The topic is a theatre production or stage play. Search for theatre "
+            "reviews and performance criticism — not the film, TV series, novel, "
+            "or album unless they are clearly about the stage production."
+        ),
+        TopicType.album: (
+            "The topic is a music album. Search for album reviews and music criticism — "
+            "not film, TV series, book, or theatre reviews."
+        ),
+    }
+    return guidance[topic_type]
+
+
 def search_articles(
     topic: str,
     source_language: str,
     n_articles: int,
     client: anthropic.Anthropic,
+    *,
+    topic_type: TopicType = TopicType.film,
 ) -> list[str]:
+    topic_label = TOPIC_TYPE_LABELS[topic_type]
 
     prompt = f"""
 You are a research assistant helping a language learner find articles to study.
 
 Search for {n_articles} review articles about "{topic}" written in {source_language}.
+
+Topic type: {topic_label}.
+{_topic_type_search_guidance(topic_type)}
 
 Requirements:
 - Articles must be written IN {source_language} (not translated into it).

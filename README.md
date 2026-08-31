@@ -109,11 +109,14 @@ Arguments (CLI and web app):
 
 | Argument | Description | Example |
 |----------|-------------|---------|
-| `topic` | Film, book, author, or subject to search for | `"Entroncamento"` |
+| `topic` | Film, book, play, album, or subject to search for | `"Amadeus"` |
+| `topic_type` | Kind of work — disambiguates search (web app dropdown; CLI optional) | `theatre` |
 | `source_language` | Language the review articles are written in | `portuguese` |
 | `translation_language` | Language to translate extracted phrases into | `german` |
 | `cefr_level` | Your CEFR level — only phrases at or above this level are kept | `C1` |
 | `n_articles` | Number of candidate articles to search for (optional, default `5`) | `5` |
+
+`topic_type` values: `film` (default), `series`, `book`, `theatre`, `album`.
 
 ## Output
 
@@ -319,7 +322,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 22**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 23**.
 
 ### Initial Setup ✅
 
@@ -462,7 +465,14 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 22
 - [x] Run deterministic evals in CI (no API key required)
 - [x] Add linting with Ruff
 
-### PR 22 — Containerization
+### PR 22 — Topic Type Disambiguation ✅
+
+- [x] Add `TopicType` enum (`film`, `series`, `book`, `theatre`, `album`)
+- [x] Add topic type dropdown to Streamlit UI
+- [x] Steer search agent prompts by topic type
+- [x] Support optional `topic_type` in CLI and store on `PipelineOutput`
+
+### PR 23 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -470,7 +480,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 22
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 23 — Azure Container Apps Deployment
+### PR 24 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -480,7 +490,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 22
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 24 — Continuous Deployment
+### PR 25 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`

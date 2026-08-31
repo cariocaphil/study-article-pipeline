@@ -3,7 +3,16 @@ import os
 import streamlit as st
 
 from src.orchestrator import run_pipeline
+from src.schemas.article import TopicType
 from src.tools.validate_topic import topic_validation_error
+
+TOPIC_TYPE_OPTIONS = {
+    "Film": TopicType.film,
+    "Series": TopicType.series,
+    "Book": TopicType.book,
+    "Theatre production": TopicType.theatre,
+    "Album": TopicType.album,
+}
 
 st.set_page_config(
     page_title="Study Article Collection",
@@ -48,7 +57,12 @@ st.divider()
 # ── Inputs ────────────────────────────────────────────────────────────────────
 topic = st.text_input(
     "Topic",
-    placeholder='e.g. "Entroncamento", "Romería", "O riso e a faca"',
+    placeholder='e.g. "Entroncamento", "Amadeus", "Que Horas Ela Volta?"',
+)
+
+topic_type = st.selectbox(
+    "Topic type",
+    list(TOPIC_TYPE_OPTIONS.keys()),
 )
 
 col1, col2 = st.columns(2)
@@ -99,6 +113,7 @@ if st.button("Generate study document", type="primary", use_container_width=True
                     translation_language=translation_language,
                     user_level=user_level,
                     n_articles=n_articles,
+                    topic_type=TOPIC_TYPE_OPTIONS[topic_type],
                 )
                 st.success("Document generated successfully.")
 

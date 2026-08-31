@@ -26,6 +26,23 @@ class PhraseCategory(str, Enum):
     idiom = "idiom"
 
 
+class TopicType(str, Enum):
+    film = "film"
+    series = "series"
+    book = "book"
+    theatre = "theatre"
+    album = "album"
+
+
+TOPIC_TYPE_LABELS: dict[TopicType, str] = {
+    TopicType.film: "film",
+    TopicType.series: "TV series",
+    TopicType.book: "book",
+    TopicType.theatre: "theatre production",
+    TopicType.album: "album",
+}
+
+
 class ExtractedPhrase(BaseModel):
     phrase: str  # the word, expression, or construction
     sentence_context: str  # the sentence it appeared in
@@ -45,6 +62,7 @@ class Article(BaseModel):
 
 class PipelineOutput(BaseModel):
     topic: str
+    topic_type: TopicType = TopicType.film
     source_language: str
     translation_language: str
     user_level: CEFRLevel
