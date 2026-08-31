@@ -180,6 +180,21 @@ uv run python -m evals.runners.run_evals \
 
 Add `--live` to score the real review agent (requires `ANTHROPIC_API_KEY`).
 
+Run extract phrase recall offline against cached predictions:
+
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite extract_phrase_recall \
+  --input evals/datasets/extract/gold_phrases.jsonl \
+  --predictions evals/datasets/fixtures/extract_predictions.jsonl
+```
+
+Add `--live` to score the real extract agent (requires `ANTHROPIC_API_KEY`).
+
+Gold phrases are labeled manually for fixed article excerpts. Each case lists
+phrases a human annotator would expect the extract agent to surface at the given
+CEFR level. Recall is the fraction of gold phrases found in the agent output.
+
 Results are saved under `evals/results/` (gitignored).
 
 ## Project structure
@@ -189,9 +204,10 @@ app.py                        # Streamlit web UI entry point
 evals/
 ├── datasets/
 │   ├── filter/urls.jsonl       # labeled accept/reject URL dataset
+│   ├── extract/gold_phrases.jsonl  # human-labeled gold phrases for fixed excerpts
 │   ├── review/phrase_lists.jsonl  # labeled keep/review/remove phrase lists
 │   └── fixtures/               # sample PipelineOutput + cached predictions
-├── evaluators/                 # quote_faithfulness, filter_classification, review_actions
+├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall
 └── runners/run_evals.py        # CLI entry point
 .claude/
 ├── commands/
@@ -238,7 +254,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 16**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 17**.
 
 ### Initial Setup ✅
 
@@ -339,11 +355,13 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 16
 - [x] Support live scoring via `--live` (calls `review_agent` per phrase list)
 - [x] Add deterministic tests and CLI registration
 
-### PR 16 — Eval: Extract Phrase Recall
+### PR 16 — Eval: Extract Phrase Recall ✅
 
-- [ ] Add human-labeled gold phrases for fixed article excerpts
-- [ ] Add extract recall@k evaluator against gold dataset
-- [ ] Document labeling process and run live eval against extract agent
+- [x] Add human-labeled gold phrases for fixed article excerpts
+- [x] Add extract phrase recall evaluator against gold dataset
+- [x] Support offline scoring via cached predictions
+- [x] Support live scoring via `--live` (calls `extract_agent` per excerpt)
+- [x] Document labeling process and add deterministic tests
 
 ### PR 17 — Eval: Translation Quality & Regression Comparison
 

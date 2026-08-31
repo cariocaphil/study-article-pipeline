@@ -15,6 +15,11 @@ Examples:
         --suite review_actions \\
         --input evals/datasets/review/phrase_lists.jsonl \\
         --predictions evals/datasets/fixtures/review_predictions.jsonl
+
+    uv run python -m evals.runners.run_evals \\
+        --suite extract_phrase_recall \\
+        --input evals/datasets/extract/gold_phrases.jsonl \\
+        --predictions evals/datasets/fixtures/extract_predictions.jsonl
 """
 
 from __future__ import annotations
@@ -30,12 +35,18 @@ from dotenv import load_dotenv
 from evals.evaluators.base import (
     EvalReport,
     current_git_sha,
+    load_extract_predictions,
+    load_extract_recall_dataset,
     load_filter_dataset,
     load_filter_predictions,
     load_pipeline_output,
     load_review_dataset,
     load_review_predictions,
     new_run_id,
+)
+from evals.evaluators.extract_phrase_recall import (
+    ExtractPhraseRecallEvaluator,
+    collect_live_predictions as collect_extract_live_predictions,
 )
 from evals.evaluators.filter_classification import (
     FilterClassificationEvaluator,
@@ -64,19 +75,27 @@ DEFAULT_REVIEW_DATASET = (
 DEFAULT_REVIEW_PREDICTIONS = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "review_predictions.jsonl"
 )
+DEFAULT_EXTRACT_DATASET = (
+    PROJECT_ROOT / "evals" / "datasets" / "extract" / "gold_phrases.jsonl"
+)
+DEFAULT_EXTRACT_PREDICTIONS = (
+    PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "extract_predictions.jsonl"
+)
 
 SUITE_DEFAULTS = {
     "quote_faithfulness": DEFAULT_PIPELINE_FIXTURE,
     "filter_classification": DEFAULT_FILTER_DATASET,
     "review_actions": DEFAULT_REVIEW_DATASET,
+    "extract_phrase_recall": DEFAULT_EXTRACT_DATASET,
 }
 
 SUITE_PREDICTION_DEFAULTS = {
     "filter_classification": DEFAULT_FILTER_PREDICTIONS,
     "review_actions": DEFAULT_REVIEW_PREDICTIONS,
+    "extract_phrase_recall": DEFAULT_EXTRACT_PREDICTIONS,
 }
 
-LIVE_SUITES = {"filter_classification", "review_actions"}
+LIVE_SUITES = {"filter_classification", "review_actions", "extract_phrase_recall"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -97,12 +116,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--predictions",
         type=Path,
         default=None,
-        help="Cached predictions for offline filter_classification or review_actions runs",
+        help="Cached predictions for offline filter_classification, review_actions, or extract_phrase_recall runs",
     )
     parser.add_argument(
         "--live",
         action="store_true",
-        help="Call the live agent for filter_classification or review_actions",
+        help="Call the live agent for filter_classification, review_actions, or extract_phrase_recall",
     )
     parser.add_argument(
         "--output-dir",
@@ -181,6 +200,27 @@ def run_suite(
                     "review_actions requires --predictions unless --live is set."
                 )
             predictions = load_review_predictions(predictions_path)
+
+        return evaluator.run(cases, predictions)
+
+    if suite == "extract_phrase_recall":
+        cases = load_extract_recall_dataset(input_path)
+        evaluator = ExtractPhraseRecallEvaluator(pass_threshold=pass_threshold)
+
+        if live:
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY is required for --live extract_phrase_recall runs."
+                )
+            client = anthropic.Anthropic(api_key=api_key)
+            predictions = collect_extract_live_predictions(cases, client)
+        else:
+            if predictions_path is None:
+                raise ValueError(
+                    "extract_phrase_recall requires --predictions unless --live is set."
+                )
+            predictions = load_extract_predictions(predictions_path)
 
         return evaluator.run(cases, predictions)
 

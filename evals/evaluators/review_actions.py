@@ -13,6 +13,7 @@ from typing import Callable, Literal
 import anthropic
 
 from evals.evaluators.base import EvalFailure, EvalResult
+from evals.evaluators.utils import safe_divide
 from src.schemas.article import ExtractedPhrase
 
 DEFAULT_PASS_THRESHOLD = 1.0
@@ -26,12 +27,6 @@ class ReviewCase:
     topic: str
     phrases: list[ExtractedPhrase]
     expected_actions: dict[str, ReviewAction] = field(default_factory=dict)
-
-
-def _safe_divide(numerator: float, denominator: float) -> float:
-    if denominator == 0:
-        return 0.0
-    return numerator / denominator
 
 
 def _is_removed(action: ReviewAction) -> bool:
@@ -136,13 +131,13 @@ class ReviewActionsEvaluator:
                         )
                     )
 
-        removal_precision = _safe_divide(removal_tp, removal_tp + removal_fp)
-        removal_recall = _safe_divide(removal_tp, removal_tp + removal_fn)
-        removal_f1 = _safe_divide(
+        removal_precision = safe_divide(removal_tp, removal_tp + removal_fp)
+        removal_recall = safe_divide(removal_tp, removal_tp + removal_fn)
+        removal_f1 = safe_divide(
             2 * removal_precision * removal_recall,
             removal_precision + removal_recall,
         )
-        action_accuracy = _safe_divide(action_correct, action_total)
+        action_accuracy = safe_divide(action_correct, action_total)
 
         metrics = {
             "total_phrases": action_total,

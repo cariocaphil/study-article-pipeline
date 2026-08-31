@@ -182,3 +182,25 @@ def load_review_dataset(path: Path):
 
 def load_review_predictions(path: Path) -> dict[str, dict[str, str]]:
     return {record["id"]: record["actions"] for record in load_jsonl(path)}
+
+
+def load_extract_recall_dataset(path: Path):
+    from evals.evaluators.extract_phrase_recall import ExtractRecallCase
+    from src.schemas.article import CEFRLevel
+
+    return [
+        ExtractRecallCase(
+            id=record["id"],
+            topic=record["topic"],
+            full_text=record["full_text"],
+            source_language=record["source_language"],
+            translation_language=record["translation_language"],
+            user_level=CEFRLevel(record["user_level"]),
+            gold_phrases=record["gold_phrases"],
+        )
+        for record in load_jsonl(path)
+    ]
+
+
+def load_extract_predictions(path: Path) -> dict[str, list[str]]:
+    return {record["id"]: record["phrases"] for record in load_jsonl(path)}
