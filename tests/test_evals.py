@@ -23,6 +23,7 @@ from evals.evaluators.base import (
 )
 from evals.evaluators.extract_phrase_recall import ExtractPhraseRecallEvaluator
 from evals.evaluators.filter_classification import FilterClassificationEvaluator
+from evals.evaluators.pipeline_quality import PipelineQualityEvaluator
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import ReviewActionsEvaluator
 from evals.evaluators.search_url_recall import SearchUrlRecallEvaluator
@@ -36,6 +37,13 @@ FIXTURE_PATH = (
     / "datasets"
     / "fixtures"
     / "sample_pipeline_output.json"
+)
+GOOD_PIPELINE_FIXTURE_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "fixtures"
+    / "pipeline_output_good.json"
 )
 FILTER_DATASET_PATH = (
     Path(__file__).resolve().parent.parent / "evals" / "datasets" / "filter" / "urls.jsonl"
@@ -387,6 +395,44 @@ class TestSearchUrlRecallEvaluator:
 
         assert result.evaluator == "search_url_recall"
         assert result.metrics["recall"] == pytest.approx(2 / 3)
+
+
+class TestPipelineQualityEvaluator:
+    def test_scores_sample_fixture_with_structural_and_quote_failures(self):
+        pipeline_output = load_pipeline_output(FIXTURE_PATH)
+        result = PipelineQualityEvaluator(pass_threshold=1.0).run(
+            pipeline_output,
+            case_id="sample",
+        )
+
+        assert result.metrics["article_count"] == 1
+        assert result.metrics["total_phrases"] == 2
+        assert result.metrics["subscores"]["structure"] == 0.0
+        assert result.metrics["subscores"]["phrase_coverage"] == pytest.approx(1.0)
+        assert result.metrics["subscores"]["quote_faithfulness"] == pytest.approx(0.5)
+        assert result.metrics["subscores"]["translation_validity"] == pytest.approx(1.0)
+        assert result.metrics["subscores"]["level_floor_compliance"] == pytest.approx(1.0)
+        assert result.score == pytest.approx(0.7)
+        assert result.passed is False
+        failure_categories = {failure.category for failure in result.failures}
+        assert "insufficient_articles" in failure_categories
+        assert "unverified_quote" in failure_categories
+
+    def test_passes_good_fixture_with_perfect_subscores(self):
+        pipeline_output = load_pipeline_output(GOOD_PIPELINE_FIXTURE_PATH)
+        result = PipelineQualityEvaluator().run(pipeline_output)
+
+        assert result.metrics["article_count"] == 3
+        assert result.metrics["total_phrases"] == 4
+        assert result.score == pytest.approx(1.0)
+        assert result.passed is True
+        assert result.failures == []
+
+    def test_run_suite_offline_pipeline_quality(self):
+        result = run_suite("pipeline_quality", FIXTURE_PATH)
+
+        assert result.evaluator == "pipeline_quality"
+        assert result.score == pytest.approx(0.7)
 
 
 class TestCompareRuns:

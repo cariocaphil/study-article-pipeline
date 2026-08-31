@@ -30,6 +30,10 @@ Examples:
         --suite search_url_recall \\
         --input evals/datasets/search/gold_urls.jsonl \\
         --predictions evals/datasets/fixtures/search_predictions.jsonl
+
+    uv run python -m evals.runners.run_evals \\
+        --suite pipeline_quality \\
+        --input evals/datasets/fixtures/sample_pipeline_output.json
 """
 
 from __future__ import annotations
@@ -66,6 +70,7 @@ from evals.evaluators.filter_classification import (
     FilterClassificationEvaluator,
     collect_live_predictions as collect_filter_live_predictions,
 )
+from evals.evaluators.pipeline_quality import PipelineQualityEvaluator
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import (
     ReviewActionsEvaluator,
@@ -120,6 +125,10 @@ DEFAULT_SEARCH_PREDICTIONS = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "search_predictions.jsonl"
 )
 
+DEFAULT_PIPELINE_QUALITY_FIXTURE = (
+    PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "sample_pipeline_output.json"
+)
+
 SUITE_DEFAULTS = {
     "quote_faithfulness": DEFAULT_PIPELINE_FIXTURE,
     "filter_classification": DEFAULT_FILTER_DATASET,
@@ -127,6 +136,7 @@ SUITE_DEFAULTS = {
     "extract_phrase_recall": DEFAULT_EXTRACT_DATASET,
     "translation_quality": DEFAULT_TRANSLATION_DATASET,
     "search_url_recall": DEFAULT_SEARCH_DATASET,
+    "pipeline_quality": DEFAULT_PIPELINE_QUALITY_FIXTURE,
 }
 
 SUITE_PREDICTION_DEFAULTS = {
@@ -313,6 +323,11 @@ def run_suite(
             predictions = load_search_predictions(predictions_path)
 
         return evaluator.run(cases, predictions)
+
+    if suite == "pipeline_quality":
+        pipeline_output = load_pipeline_output(input_path)
+        evaluator = PipelineQualityEvaluator(pass_threshold=pass_threshold)
+        return evaluator.run(pipeline_output, case_id=input_path.stem)
 
     raise ValueError(f"Unsupported suite: {suite}")
 

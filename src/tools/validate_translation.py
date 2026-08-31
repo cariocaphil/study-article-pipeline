@@ -4,7 +4,7 @@ Checks that a translation is non-empty and not a lazy copy of the source phrase.
 """
 
 
-def validate_translation(phrase: str, translation: str) -> bool:
+def validate_translation(phrase: str, translation: str, *, quiet: bool = False) -> bool:
     """
     Return True if translation is a plausible translation of phrase.
 
@@ -22,5 +22,6 @@ def validate_translation(phrase: str, translation: str) -> bool:
         valid = True
 
     status_label = "valid" if valid else "invalid"
-    print(f"[translation_validator] {phrase} → {translation} → {status_label}")
+    if not quiet:
+        print(f"[translation_validator] {phrase} → {translation} → {status_label}")
     return valid
