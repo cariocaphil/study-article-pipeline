@@ -25,6 +25,11 @@ Examples:
         --suite translation_quality \\
         --input evals/datasets/translation/phrases.jsonl \\
         --predictions evals/datasets/fixtures/translation_judge_predictions.jsonl
+
+    uv run python -m evals.runners.run_evals \\
+        --suite search_url_recall \\
+        --input evals/datasets/search/gold_urls.jsonl \\
+        --predictions evals/datasets/fixtures/search_predictions.jsonl
 """
 
 from __future__ import annotations
@@ -47,6 +52,8 @@ from evals.evaluators.base import (
     load_pipeline_output,
     load_review_dataset,
     load_review_predictions,
+    load_search_predictions,
+    load_search_recall_dataset,
     load_translation_dataset,
     load_translation_predictions,
     new_run_id,
@@ -63,6 +70,10 @@ from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import (
     ReviewActionsEvaluator,
     collect_live_predictions as collect_review_live_predictions,
+)
+from evals.evaluators.search_url_recall import (
+    SearchUrlRecallEvaluator,
+    collect_live_predictions as collect_search_live_predictions,
 )
 from evals.evaluators.translation_quality import (
     TranslationQualityEvaluator,
@@ -102,6 +113,12 @@ DEFAULT_TRANSLATION_PREDICTIONS = (
     / "fixtures"
     / "translation_judge_predictions.jsonl"
 )
+DEFAULT_SEARCH_DATASET = (
+    PROJECT_ROOT / "evals" / "datasets" / "search" / "gold_urls.jsonl"
+)
+DEFAULT_SEARCH_PREDICTIONS = (
+    PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "search_predictions.jsonl"
+)
 
 SUITE_DEFAULTS = {
     "quote_faithfulness": DEFAULT_PIPELINE_FIXTURE,
@@ -109,6 +126,7 @@ SUITE_DEFAULTS = {
     "review_actions": DEFAULT_REVIEW_DATASET,
     "extract_phrase_recall": DEFAULT_EXTRACT_DATASET,
     "translation_quality": DEFAULT_TRANSLATION_DATASET,
+    "search_url_recall": DEFAULT_SEARCH_DATASET,
 }
 
 SUITE_PREDICTION_DEFAULTS = {
@@ -116,6 +134,7 @@ SUITE_PREDICTION_DEFAULTS = {
     "review_actions": DEFAULT_REVIEW_PREDICTIONS,
     "extract_phrase_recall": DEFAULT_EXTRACT_PREDICTIONS,
     "translation_quality": DEFAULT_TRANSLATION_PREDICTIONS,
+    "search_url_recall": DEFAULT_SEARCH_PREDICTIONS,
 }
 
 LIVE_SUITES = {
@@ -123,6 +142,7 @@ LIVE_SUITES = {
     "review_actions",
     "extract_phrase_recall",
     "translation_quality",
+    "search_url_recall",
 }
 
 
@@ -144,7 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--predictions",
         type=Path,
         default=None,
-        help="Cached predictions for offline filter_classification, review_actions, extract_phrase_recall, or translation_quality runs",
+        help="Cached predictions for offline runs that require --predictions",
     )
     parser.add_argument(
         "--live",
@@ -270,6 +290,27 @@ def run_suite(
                     "translation_quality requires --predictions unless --live is set."
                 )
             predictions = load_translation_predictions(predictions_path)
+
+        return evaluator.run(cases, predictions)
+
+    if suite == "search_url_recall":
+        cases = load_search_recall_dataset(input_path)
+        evaluator = SearchUrlRecallEvaluator(pass_threshold=pass_threshold)
+
+        if live:
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY is required for --live search_url_recall runs."
+                )
+            client = anthropic.Anthropic(api_key=api_key)
+            predictions = collect_search_live_predictions(cases, client)
+        else:
+            if predictions_path is None:
+                raise ValueError(
+                    "search_url_recall requires --predictions unless --live is set."
+                )
+            predictions = load_search_predictions(predictions_path)
 
         return evaluator.run(cases, predictions)
 

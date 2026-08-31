@@ -206,6 +206,21 @@ uv run python -m evals.runners.run_evals \
 
 Add `--live` to score with the LLM judge (requires `ANTHROPIC_API_KEY`).
 
+Run search URL recall offline against cached predictions:
+
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite search_url_recall \
+  --input evals/datasets/search/gold_urls.jsonl \
+  --predictions evals/datasets/fixtures/search_predictions.jsonl
+```
+
+Add `--live` to score the real search agent (requires `ANTHROPIC_API_KEY`).
+
+Gold URLs are stable review links a human verified for each topic. Recall
+measures whether search returned those known-good candidates (filter still
+judges page content afterward).
+
 Compare two saved eval runs:
 
 ```bash
@@ -226,8 +241,9 @@ evals/
 │   ├── extract/gold_phrases.jsonl  # human-labeled gold phrases for fixed excerpts
 │   ├── review/phrase_lists.jsonl  # labeled keep/review/remove phrase lists
 │   ├── translation/phrases.jsonl  # human-labeled translation adequacy cases
+│   ├── search/gold_urls.jsonl  # stable gold review URLs per topic
 │   └── fixtures/               # sample PipelineOutput + cached predictions
-├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall, translation_quality
+├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall, translation_quality, search_url_recall
 └── runners/
     ├── run_evals.py            # CLI entry point
     └── compare_runs.py         # diff scores between two saved runs
@@ -277,7 +293,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 18**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 19**.
 
 ### Initial Setup ✅
 
@@ -392,7 +408,14 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 18
 - [x] Add `compare_runs` CLI to diff scores across eval runs
 - [x] Support live LLM judge runs via `--live` (local, API key required)
 
-### PR 18 — Continuous Integration
+### PR 18 — Eval: Search URL Recall
+
+- [x] Add stable gold URL dataset for fixed search topics
+- [x] Add search URL recall evaluator against gold links
+- [x] Support offline scoring via cached predictions
+- [x] Support live scoring via `--live` (calls `search_agent` per topic)
+
+### PR 19 — Continuous Integration
 
 - [ ] Add GitHub Actions workflow
 - [ ] Set up Python and uv in CI
@@ -400,7 +423,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 18
 - [ ] Run deterministic evals in CI (no API key required)
 - [ ] Add linting with Ruff
 
-### PR 19 — Containerization
+### PR 20 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -408,7 +431,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 18
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 20 — Azure Container Apps Deployment
+### PR 21 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -418,7 +441,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 18
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 21 — Continuous Deployment
+### PR 22 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`
