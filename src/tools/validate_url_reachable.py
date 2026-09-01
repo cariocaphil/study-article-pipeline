@@ -8,6 +8,8 @@ import logging
 import urllib.error
 import urllib.request
 
+from src.tools.url_safety import is_safe_fetch_url
+
 logger = logging.getLogger(__name__)
 
 TIMEOUT_SECONDS = 5
@@ -17,9 +19,13 @@ def validate_url_reachable(url: str) -> bool:
     """
     Check whether a URL is reachable via an HTTP HEAD request.
 
-    Returns True for HTTP 2xx/3xx responses. Returns False on 4xx/5xx
-    responses, timeouts, or connection failures.
+    Returns True for HTTP 2xx/3xx responses. Returns False on unsafe URLs,
+    4xx/5xx responses, timeouts, or connection failures.
     """
+    if not is_safe_fetch_url(url):
+        logger.info("%s → blocked", url)
+        return False
+
     try:
         request = urllib.request.Request(
             url,

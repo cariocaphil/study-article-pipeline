@@ -38,7 +38,7 @@ keeps items that passed validation:
 
 | Tool | Agent | What it checks |
 |------|-------|----------------|
-| `validate_url_reachable` | Search | URL responds to an HTTP HEAD request (2xx/3xx) |
+| `validate_url_reachable` | Search | URL passes SSRF checks; responds to HTTP HEAD (2xx/3xx) |
 | `verify_quote` | Extract | `sentence_context` is a verbatim quote from the article |
 | `validate_translation` | Extract | Translation is non-empty and not a lazy copy of the source phrase |
 
@@ -289,6 +289,7 @@ src/
 │   └── compile_agent.py      # generates the PDF
 ├── tools/                    # client-side validation tools used by agents
 │   ├── validate_url_reachable.py
+│   ├── url_safety.py
 │   ├── verify_quote.py
 │   ├── validate_translation.py
 │   └── validate_topic.py
@@ -311,13 +312,14 @@ tests/
 ├── test_validate_translation.py
 ├── test_validate_topic.py
 ├── test_validate_url_reachable.py
+├── test_url_safety.py
 └── test_verify_quote.py
 output/                        # generated PDF files land here
 ```
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 27**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 28**.
 
 ### Initial Setup ✅
 
@@ -500,7 +502,14 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 27
 - [x] Add unit tests for wrapping and prompt usage
 - [x] Document trust boundaries in CLAUDE.md (complements PR 20 input guardrails)
 
-### PR 27 — Containerization
+### PR 27 — URL Safety
+
+- [x] Add `is_safe_fetch_url()` to block private, local, and non-http(s) URLs
+- [x] Run SSRF checks in `validate_url_reachable` before outbound HTTP HEAD
+- [x] Add unit tests for blocked URLs (no network I/O)
+- [x] Document URL safety in CLAUDE.md trust boundaries
+
+### PR 28 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -508,7 +517,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 27
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 28 — Azure Container Apps Deployment
+### PR 29 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -518,7 +527,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 27
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 29 — Continuous Deployment
+### PR 30 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`
