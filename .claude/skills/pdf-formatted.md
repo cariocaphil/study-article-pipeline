@@ -2,7 +2,7 @@
 
 ## Purpose
 Define formatting preferences for the generated study document.
-Apply these when the compile agent builds the .docx.
+Apply these when the compile agent builds the PDF.
 
 ## Page layout
 - Paper size: A4

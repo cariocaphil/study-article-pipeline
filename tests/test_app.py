@@ -21,6 +21,17 @@ from src.schemas.pipeline_result import PipelineRunResult
 APP_PATH = Path(__file__).resolve().parent.parent / "app.py"
 
 
+def _sample_pdf_path() -> str:
+    from reportlab.pdfgen import canvas
+
+    fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
+    os.close(fd)
+    pdf = canvas.Canvas(tmp_path)
+    pdf.drawString(72, 720, "Study document")
+    pdf.save()
+    return tmp_path
+
+
 def _pipeline_result(output_path: str) -> PipelineRunResult:
     return PipelineRunResult(
         output_path=output_path,
@@ -127,11 +138,8 @@ class TestGenerateButton:
     def test_successful_run_shows_success_and_download_button(self, app):
         app.text_input[0].input("Entroncamento")
 
-        fd, tmp_path = tempfile.mkstemp(suffix=".docx")
+        tmp_path = _sample_pdf_path()
         try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(b"fake docx bytes")
-
             with patch(
                 "src.orchestrator.run_pipeline",
                 return_value=_pipeline_result(tmp_path),
@@ -159,11 +167,8 @@ class TestGenerateButton:
         app.text_input[0].input("Amadeus")
         app.selectbox[0].select("Theatre production")
 
-        fd, tmp_path = tempfile.mkstemp(suffix=".docx")
+        tmp_path = _sample_pdf_path()
         try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(b"fake docx bytes")
-
             with patch(
                 "src.orchestrator.run_pipeline",
                 return_value=_pipeline_result(tmp_path),
@@ -201,11 +206,8 @@ class TestGenerateButton:
     def test_topic_is_stripped_before_being_passed_to_pipeline(self, app):
         app.text_input[0].input("  Entroncamento  ")
 
-        fd, tmp_path = tempfile.mkstemp(suffix=".docx")
+        tmp_path = _sample_pdf_path()
         try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(b"fake docx bytes")
-
             with patch(
                 "src.orchestrator.run_pipeline",
                 return_value=_pipeline_result(tmp_path),

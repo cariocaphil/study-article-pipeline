@@ -1,105 +1,208 @@
 """
 Compile agent.
-Takes a validated PipelineOutput and produces a printable .docx file.
+Takes a validated PipelineOutput and produces a printable PDF file.
 """
 
-import logging
+from __future__ import annotations
 
-from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Cm
+import logging
+from pathlib import Path
+from xml.sax.saxutils import escape
+
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Flowable, PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
 from src.schemas.article import PipelineOutput
 
 logger = logging.getLogger(__name__)
 
+_FONT_NAME = "StudyDocUnicode"
+_FONT_REGISTERED = False
+
+
+def _register_unicode_font() -> None:
+    global _FONT_REGISTERED
+    if _FONT_REGISTERED:
+        return
+
+    project_root = Path(__file__).resolve().parents[2]
+    candidates = [
+        project_root / "src" / "assets" / "fonts" / "DejaVuSans.ttf",
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/TTF/DejaVuSans.ttf"),
+        Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
+        Path("/Library/Fonts/Arial Unicode.ttf"),
+    ]
+    for font_path in candidates:
+        if font_path.is_file():
+            pdfmetrics.registerFont(TTFont(_FONT_NAME, str(font_path)))
+            _FONT_REGISTERED = True
+            return
+
+    raise RuntimeError(
+        "No Unicode font found for PDF generation. "
+        "Install DejaVu Sans or place DejaVuSans.ttf in src/assets/fonts/."
+    )
+
+
+def _styles() -> dict[str, ParagraphStyle]:
+    _register_unicode_font()
+    return {
+        "title": ParagraphStyle(
+            "Title",
+            fontName=_FONT_NAME,
+            fontSize=18,
+            leading=22,
+            alignment=TA_CENTER,
+            spaceAfter=6,
+        ),
+        "meta": ParagraphStyle(
+            "Meta",
+            fontName=_FONT_NAME,
+            fontSize=11,
+            leading=14,
+            alignment=TA_CENTER,
+            spaceAfter=12,
+        ),
+        "heading2": ParagraphStyle(
+            "Heading2",
+            fontName=_FONT_NAME,
+            fontSize=14,
+            leading=18,
+            spaceBefore=6,
+            spaceAfter=6,
+        ),
+        "heading3": ParagraphStyle(
+            "Heading3",
+            fontName=_FONT_NAME,
+            fontSize=12,
+            leading=16,
+            spaceBefore=6,
+            spaceAfter=4,
+        ),
+        "body": ParagraphStyle(
+            "Body",
+            fontName=_FONT_NAME,
+            fontSize=11,
+            leading=11 * 1.3,
+            spaceAfter=4,
+        ),
+        "bullet": ParagraphStyle(
+            "Bullet",
+            fontName=_FONT_NAME,
+            fontSize=11,
+            leading=11 * 1.3,
+            leftIndent=12,
+            bulletIndent=0,
+            spaceAfter=2,
+        ),
+        "context": ParagraphStyle(
+            "Context",
+            fontName=_FONT_NAME,
+            fontSize=11,
+            leading=11 * 1.3,
+            leftIndent=12 + cm,
+            spaceAfter=8,
+        ),
+    }
+
+
+def _bold_label(label: str, value: str, style: ParagraphStyle) -> Paragraph:
+    return Paragraph(f"<b>{escape(label)}</b>{escape(value)}", style)
+
 
 def compile_document(output: PipelineOutput, output_path: str) -> str:
     """
-    Generates a .docx file from a PipelineOutput.
+    Generates a PDF file from a PipelineOutput.
     Returns the path to the generated file.
     """
 
-    doc = Document()
+    styles = _styles()
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=A4,
+        leftMargin=3 * cm,
+        rightMargin=4.5 * cm,
+        topMargin=2.5 * cm,
+        bottomMargin=2.5 * cm,
+        title=f'Study Article Collection regarding "{output.topic}"',
+    )
 
-    # ── Page margins — generous for hand annotation ───────────────────────────
-    for section in doc.sections:
-        section.top_margin = Cm(2.5)
-        section.bottom_margin = Cm(2.5)
-        section.left_margin = Cm(3)
-        section.right_margin = Cm(4)  # wider right margin for your pen notes
+    story: list[Flowable] = []
 
-    # ── Document title ────────────────────────────────────────────────────────
-    title = doc.add_heading(f'Study Article Collection regarding "{output.topic}"', level=1)
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    story.append(
+        Paragraph(
+            f'Study Article Collection regarding "{escape(output.topic)}"',
+            styles["title"],
+        )
+    )
+    story.append(
+        Paragraph(
+            (
+                f"<i>Source language: {escape(output.source_language.capitalize())}  |  "
+                f"Translations: {escape(output.translation_language.capitalize())}  |  "
+                f"Level: {escape(output.user_level.value)}</i>"
+            ),
+            styles["meta"],
+        )
+    )
+    story.append(Spacer(1, 6))
 
-    # ── Metadata line ─────────────────────────────────────────────────────────
-    meta = doc.add_paragraph()
-    meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    meta.add_run(
-        f"Source language: {output.source_language.capitalize()}  |  "
-        f"Translations: {output.translation_language.capitalize()}  |  "
-        f"Level: {output.user_level.value}"
-    ).italic = True
-
-    doc.add_paragraph()  # spacer
-
-    # ── Articles ──────────────────────────────────────────────────────────────
     for i, article in enumerate(output.articles, start=1):
-        # Article heading
-        doc.add_heading(f"Article {i}", level=2)
+        story.append(Paragraph(f"Article {i}", styles["heading2"]))
+        story.append(_bold_label("Title: ", article.title, styles["body"]))
+        author = article.author if article.author else "Unknown"
+        story.append(_bold_label("Author: ", author, styles["body"]))
+        story.append(_bold_label("Source: ", article.source_name, styles["body"]))
+        story.append(_bold_label("Link: ", article.url, styles["body"]))
+        story.append(Spacer(1, 6))
 
-        # Article metadata
-        p = doc.add_paragraph()
-        p.add_run("Title: ").bold = True
-        p.add_run(article.title)
-
-        p = doc.add_paragraph()
-        p.add_run("Author: ").bold = True
-        p.add_run(article.author if article.author else "Unknown")
-
-        p = doc.add_paragraph()
-        p.add_run("Source: ").bold = True
-        p.add_run(article.source_name)
-
-        p = doc.add_paragraph()
-        p.add_run("Link: ").bold = True
-        p.add_run(article.url)
-
-        doc.add_paragraph()  # spacer
-
-        # Full article text
-        doc.add_heading("Article Text", level=3)
+        story.append(Paragraph("Article Text", styles["heading3"]))
         for paragraph in article.full_text.split("\n"):
             paragraph = paragraph.strip()
             if paragraph:
-                doc.add_paragraph(paragraph)
+                story.append(Paragraph(escape(paragraph), styles["body"]))
 
-        doc.add_paragraph()  # spacer
-
-        # Vocabulary and expressions list
-        doc.add_heading("Vocabulary & Expressions", level=3)
+        story.append(Spacer(1, 6))
+        story.append(Paragraph("Vocabulary &amp; Expressions", styles["heading3"]))
 
         if not article.phrases:
-            doc.add_paragraph("No phrases extracted above the specified level.")
+            story.append(
+                Paragraph(
+                    "No phrases extracted above the specified level.",
+                    styles["body"],
+                )
+            )
         else:
             for phrase in article.phrases:
-                p = doc.add_paragraph(style="List Bullet")
-                p.add_run(
-                    f"[{phrase.category.value}] [{phrase.estimated_level.value}] "
-                ).bold = True
-                p.add_run(f"{phrase.phrase}").bold = True
-                p.add_run(f" — {phrase.translation}")
-                # Sentence context on the next line, indented
-                context_p = doc.add_paragraph(style="List Bullet")
-                context_p.add_run(f'"{phrase.sentence_context}"').italic = True
-                context_p.paragraph_format.left_indent = Cm(1)
+                story.append(
+                    Paragraph(
+                        (
+                            f"<bullet>&bull;</bullet> "
+                            f"<b>[{escape(phrase.category.value)}] "
+                            f"[{escape(phrase.estimated_level.value)}] "
+                            f"{escape(phrase.phrase)}</b> "
+                            f"&mdash; {escape(phrase.translation)}"
+                        ),
+                        styles["bullet"],
+                    )
+                )
+                story.append(
+                    Paragraph(
+                        f'<i>"{escape(phrase.sentence_context)}"</i>',
+                        styles["context"],
+                    )
+                )
 
-        # Page break between articles (except after the last one)
         if i < len(output.articles):
-            doc.add_page_break()
+            story.append(PageBreak())
 
-    doc.save(output_path)
+    doc.build(story)
     logger.info("Document saved to %s", output_path)
     return output_path
 
@@ -146,4 +249,4 @@ if __name__ == "__main__":
         ],
     )
 
-    compile_document(sample, "output/test_output.docx")
+    compile_document(sample, "output/test_output.pdf")

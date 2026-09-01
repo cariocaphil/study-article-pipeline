@@ -4,12 +4,12 @@
 Given a topic (film, book, author, etc.), a source language, a translation
 language, and the user's CEFR level, this pipeline searches for native-language
 review articles, extracts vocabulary and expressions above the user's level,
-and compiles everything into a printable Word document for language study.
+and compiles everything into a printable PDF for language study.
 
 ## Stack
 - Python 3.11+
 - Anthropic Python SDK (claude-sonnet-4-6, web search tool enabled)
-- python-docx (Word document generation)
+- ReportLab (PDF document generation)
 - Pydantic (schema validation between agents)
 - Pyright (`standard` type checking — config in `pyproject.toml`)
 - stdlib `logging` (no `print()` in pipeline code)
@@ -22,7 +22,7 @@ and compiles everything into a printable Word document for language study.
 | Filter      | src/agents/filter_agent.py  | Confirm each URL is a real review, fetch full text + author |
 | Extract     | src/agents/extract_agent.py | Pull phrases above user's CEFR level, with translations |
 | Review      | src/agents/review_agent.py  | Independently audit extracted phrases for quality, drop low-quality items |
-| Compile     | src/agents/compile_agent.py | Produce the final .docx |
+| Compile     | src/agents/compile_agent.py | Produce the final PDF |
 
 ## Tools
 Validation tools live in `src/tools/`. They are **client-executed**: the agent
@@ -99,8 +99,8 @@ Use `logging.getLogger(__name__)` in agents and tools. Validation tools support
 `quiet=True` to suppress info logs when called from evals or bulk tests.
 
 ## Output
-Generated .docx files land in output/
-Filename format: {topic}_{source_lang}_{translation_lang}_{level}.docx
+Generated PDF files land in output/
+Filename format: {topic}_{source_lang}_{translation_lang}_{level}.pdf
 
 ## Slash command
 /find-articles "<topic>" <source_language> <translation_language> <cefr_level> [n_articles]
@@ -132,7 +132,7 @@ Skills are located in `.claude/skills/`. Claude Code should load them when relev
 
 | Skill | File | When to apply |
 |---|---|---|
-| Document formatter | `.claude/skills/docx-formatted.md` | Any time the compile agent or document layout is discussed or modified |
+| Document formatter | `.claude/skills/pdf-formatted.md` | Any time the compile agent or document layout is discussed or modified |
 | Article filter criteria | `.claude/skills/article-filter-criteria.md` | Already injected at runtime in filter_agent.py |
 | CEFR extraction guide | `.claude/skills/cefr-extraction-guide.md` | Already injected at runtime in extract_agent.py |
 | Phrase quality reviewer | `.claude/skills/phrase-quality-reviewer.md` | Already injected at runtime in review_agent.py |
