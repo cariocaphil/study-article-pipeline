@@ -3,8 +3,11 @@ Quote verifier.
 Checks whether a sentence appears verbatim in the source article text.
 """
 
+import logging
 import re
 import unicodedata
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize(text: str) -> str:
@@ -28,5 +31,5 @@ def verify_quote(sentence: str, article_text: str, *, quiet: bool = False) -> bo
 
     if not quiet:
         status_label = "verified" if verified else "not found"
-        print(f"[quote_verifier] {sentence} → {status_label}")
+        logger.info("%s → %s", sentence, status_label)
     return verified

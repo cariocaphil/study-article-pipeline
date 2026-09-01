@@ -2,6 +2,8 @@
 Tests for src/tools/validate_topic.py.
 """
 
+import logging
+
 from src.tools.validate_topic import (
     MAX_TOPIC_LENGTH,
     topic_validation_error,
@@ -65,22 +67,22 @@ def test_validate_topic_rejects_script_markup_as_unsafe_characters():
     assert topic_validation_error(topic) == ("Topic contains characters that are not allowed.")
 
 
-def test_validate_topic_logs_valid(capsys):
-    validate_topic("Entroncamento")
+def test_validate_topic_logs_valid(caplog):
+    with caplog.at_level(logging.INFO, logger="src.tools.validate_topic"):
+        validate_topic("Entroncamento")
 
-    captured = capsys.readouterr()
-    assert "[topic_validator] 'Entroncamento' → valid" in captured.out
-
-
-def test_validate_topic_logs_invalid(capsys):
-    validate_topic("")
-
-    captured = capsys.readouterr()
-    assert "[topic_validator] '' → invalid" in captured.out
+    assert "'Entroncamento' → valid" in caplog.text
 
 
-def test_validate_topic_quiet_mode(capsys):
-    validate_topic("Entroncamento", quiet=True)
+def test_validate_topic_logs_invalid(caplog):
+    with caplog.at_level(logging.INFO, logger="src.tools.validate_topic"):
+        validate_topic("")
 
-    captured = capsys.readouterr()
-    assert captured.out == ""
+    assert "'' → invalid" in caplog.text
+
+
+def test_validate_topic_quiet_mode(caplog):
+    with caplog.at_level(logging.INFO, logger="src.tools.validate_topic"):
+        validate_topic("Entroncamento", quiet=True)
+
+    assert caplog.text == ""

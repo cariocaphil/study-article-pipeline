@@ -3,6 +3,10 @@ Translation validator.
 Checks that a translation is non-empty and not a lazy copy of the source phrase.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def validate_translation(phrase: str, translation: str, *, quiet: bool = False) -> bool:
     """
@@ -23,5 +27,5 @@ def validate_translation(phrase: str, translation: str, *, quiet: bool = False) 
 
     status_label = "valid" if valid else "invalid"
     if not quiet:
-        print(f"[translation_validator] {phrase} → {translation} → {status_label}")
+        logger.info("%s → %s → %s", phrase, translation, status_label)
     return valid

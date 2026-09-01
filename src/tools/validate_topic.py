@@ -6,7 +6,10 @@ to use in filenames and agent prompts.
 
 from __future__ import annotations
 
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 MAX_TOPIC_LENGTH = 200
 
@@ -47,5 +50,5 @@ def validate_topic(topic: str, *, quiet: bool = False) -> bool:
 
     if not quiet:
         status_label = "valid" if valid else "invalid"
-        print(f"[topic_validator] {topic!r} → {status_label}")
+        logger.info("%r → %s", topic, status_label)
     return valid
