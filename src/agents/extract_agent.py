@@ -15,6 +15,7 @@ from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
 from src.tools.validate_translation import validate_translation
 from src.tools.verify_quote import verify_quote
 from src.utils import load_skill
+from src.utils.anthropic_retry import create_message_with_retry
 from src.utils.anthropic_utils import as_tool_param, message_text, require_str_field
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
@@ -180,7 +181,8 @@ Example format:
     parse_attempts = 0
 
     while True:
-        response = client.messages.create(
+        response = create_message_with_retry(
+            client,
             model="claude-sonnet-4-6",
             max_tokens=4096,
             tools=[VERIFY_QUOTE_TOOL, VALIDATE_TRANSLATION_TOOL],

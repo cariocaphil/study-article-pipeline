@@ -49,17 +49,19 @@ parseable JSON: it sends a continuation prompt and re-calls the API (up to 3
 parse attempts) before raising. Apply the same pattern if another agent's tool
 loop can end with planning text rather than structured output.
 
-Agents that call `client.messages.create()` should call `record_api_usage()`
-from `src/utils/observability.py` after each response when a `UsageTracker` is
+Agents that call the Anthropic API should use `create_message_with_retry()` from
+`src/utils/anthropic_retry.py` and call `record_api_usage()` from
+`src/utils/observability.py` after each response when a `UsageTracker` is
 available (passed from the orchestrator).
 
 ### Anthropic API typing
 
 Agent tool loops use typed Anthropic SDK types. Shared helpers live in
-`src/utils/anthropic_utils.py`:
+`src/utils/anthropic_utils.py` and `src/utils/anthropic_retry.py`:
 
 | Helper | Use for |
 |--------|---------|
+| `create_message_with_retry(client, ...)` | Retry transient Anthropic API failures |
 | `message_text(response)` | Extract joined text from a `Message` (check `block.type == "text"`) |
 | `as_tool_param(schema)` | Cast client-side tool JSON schemas to `ToolParam` |
 | `require_str_field(data, field)` | Safely read string fields from `tool_use` block inputs |

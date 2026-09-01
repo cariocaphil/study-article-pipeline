@@ -51,6 +51,19 @@ def test_user_facing_pipeline_error_generic_for_unexpected():
     assert message == "An unexpected error occurred. Please try again later."
 
 
+def test_user_facing_pipeline_error_for_transient_api_status():
+    import httpx2 as httpx
+    from anthropic import InternalServerError
+
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx.Response(500, request=request)
+    error = InternalServerError("boom", response=response, body={})
+
+    message = user_facing_pipeline_error(error)
+
+    assert message == ("The language service encountered a temporary error. Please try again.")
+
+
 def test_record_api_usage_logs_and_accumulates(caplog):
     from anthropic.types import Message, Usage
 

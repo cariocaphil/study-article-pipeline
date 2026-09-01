@@ -297,10 +297,12 @@ src/
 │   └── article.py            # Pydantic models shared between agents
 └── utils/
     ├── __init__.py           # load_skill() helper
+    ├── anthropic_retry.py    # retry transient Anthropic API failures
     └── json_utils.py         # robust JSON extraction from LLM responses
 tests/
 ├── conftest.py               # shared fixtures (API client, sample text/phrases)
 ├── test_app.py               # Streamlit UI tests (AppTest)
+├── test_anthropic_retry.py
 ├── test_compile_agent.py
 ├── test_evals.py             # deterministic eval harness tests
 ├── test_extract_agent.py
@@ -319,7 +321,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 29**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 30**.
 
 ### Initial Setup ✅
 
@@ -486,7 +488,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 29
 - [x] Add shared Anthropic typing helpers (`message_text`, `FilteredArticle`)
 - [x] Run Pyright in CI alongside Ruff
 
-### PR 25 — PDF Output
+### PR 25 — PDF Output ✅
 
 - [x] Replace DOCX generation with direct PDF generation (no intermediate Word file)
 - [x] Preserve current document structure (headings, articles, vocabulary sections, margins)
@@ -495,27 +497,34 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 29
 - [x] Persist generated PDF across Streamlit reruns via session state
 - [x] Update tests, filenames, and docs for PDF as the canonical format
 
-### PR 26 — Trust Boundary
+### PR 26 — Trust Boundary ✅
 
 - [x] Add shared helper to wrap retrieved article content as untrusted data
 - [x] Apply trust-boundary preamble and delimiters in filter, extract, and review agents
 - [x] Add unit tests for wrapping and prompt usage
 - [x] Document trust boundaries in CLAUDE.md (complements PR 20 input guardrails)
 
-### PR 27 — URL Safety
+### PR 27 — URL Safety ✅
 
 - [x] Add `is_safe_fetch_url()` to block private, local, and non-http(s) URLs
 - [x] Run SSRF checks in `validate_url_reachable` before outbound HTTP HEAD
 - [x] Add unit tests for blocked URLs (no network I/O)
 - [x] Document URL safety in CLAUDE.md trust boundaries
 
-### PR 28 — Safe Markdown Output
+### PR 28 — Safe Markdown Output ✅
 
 - [x] Escape user topic before rendering in Streamlit confirmation markdown
 - [x] Add unit tests for markdown metacharacter neutralization
 - [x] Document Streamlit output safety in CLAUDE.md trust boundaries
 
-### PR 29 — Containerization
+### PR 29 — API Retry ✅
+
+- [x] Add `create_message_with_retry()` for transient Anthropic API failures
+- [x] Use retry wrapper in search, filter, extract, and review agents
+- [x] Improve Streamlit error messages after exhausted API retries
+- [x] Add unit tests for retry behavior and user-facing API errors
+
+### PR 30 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -523,7 +532,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 29
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 30 — Azure Container Apps Deployment
+### PR 31 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -533,7 +542,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 29
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 31 — Continuous Deployment
+### PR 32 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`

@@ -15,6 +15,7 @@ import anthropic
 from evals.evaluators.base import EvalFailure, EvalResult
 from evals.evaluators.utils import safe_divide
 from src.utils import load_skill
+from src.utils.anthropic_retry import create_message_with_retry
 from src.utils.anthropic_utils import message_text
 from src.utils.json_utils import extract_json
 
@@ -164,7 +165,8 @@ Example:
 {{"adequate": true, "reason": "Captures the idiomatic meaning in natural German."}}
 """
 
-    response = client.messages.create(
+    response = create_message_with_retry(
+        client,
         model="claude-sonnet-4-6",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
