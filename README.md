@@ -488,7 +488,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 30
 - [x] Add shared Anthropic typing helpers (`message_text`, `FilteredArticle`)
 - [x] Run Pyright in CI alongside Ruff
 
-### PR 25 — PDF Output
+### PR 25 — PDF Output ✅
 
 - [x] Replace DOCX generation with direct PDF generation (no intermediate Word file)
 - [x] Preserve current document structure (headings, articles, vocabulary sections, margins)
@@ -497,27 +497,27 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 30
 - [x] Persist generated PDF across Streamlit reruns via session state
 - [x] Update tests, filenames, and docs for PDF as the canonical format
 
-### PR 26 — Trust Boundary
+### PR 26 — Trust Boundary ✅
 
 - [x] Add shared helper to wrap retrieved article content as untrusted data
 - [x] Apply trust-boundary preamble and delimiters in filter, extract, and review agents
 - [x] Add unit tests for wrapping and prompt usage
 - [x] Document trust boundaries in CLAUDE.md (complements PR 20 input guardrails)
 
-### PR 27 — URL Safety
+### PR 27 — URL Safety ✅
 
 - [x] Add `is_safe_fetch_url()` to block private, local, and non-http(s) URLs
 - [x] Run SSRF checks in `validate_url_reachable` before outbound HTTP HEAD
 - [x] Add unit tests for blocked URLs (no network I/O)
 - [x] Document URL safety in CLAUDE.md trust boundaries
 
-### PR 28 — Safe Markdown Output
+### PR 28 — Safe Markdown Output ✅
 
 - [x] Escape user topic before rendering in Streamlit confirmation markdown
 - [x] Add unit tests for markdown metacharacter neutralization
 - [x] Document Streamlit output safety in CLAUDE.md trust boundaries
 
-### PR 29 — API Retry
+### PR 29 — API Retry ✅
 
 - [x] Add `create_message_with_retry()` for transient Anthropic API failures
 - [x] Use retry wrapper in search, filter, extract, and review agents
