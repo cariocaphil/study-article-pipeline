@@ -287,6 +287,59 @@ class TestExtractPhrasesToolLoop:
         assert len(phrases) == 1
         assert client.messages.create.call_count == 3
 
+    def test_retries_when_json_array_is_truncated(self, mock_verify, mock_validate):
+        article = "Laura foge de um passado turbulento."
+        verified_sentence = "Laura foge de um passado turbulento."
+        mock_verify.return_value = True
+        mock_validate.return_value = True
+
+        client = MagicMock()
+        client.messages.create.side_effect = [
+            _response(
+                [
+                    _verify_quote_tool_use("tool-1", verified_sentence),
+                    _validate_translation_tool_use("tool-2", "turbulento", "turbulent"),
+                ],
+                "tool_use",
+            ),
+            _response(
+                [_text_block('[{"phrase": "turbulento", "sentence_context": "Laura')],
+                "max_tokens",
+            ),
+            _response(
+                [
+                    _text_block(
+                        _phrases_json(
+                            _phrase_item(
+                                "turbulento",
+                                verified_sentence,
+                                translation="turbulent",
+                            )
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+        ]
+
+        phrases = extract_phrases(
+            full_text=article,
+            source_language="portuguese",
+            translation_language="german",
+            user_level=CEFRLevel.C1,
+            client=client,
+        )
+
+        assert len(phrases) == 1
+        assert client.messages.create.call_count == 3
+        retry_messages = client.messages.create.call_args_list[2].kwargs["messages"]
+        retry_prompts = [
+            message["content"]
+            for message in retry_messages
+            if message["role"] == "user" and isinstance(message["content"], str)
+        ]
+        assert any("cut off" in prompt for prompt in retry_prompts)
+
     def test_raises_when_final_response_is_not_parseable_json(self, mock_verify, mock_validate):
         article = "Laura foge de um passado turbulento."
         sentence = "Laura foge de um passado turbulento."

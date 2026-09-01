@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.agents.search_agent import search_articles
+from src.schemas.article import TopicType
 
 
 def _text_block(text: str):
@@ -121,6 +122,29 @@ class TestSearchArticlesToolLoop:
 
         with pytest.raises(ValueError, match="could not parse URL list"):
             search_articles("Entroncamento", "portuguese", 1, client)
+
+    @patch("src.agents.search_agent.validate_url_reachable")
+    def test_includes_theatre_guidance_in_search_prompt(self, mock_validate):
+        good_url = "https://example.com/theatre-review"
+        mock_validate.return_value = True
+
+        client = MagicMock()
+        client.messages.create.side_effect = [
+            _response([_tool_use("tool-1", good_url)], "tool_use"),
+            _response([_text_block(f'["{good_url}"]')], "end_turn"),
+        ]
+
+        search_articles(
+            "Amadeus",
+            "english",
+            1,
+            client,
+            topic_type=TopicType.theatre,
+        )
+
+        prompt = client.messages.create.call_args_list[0].kwargs["messages"][0]["content"]
+        assert "theatre production" in prompt
+        assert "not the film, TV series" in prompt
 
 
 @pytest.mark.slow

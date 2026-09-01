@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from src.orchestrator import run_pipeline
+from src.schemas.article import TopicType
 
 
 def test_run_pipeline_rejects_empty_topic_before_search():
@@ -35,3 +36,20 @@ def test_run_pipeline_strips_topic_before_search():
 
     mock_search.assert_called_once()
     assert mock_search.call_args.args[0] == "Entroncamento"
+
+
+def test_run_pipeline_passes_topic_type_to_search():
+    with (
+        patch("src.orchestrator.search_articles", return_value=[]) as mock_search,
+        patch("src.orchestrator.filter_articles", return_value=[]),
+    ):
+        with pytest.raises(ValueError, match="Pipeline stopped"):
+            run_pipeline(
+                "Amadeus",
+                "english",
+                "german",
+                "C1",
+                topic_type=TopicType.theatre,
+            )
+
+    assert mock_search.call_args.kwargs["topic_type"] == TopicType.theatre

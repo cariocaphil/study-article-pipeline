@@ -15,6 +15,8 @@ from unittest.mock import patch
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from src.schemas.article import TopicType
+
 APP_PATH = Path(__file__).resolve().parent.parent / "app.py"
 
 
@@ -49,11 +51,14 @@ class TestAppLayout:
         assert app.text_input[0].label == "Topic"
         assert app.text_input[0].value == ""
 
-        source_language, translation_language, user_level = (
+        topic_type, source_language, translation_language, user_level = (
             app.selectbox[0],
             app.selectbox[1],
             app.selectbox[2],
+            app.selectbox[3],
         )
+        assert topic_type.label == "Topic type"
+        assert topic_type.value == "Film"
         assert source_language.label == "Source language"
         assert source_language.value == "portuguese"
         assert translation_language.label == "Translation language"
@@ -68,12 +73,13 @@ class TestAppLayout:
 
 
 class TestGenerateButton:
-    def test_blank_topic_shows_error_without_running_pipeline(self, app):
+    def test_blank_topic_shows_error_without_entering_confirmation(self, app):
         with patch("src.orchestrator.run_pipeline") as mock_run:
             app.button[0].click().run(timeout=30)
 
         mock_run.assert_not_called()
         assert [e.value for e in app.error] == ["Please enter a topic."]
+        assert "Review your request" not in " ".join(m.value for m in app.markdown)
 
     def test_whitespace_only_topic_shows_error(self, app):
         app.text_input[0].input("   ")
@@ -83,13 +89,27 @@ class TestGenerateButton:
         mock_run.assert_not_called()
         assert [e.value for e in app.error] == ["Please enter a topic."]
 
-    def test_unsafe_topic_shows_error_without_running_pipeline(self, app):
+    def test_unsafe_topic_shows_error_without_entering_confirmation(self, app):
         app.text_input[0].input("Entroncamento/Film")
         with patch("src.orchestrator.run_pipeline") as mock_run:
             app.button[0].click().run(timeout=30)
 
         mock_run.assert_not_called()
         assert [e.value for e in app.error] == ["Topic contains characters that are not allowed."]
+
+    def test_valid_topic_shows_summary_before_running_pipeline(self, app):
+        app.text_input[0].input("Amadeus")
+        app.selectbox[0].select("Theatre production")
+
+        with patch("src.orchestrator.run_pipeline") as mock_run:
+            app.button[0].click().run(timeout=30)
+
+        mock_run.assert_not_called()
+        body = " ".join(m.value for m in app.markdown)
+        assert "Review your request" in body
+        assert "**Topic:** Amadeus (Theatre production)" in body
+        assert app.button[0].label == "Confirm & generate"
+        assert app.button[1].label == "Go back"
 
     def test_successful_run_shows_success_and_download_button(self, app):
         app.text_input[0].input("Entroncamento")
@@ -101,6 +121,7 @@ class TestGenerateButton:
 
             with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
                 app.button[0].click().run(timeout=30)
+                app.button[0].click().run(timeout=30)
 
             mock_run.assert_called_once_with(
                 topic="Entroncamento",
@@ -108,11 +129,29 @@ class TestGenerateButton:
                 translation_language="german",
                 user_level="C1",
                 n_articles=5,
+                topic_type=TopicType.film,
             )
             assert not app.exception
             assert [s.value for s in app.success] == ["Document generated successfully."]
             assert len(app.download_button) == 1
             assert app.download_button[0].label == "⬇️ Download your study document"
+        finally:
+            os.remove(tmp_path)
+
+    def test_selected_topic_type_is_passed_to_pipeline(self, app):
+        app.text_input[0].input("Amadeus")
+        app.selectbox[0].select("Theatre production")
+
+        fd, tmp_path = tempfile.mkstemp(suffix=".docx")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(b"fake docx bytes")
+
+            with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
+                app.button[0].click().run(timeout=30)
+                app.button[0].click().run(timeout=30)
+
+            assert mock_run.call_args.kwargs["topic_type"] == TopicType.theatre
         finally:
             os.remove(tmp_path)
 
@@ -122,6 +161,7 @@ class TestGenerateButton:
         message = "Pipeline stopped: only 1 article(s) passed the filter."
         with patch("src.orchestrator.run_pipeline", side_effect=ValueError(message)):
             app.button[0].click().run(timeout=30)
+            app.button[0].click().run(timeout=30)
 
         assert not app.exception
         assert [e.value for e in app.error] == [message]
@@ -130,6 +170,7 @@ class TestGenerateButton:
         app.text_input[0].input("Entroncamento")
 
         with patch("src.orchestrator.run_pipeline", side_effect=RuntimeError("boom")):
+            app.button[0].click().run(timeout=30)
             app.button[0].click().run(timeout=30)
 
         assert not app.exception
@@ -145,7 +186,18 @@ class TestGenerateButton:
 
             with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
                 app.button[0].click().run(timeout=30)
+                app.button[0].click().run(timeout=30)
 
             assert mock_run.call_args.kwargs["topic"] == "Entroncamento"
         finally:
             os.remove(tmp_path)
+
+    def test_go_back_returns_to_generate_step_without_running_pipeline(self, app):
+        app.text_input[0].input("Entroncamento")
+
+        with patch("src.orchestrator.run_pipeline") as mock_run:
+            app.button[0].click().run(timeout=30)
+            app.button[1].click().run(timeout=30)
+
+        mock_run.assert_not_called()
+        assert app.button[0].label == "Generate study document"

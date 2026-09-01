@@ -28,7 +28,13 @@ def _strip_wrapper_text(text: str, open_char: str, close_char: str) -> str:
     clean = clean.replace("\u2018", "'").replace("\u2019", "'")
     clean = clean.replace("\u00ab", "'").replace("\u00bb", "'")
     start = clean.index(open_char)
-    end = clean.rindex(close_char) + 1
+    try:
+        end = clean.rindex(close_char) + 1
+    except ValueError as e:
+        raise ValueError(
+            f"Incomplete JSON block: found {open_char!r} but no matching {close_char!r} "
+            f"(response may have been truncated)"
+        ) from e
     return clean[start:end]
 
 

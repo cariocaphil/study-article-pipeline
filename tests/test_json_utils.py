@@ -145,8 +145,13 @@ class TestExtractJsonQuoteFollowedByComma:
 
 class TestExtractJsonFailureModes:
     def test_raises_value_error_when_no_brackets_present(self):
-        with pytest.raises(ValueError, match="no brackets here"):
+        with pytest.raises(ValueError, match="Could not find"):
             extract_json("no brackets here", "[", "]")
+
+    def test_raises_value_error_when_json_array_is_truncated(self):
+        raw = '[{"phrase": "foo", "sentence_context": "Com a'
+        with pytest.raises(ValueError, match="truncated"):
+            extract_json(raw, "[", "]")
 
     def test_raises_value_error_on_unrecoverable_malformed_json(self):
         raw = '[{"phrase": "foo", "translation": }]'
