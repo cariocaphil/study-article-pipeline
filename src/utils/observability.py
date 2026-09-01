@@ -127,13 +127,7 @@ def user_facing_pipeline_error(exc: Exception) -> str:
             )
         return message
     if isinstance(exc, (RateLimitError, APIConnectionError)):
-        return (
-            "The language service is temporarily unavailable. "
-            "Please try again in a moment."
-        )
+        return "The language service is temporarily unavailable. Please try again in a moment."
     if isinstance(exc, APIStatusError) and exc.status_code in {500, 502, 503, 529}:
-        return (
-            "The language service encountered a temporary error. "
-            "Please try again."
-        )
+        return "The language service encountered a temporary error. Please try again."
     return "An unexpected error occurred. Please try again later."

@@ -61,9 +61,7 @@ def test_user_facing_pipeline_error_for_transient_api_status():
 
     message = user_facing_pipeline_error(error)
 
-    assert message == (
-        "The language service encountered a temporary error. Please try again."
-    )
+    assert message == ("The language service encountered a temporary error. Please try again.")
 
 
 def test_record_api_usage_logs_and_accumulates(caplog):
