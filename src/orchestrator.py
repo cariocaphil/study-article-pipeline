@@ -128,9 +128,7 @@ if __name__ == "__main__":
             "Usage: python -m src.orchestrator <topic> <source_language> "
             "<translation_language> <cefr_level> [topic_type] [n_articles]"
         )
-        print(
-            "topic_type: film (default), series, book, theatre, album"
-        )
+        print("topic_type: film (default), series, book, theatre, album")
         sys.exit(1)
 
     topic_type = TopicType.film
