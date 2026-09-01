@@ -2,12 +2,13 @@
 Tests for src/agents/compile_agent.py.
 
 No Anthropic API calls are made here — compile_document() is a pure
-docx-generation step — so these run fast and unmarked.
+PDF-generation step — so these run fast and unmarked.
 """
 
 import os
 
-from docx import Document
+import pytest
+from pypdf import PdfReader
 
 from src.agents.compile_agent import compile_document
 from src.schemas.article import (
@@ -48,24 +49,30 @@ def _sample_pipeline_output() -> PipelineOutput:
     )
 
 
-def test_compile_creates_docx(temp_output_dir):
-    output_path = os.path.join(temp_output_dir, "test_output.docx")
+def _pdf_text(output_path: str) -> str:
+    reader = PdfReader(output_path)
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
 
-    result_path = compile_document(_sample_pipeline_output(), output_path)
 
-    assert result_path == output_path
+@pytest.fixture
+def compiled_pdf(temp_output_dir):
+    output_path = os.path.join(temp_output_dir, "test_output.pdf")
+    compile_document(_sample_pipeline_output(), output_path)
+    return output_path, _sample_pipeline_output()
+
+
+def test_compile_creates_pdf(compiled_pdf):
+    output_path, _ = compiled_pdf
+
     assert os.path.exists(output_path)
     assert os.path.getsize(output_path) > 0
+    with open(output_path, "rb") as pdf_file:
+        assert pdf_file.read(4) == b"%PDF"
 
 
-def test_compile_contains_article_text(temp_output_dir):
-    output_path = os.path.join(temp_output_dir, "test_output.docx")
-    pipeline_output = _sample_pipeline_output()
-
-    compile_document(pipeline_output, output_path)
-
-    doc = Document(output_path)
-    full_text = "\n".join(p.text for p in doc.paragraphs)
+def test_compile_contains_article_text(compiled_pdf):
+    output_path, pipeline_output = compiled_pdf
+    full_text = " ".join(_pdf_text(output_path).split())
 
     article = pipeline_output.articles[0]
     assert article.title in full_text
