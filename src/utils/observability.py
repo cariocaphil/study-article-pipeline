@@ -10,6 +10,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from anthropic import APIConnectionError, APIStatusError, RateLimitError
 from anthropic.types import Message
 
 StageCallback = Callable[[str], None]
@@ -125,4 +126,14 @@ def user_facing_pipeline_error(exc: Exception) -> str:
                 "Please try again or adjust your topic."
             )
         return message
+    if isinstance(exc, (RateLimitError, APIConnectionError)):
+        return (
+            "The language service is temporarily unavailable. "
+            "Please try again in a moment."
+        )
+    if isinstance(exc, APIStatusError) and exc.status_code in {500, 502, 503, 529}:
+        return (
+            "The language service encountered a temporary error. "
+            "Please try again."
+        )
     return "An unexpected error occurred. Please try again later."

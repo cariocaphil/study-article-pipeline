@@ -15,6 +15,7 @@ from anthropic.types import ToolUnionParam
 
 from src.schemas.article import FilteredArticle
 from src.utils import load_skill
+from src.utils.anthropic_retry import create_message_with_retry
 from src.utils.anthropic_utils import message_text
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
@@ -77,7 +78,8 @@ Return ONLY a JSON object with these exact keys, no other text:
 }}
 """
 
-        response = client.messages.create(
+        response = create_message_with_retry(
+            client,
             model="claude-sonnet-4-6",
             max_tokens=4000,
             tools=[WEB_SEARCH_TOOL],
