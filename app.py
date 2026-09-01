@@ -48,6 +48,7 @@ def _render_generated_document(result: PipelineRunResult) -> None:
         use_container_width=True,
     )
 
+
 st.title("📚 Study Article Collection")
 st.markdown("**Prepare for language lessons through real-world reading.**")
 
