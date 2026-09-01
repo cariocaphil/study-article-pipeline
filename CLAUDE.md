@@ -132,6 +132,13 @@ risk from malicious article pages but does not eliminate it.
 
 ## Development checks
 
+See `AGENTS.md` for the full quality-gate checklist. Install Git pre-commit
+hooks once per clone so Ruff format and check run automatically on commit:
+
+```bash
+uv run pre-commit install
+```
+
 Run before opening a PR:
 
 ```bash
