@@ -18,6 +18,7 @@ from src.utils import load_skill
 from src.utils.anthropic_utils import as_tool_param, message_text, require_str_field
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
+from src.utils.untrusted_content import UNTRUSTED_CONTENT_PREAMBLE, wrap_untrusted_content
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +121,7 @@ def extract_phrases(
 ) -> list[ExtractedPhrase]:
 
     cefr_guide = load_skill("cefr-extraction-guide")
+    wrapped_article = wrap_untrusted_content(full_text)
 
     prompt = f"""
 You are a language teaching assistant helping a {user_level} level {source_language} learner
@@ -128,11 +130,11 @@ identify vocabulary and expressions worth studying.
 ## CEFR Level Reference
 {cefr_guide}
 
+{UNTRUSTED_CONTENT_PREAMBLE}
+
 Here is an article in {source_language}:
 
----
-{full_text}
----
+{wrapped_article}
 
 Extract vocabulary, constructions, and idioms from this article that would be
 useful for a {user_level} level learner to acquire.

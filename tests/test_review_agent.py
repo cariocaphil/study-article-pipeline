@@ -1,15 +1,53 @@
 """
 Tests for src/agents/review_agent.py.
 
-These make real calls to the Anthropic API, so they're marked slow.
-Run `uv run pytest -m "not slow"` to skip them.
+Fast unit tests mock the Anthropic client. Slow tests make real API calls.
+Run `uv run pytest -m "not slow"` to skip the integration tests.
 """
 
+import json
 import logging
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
 from src.agents.review_agent import review_phrases
+from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
+from src.utils.untrusted_content import UNTRUSTED_CONTENT_PREAMBLE
+from tests.anthropic_mocks import mock_message
+
+
+def _text_block(text: str):
+    return SimpleNamespace(type="text", text=text)
+
+
+def test_prompt_wraps_phrase_list_as_untrusted_content():
+    phrases = [
+        ExtractedPhrase(
+            phrase="teia de cumplicidades",
+            sentence_context="numa teia de cumplicidades difícil de escapar",
+            translation="Netz der Komplizenschaft",
+            category=PhraseCategory.idiom,
+            estimated_level=CEFRLevel.C1,
+        )
+    ]
+    client = MagicMock()
+    client.messages.create.return_value = mock_message(
+        [
+            _text_block(
+                json.dumps([{"phrase": "teia de cumplicidades", "action": "keep", "reason": "ok"}])
+            )
+        ],
+        "end_turn",
+    )
+
+    review_phrases(phrases, topic="Entroncamento", client=client)
+
+    prompt = client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert UNTRUSTED_CONTENT_PREAMBLE in prompt
+    assert "<untrusted_extracted_phrases>" in prompt
+    assert "teia de cumplicidades" in prompt
 
 
 @pytest.mark.slow
