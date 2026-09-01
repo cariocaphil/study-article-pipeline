@@ -27,7 +27,12 @@ Apply these when the compile agent builds the PDF.
 - One page break between articles
 - No page break between Article Text and Vocabulary & Expressions
 
+## Footer
+- On every page: document title left-aligned, page number right-aligned
+- Footer text: 9pt, same Unicode font as body text
+- Title format: `Study Article Collection regarding "{topic}"`
+- Truncate long titles with an ellipsis so they do not overlap the page number
+- No header in v1
+
 ## General
-- No header or footer in v1
 - No table of contents in v1
-- No page numbers in v1
