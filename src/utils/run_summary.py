@@ -4,6 +4,16 @@ Helpers for displaying pre-run and post-run pipeline summaries.
 
 from src.schemas.pipeline_result import PipelineRunResult
 
+_MARKDOWN_ESCAPE_CHARS = "\\`*_{}[]()#+-.!|"
+
+
+def escape_markdown_text(text: str) -> str:
+    """Escape user-controlled text before embedding it in Streamlit markdown."""
+    normalized = " ".join(text.split())
+    return "".join(
+        f"\\{char}" if char in _MARKDOWN_ESCAPE_CHARS else char for char in normalized
+    )
+
 
 def format_run_summary(
     *,
@@ -18,7 +28,7 @@ def format_run_summary(
     Return markdown summarizing the pipeline run the user is about to start.
     """
     return (
-        f"**Topic:** {topic} ({topic_type_label})\n\n"
+        f"**Topic:** {escape_markdown_text(topic)} ({topic_type_label})\n\n"
         f"**Source language:** {source_language}\n\n"
         f"**Translation language:** {translation_language}\n\n"
         f"**Your CEFR level:** {user_level}\n\n"

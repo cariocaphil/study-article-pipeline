@@ -3,7 +3,11 @@ Tests for src/utils/run_summary.py.
 """
 
 from src.schemas.pipeline_result import PipelineRunResult
-from src.utils.run_summary import format_post_run_summary, format_run_summary
+from src.utils.run_summary import (
+    escape_markdown_text,
+    format_post_run_summary,
+    format_run_summary,
+)
 
 
 def test_format_run_summary_includes_all_fields():
@@ -21,6 +25,27 @@ def test_format_run_summary_includes_all_fields():
     assert "**Translation language:** german" in summary
     assert "**Your CEFR level:** C1" in summary
     assert "**Articles requested:** 5" in summary
+
+
+def test_escape_markdown_text_neutralizes_markdown_syntax():
+    assert escape_markdown_text("**Amadeus**") == "\\*\\*Amadeus\\*\\*"
+    assert escape_markdown_text("[click](http://evil.com)") == (
+        "\\[click\\]\\(http://evil\\.com\\)"
+    )
+
+
+def test_format_run_summary_escapes_user_topic_markdown():
+    summary = format_run_summary(
+        topic="**Amadeus**",
+        topic_type_label="Theatre production",
+        source_language="english",
+        translation_language="german",
+        user_level="C1",
+        n_articles=5,
+    )
+
+    assert "**Topic:** \\*\\*Amadeus\\*\\* (Theatre production)" in summary
+    assert "**Topic:** **Amadeus**" not in summary
 
 
 def test_format_post_run_summary_includes_key_metrics():

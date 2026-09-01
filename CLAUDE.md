@@ -121,6 +121,7 @@ External content is treated as untrusted data, not instructions:
 |----------|-----------|------|
 | User topic input | `validate_topic()` rejects empty, oversized, or unsafe strings | `src/tools/validate_topic.py` |
 | Outbound URL fetch | `is_safe_fetch_url()` blocks private/local addresses before HTTP HEAD | `src/tools/url_safety.py` |
+| Streamlit user topic | `escape_markdown_text()` before embedding topic in confirmation markdown | `src/utils/run_summary.py` |
 | Retrieved article text | `wrap_untrusted_content()` + preamble in agent prompts | `src/utils/untrusted_content.py` |
 
 Agents that consume internet-sourced text (`filter_agent`, `extract_agent`, `review_agent`)

@@ -319,7 +319,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 28**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 29**.
 
 ### Initial Setup ✅
 
@@ -509,7 +509,13 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 28
 - [x] Add unit tests for blocked URLs (no network I/O)
 - [x] Document URL safety in CLAUDE.md trust boundaries
 
-### PR 28 — Containerization
+### PR 28 — Safe Markdown Output
+
+- [x] Escape user topic before rendering in Streamlit confirmation markdown
+- [x] Add unit tests for markdown metacharacter neutralization
+- [x] Document Streamlit output safety in CLAUDE.md trust boundaries
+
+### PR 29 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -517,7 +523,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 28
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 29 — Azure Container Apps Deployment
+### PR 30 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -527,7 +533,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 28
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 30 — Continuous Deployment
+### PR 31 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`
