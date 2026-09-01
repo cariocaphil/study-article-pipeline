@@ -3,8 +3,7 @@
 Given a topic (film, book, author, etc.), a source language, a translation
 language, and your CEFR level, this pipeline searches the web for
 native-language review articles, extracts vocabulary and expressions above
-your level (with translations), and compiles everything into a printable
-Word document for language study.
+your level (with translations), and compiles everything into a printable PDF for language study.
 
 ## How it works
 
@@ -16,7 +15,7 @@ Five agents run in sequence, each owning one stage of the pipeline:
 | 2 | Filter | `src/agents/filter_agent.py` | Confirm each URL is a genuine review, fetch full text + author |
 | 3 | Extract | `src/agents/extract_agent.py` | Pull vocabulary/constructions/idioms at or above your CEFR level; verify quotes and translations |
 | 4 | Review | `src/agents/review_agent.py` | Independently audit extracted phrases for quality, drop low-quality items |
-| 5 | Compile | `src/agents/compile_agent.py` | Produce the final `.docx` |
+| 5 | Compile | `src/agents/compile_agent.py` | Produce the final `.pdf` |
 
 `src/orchestrator.py` wires these together, handles CLI input, and enforces
 the fallback rule: if fewer than 3 articles pass the filter stage, the
@@ -80,8 +79,8 @@ uv run streamlit run app.py
 ```
 
 Fill in the topic, source language, translation language, and your CEFR
-level in the browser, then click **Generate study document** and download
-the resulting `.docx` once the pipeline finishes.
+level in the browser, then click **Generate study document**. Preview the
+PDF in the browser and download it once the pipeline finishes.
 
 ### Command line
 
@@ -123,18 +122,15 @@ Arguments (CLI and web app):
 Generated documents are saved to `output/`, named:
 
 ```
-{topic}_{source_language}_{translation_language}_{cefr_level}.docx
+{topic}_{source_language}_{translation_language}_{cefr_level}.pdf
 ```
 
 Each document includes, per article: title, author, source, and a table of
 extracted phrases with sentence context, translation, category
 (vocab/construction/idiom), and estimated CEFR level.
 
-After a successful CLI run, the orchestrator triggers a post-run hook
-(`.claude/hooks/post-run.sh`) that opens the most recently generated
-`.docx` in `output/`. On macOS this uses `open`; on Linux use `xdg-open`,
-on Windows use `start` (edit the script if needed). The Streamlit app does
-not auto-open files — use the download button instead.
+The Streamlit app previews the PDF inline and offers a download button.
+CLI runs print the output path when complete.
 
 ## Testing
 
@@ -277,12 +273,10 @@ evals/
 .claude/
 ├── commands/
 │   └── find-articles.md      # slash command definition
-├── hooks/
-│   └── post-run.sh           # opens latest .docx after CLI pipeline run
 └── skills/                   # agent evaluation criteria (loaded at runtime)
     ├── article-filter-criteria.md   # injected in filter_agent.py
     ├── cefr-extraction-guide.md     # injected in extract_agent.py
-    ├── docx-formatted.md            # document layout reference for compile_agent.py
+    ├── pdf-formatted.md             # document layout reference for compile_agent.py
     ├── phrase-quality-reviewer.md   # injected in review_agent.py
     └── translation-adequacy-rubric.md  # injected in translation quality judge
 src/
@@ -292,7 +286,7 @@ src/
 │   ├── filter_agent.py       # validates + fetches article content
 │   ├── extract_agent.py      # extracts phrases (quote + translation validation)
 │   ├── review_agent.py       # audits phrase quality, drops low-value items
-│   └── compile_agent.py      # generates the .docx
+│   └── compile_agent.py      # generates the PDF
 ├── tools/                    # client-side validation tools used by agents
 │   ├── validate_url_reachable.py
 │   ├── verify_quote.py
@@ -318,12 +312,12 @@ tests/
 ├── test_validate_topic.py
 ├── test_validate_url_reachable.py
 └── test_verify_quote.py
-output/                        # generated .docx files land here
+output/                        # generated PDF files land here
 ```
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 25**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 26**.
 
 ### Initial Setup ✅
 
@@ -490,7 +484,16 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 25
 - [x] Add shared Anthropic typing helpers (`message_text`, `FilteredArticle`)
 - [x] Run Pyright in CI alongside Ruff
 
-### PR 25 — Containerization
+### PR 25 — PDF Output
+
+- [x] Replace DOCX generation with direct PDF generation (no intermediate Word file)
+- [x] Preserve current document structure (headings, articles, vocabulary sections, margins)
+- [x] Remove post-run DOCX hook and `python-docx` dependency
+- [x] Add in-browser PDF preview (`st.pdf`) and Download PDF in Streamlit
+- [x] Persist generated PDF across Streamlit reruns via session state
+- [x] Update tests, filenames, and docs for PDF as the canonical format
+
+### PR 26 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -498,7 +501,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 25
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 26 — Azure Container Apps Deployment
+### PR 27 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -508,7 +511,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 25
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 27 — Continuous Deployment
+### PR 28 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`

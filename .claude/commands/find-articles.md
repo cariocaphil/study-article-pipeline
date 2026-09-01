@@ -15,7 +15,7 @@ Run the Study Article Collection Doc Generator Pipeline.
 1. Searches for native-language review articles about the topic
 2. Filters each URL to confirm it is a genuine review and extracts full text
 3. Extracts vocabulary and expressions at or above the specified CEFR level
-4. Compiles everything into a printable .docx in the output/ folder
+4. Compiles everything into a printable PDF in the output/ folder
 
 ## Run
 ```bash
