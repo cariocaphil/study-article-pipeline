@@ -13,6 +13,7 @@ import anthropic
 
 from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
 from src.utils import load_skill
+from src.utils.anthropic_utils import message_text
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
 
@@ -73,7 +74,7 @@ Example format:
     )
     record_api_usage(response, agent="review_agent", usage=usage, logger=logger)
 
-    full_response = " ".join(block.text for block in response.content if hasattr(block, "text"))
+    full_response = message_text(response)
 
     try:
         raw_verdicts = extract_json(full_response, "[", "]")

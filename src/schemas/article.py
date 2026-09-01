@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import TypedDict
 
 from pydantic import BaseModel
 
@@ -58,6 +59,14 @@ class Article(BaseModel):
     source_name: str  # e.g. "fiocondutor.com.pt"
     full_text: str  # full article body
     phrases: list[ExtractedPhrase]  # filtered to >= user's CEFR level
+
+
+class FilteredArticle(TypedDict):
+    title: str
+    author: str | None
+    url: str
+    source_name: str
+    full_text: str
 
 
 class PipelineOutput(BaseModel):

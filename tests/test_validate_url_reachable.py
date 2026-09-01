@@ -4,6 +4,7 @@ Tests for src/tools/validate_url_reachable.py.
 Network I/O is mocked so these run quickly without external requests.
 """
 
+import http.client
 import logging
 import urllib.error
 import urllib.request
@@ -40,7 +41,7 @@ def test_validate_url_reachable_treats_http_error_status_as_unreachable():
         url="https://example.com/missing",
         code=404,
         msg="Not Found",
-        hdrs=None,
+        hdrs=http.client.HTTPMessage(),
         fp=None,
     )
 

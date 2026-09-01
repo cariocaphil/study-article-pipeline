@@ -6,37 +6,47 @@ Returns a list of raw URLs — no content fetching happens here.
 
 import json
 import logging
+from typing import cast
 
 import anthropic
+from anthropic.types import MessageParam, ToolResultBlockParam, ToolUnionParam
 
 from src.schemas.article import TOPIC_TYPE_LABELS, TopicType
 from src.tools.validate_url_reachable import validate_url_reachable
+from src.utils.anthropic_utils import as_tool_param, message_text, require_str_field
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
 
 logger = logging.getLogger(__name__)
 
-VALIDATE_URL_TOOL = {
-    "name": "validate_url_reachable",
-    "description": (
-        "Check whether a URL is reachable via an HTTP HEAD request. "
-        "Returns true for HTTP 2xx/3xx responses, false otherwise."
-    ),
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "url": {
-                "type": "string",
-                "description": "The URL to validate.",
-            }
+VALIDATE_URL_TOOL = as_tool_param(
+    {
+        "name": "validate_url_reachable",
+        "description": (
+            "Check whether a URL is reachable via an HTTP HEAD request. "
+            "Returns true for HTTP 2xx/3xx responses, false otherwise."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL to validate.",
+                }
+            },
+            "required": ["url"],
         },
-        "required": ["url"],
-    },
-}
+    }
+)
+
+WEB_SEARCH_TOOL: ToolUnionParam = cast(
+    ToolUnionParam,
+    {"type": "web_search_20250305", "name": "web_search"},
+)
 
 
-def _run_validate_url_tool(tool_input: dict) -> bool:
-    url = tool_input["url"]
+def _run_validate_url_tool(tool_input: object) -> bool:
+    url = require_str_field(tool_input, "url")
     return validate_url_reachable(url)
 
 
@@ -101,7 +111,7 @@ Return ONLY a JSON array of URLs, with no other text, no markdown, no explanatio
 Example format: ["https://...", "https://...", "https://..."]
 """
 
-    messages = [{"role": "user", "content": prompt}]
+    messages: list[MessageParam] = [{"role": "user", "content": prompt}]
     validation_results: dict[str, bool] = {}
     response = None
 
@@ -109,22 +119,20 @@ Example format: ["https://...", "https://...", "https://..."]
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=2000,
-            tools=[
-                {"type": "web_search_20250305", "name": "web_search"},
-                VALIDATE_URL_TOOL,
-            ],
+            tools=[WEB_SEARCH_TOOL, VALIDATE_URL_TOOL],
             messages=messages,
         )
         record_api_usage(response, agent="search_agent", usage=usage, logger=logger)
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "tool_use":
-            tool_results = []
+            tool_results: list[ToolResultBlockParam] = []
             for block in response.content:
                 if block.type != "tool_use" or block.name != "validate_url_reachable":
                     continue
                 reachable = _run_validate_url_tool(block.input)
-                validation_results[block.input["url"]] = reachable
+                url = require_str_field(block.input, "url")
+                validation_results[url] = reachable
                 tool_results.append(
                     {
                         "type": "tool_result",
@@ -141,7 +149,7 @@ Example format: ["https://...", "https://...", "https://..."]
 
         break
 
-    full_text = " ".join(block.text for block in response.content if hasattr(block, "text"))
+    full_text = message_text(response)
 
     try:
         urls = extract_json(full_text, "[", "]")

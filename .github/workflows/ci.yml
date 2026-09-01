@@ -29,6 +29,9 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
 
+      - name: Pyright
+        run: uv run pyright
+
   test:
     runs-on: ubuntu-latest
     steps:

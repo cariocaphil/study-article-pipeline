@@ -155,11 +155,12 @@ Run lint checks locally:
 ```bash
 uv run ruff check .
 uv run ruff format --check .
+uv run pyright
 ```
 
 CI runs on pushes and pull requests to `main` via GitHub Actions
-(`.github/workflows/ci.yml`): Ruff lint/format, fast pytest, and offline
-eval smoke tests. No API key is required.
+(`.github/workflows/ci.yml`): Ruff lint/format, Pyright type checking, fast
+pytest, and offline eval smoke tests. No API key is required.
 
 Tests cover agents, validation tools, JSON repair (`json_utils`), the
 Streamlit UI (`AppTest`), and deterministic evals (`tests/test_evals.py`).
@@ -260,7 +261,7 @@ Results are saved under `evals/results/` (gitignored).
 ```
 app.py                        # Streamlit web UI entry point
 .github/
-└── workflows/ci.yml          # GitHub Actions: Ruff, pytest, offline evals
+└── workflows/ci.yml          # GitHub Actions: Ruff, Pyright, pytest, offline evals
 evals/
 ├── datasets/
 │   ├── filter/urls.jsonl       # labeled accept/reject URL dataset
@@ -322,7 +323,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 24**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 25**.
 
 ### Initial Setup ✅
 
@@ -482,7 +483,14 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 24
 - [x] Add post-run summary in Streamlit (articles, phrases, elapsed time, tokens)
 - [x] Replace generic spinner with per-stage progress via `st.status`
 
-### PR 24 — Containerization
+### PR 24 — Strict Typing ✅
+
+- [x] Add Pyright with `standard` type checking in `pyproject.toml`
+- [x] Fix type errors in pipeline source code, eval harness, and tests
+- [x] Add shared Anthropic typing helpers (`message_text`, `FilteredArticle`)
+- [x] Run Pyright in CI alongside Ruff
+
+### PR 25 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -490,7 +498,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 24
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 25 — Azure Container Apps Deployment
+### PR 26 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -500,7 +508,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 24
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 26 — Continuous Deployment
+### PR 27 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`

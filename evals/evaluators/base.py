@@ -9,7 +9,10 @@ import subprocess
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, cast
+
+if TYPE_CHECKING:
+    from evals.evaluators.review_actions import ReviewAction
 
 
 @dataclass
@@ -178,8 +181,23 @@ def load_review_dataset(path: Path):
     ]
 
 
-def load_review_predictions(path: Path) -> dict[str, dict[str, str]]:
-    return {record["id"]: record["actions"] for record in load_jsonl(path)}
+def load_review_predictions(path: Path) -> dict[str, dict[str, ReviewAction]]:
+    from evals.evaluators.review_actions import ReviewAction as ReviewActionType
+
+    valid_actions = {"keep", "review", "remove"}
+    predictions: dict[str, dict[str, ReviewAction]] = {}
+
+    for record in load_jsonl(path):
+        actions: dict[str, ReviewAction] = {}
+        for phrase, action in record["actions"].items():
+            if action not in valid_actions:
+                raise ValueError(
+                    f"Invalid review action {action!r} for phrase {phrase!r} in case {record['id']}"
+                )
+            actions[phrase] = cast(ReviewActionType, action)
+        predictions[record["id"]] = actions
+
+    return predictions
 
 
 def load_extract_recall_dataset(path: Path):
