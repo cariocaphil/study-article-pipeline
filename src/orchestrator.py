@@ -6,7 +6,6 @@ Handles inputs, fallback logic, and file naming.
 
 import logging
 import os
-import subprocess
 import time
 
 import anthropic
@@ -46,7 +45,7 @@ def run_pipeline(
     on_stage: StageCallback | None = None,
 ) -> PipelineRunResult:
     """
-    Runs the full pipeline and returns metrics plus the path to the generated .docx.
+    Runs the full pipeline and returns metrics plus the path to the generated PDF.
     """
 
     configure_logging()
@@ -131,16 +130,13 @@ def run_pipeline(
     )
 
     filename = (
-        f"{filename_safe_topic(topic)}_{source_language}_{translation_language}_{level.value}.docx"
+        f"{filename_safe_topic(topic)}_{source_language}_{translation_language}_{level.value}.pdf"
     )
     output_path = os.path.join("output", filename)
     os.makedirs("output", exist_ok=True)
 
     with stage_timer.track("compile", on_stage):
         compile_document(pipeline_output, output_path)
-
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    subprocess.run(["bash", f"{project_root}/.claude/hooks/post-run.sh"], cwd=project_root)
 
     phrase_count = sum(len(article.phrases) for article in articles)
     elapsed_seconds = time.perf_counter() - started_at

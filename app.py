@@ -5,6 +5,7 @@ import streamlit as st
 
 from src.orchestrator import run_pipeline
 from src.schemas.article import TopicType
+from src.schemas.pipeline_result import PipelineRunResult
 from src.tools.validate_topic import topic_validation_error
 from src.utils.observability import STAGE_LABELS, user_facing_pipeline_error
 from src.utils.run_summary import format_post_run_summary, format_run_summary
@@ -27,6 +28,25 @@ st.set_page_config(
 
 if "awaiting_confirmation" not in st.session_state:
     st.session_state.awaiting_confirmation = False
+if "last_run_result" not in st.session_state:
+    st.session_state.last_run_result = None
+
+
+def _render_generated_document(result: PipelineRunResult) -> None:
+    if not os.path.exists(result.output_path):
+        return
+
+    with open(result.output_path, "rb") as pdf_file:
+        pdf_bytes = pdf_file.read()
+
+    st.pdf(pdf_bytes)
+    st.download_button(
+        label="⬇️ Download your study document",
+        data=pdf_bytes,
+        file_name=os.path.basename(result.output_path),
+        mime="application/pdf",
+        use_container_width=True,
+    )
 
 st.title("📚 Study Article Collection")
 st.markdown("**Prepare for language lessons through real-world reading.**")
@@ -150,6 +170,7 @@ if st.session_state.awaiting_confirmation and not topic_error:
         st.rerun()
 
     if confirm_clicked:
+        st.session_state.last_run_result = None
         with st.status("Running pipeline…", expanded=True) as status:
 
             def on_stage(stage: str) -> None:
@@ -168,17 +189,7 @@ if st.session_state.awaiting_confirmation and not topic_error:
                 status.update(label="Pipeline complete", state="complete", expanded=False)
                 st.session_state.awaiting_confirmation = False
                 st.session_state.pending_run_config = None
-                st.success("Document generated successfully.")
-                st.markdown(format_post_run_summary(result))
-
-                with open(result.output_path, "rb") as f:
-                    st.download_button(
-                        label="⬇️ Download your study document",
-                        data=f,
-                        file_name=os.path.basename(result.output_path),
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True,
-                    )
+                st.session_state.last_run_result = result
 
             except ValueError as e:
                 status.update(label="Pipeline failed", state="error", expanded=False)
@@ -195,3 +206,9 @@ else:
             st.session_state.awaiting_confirmation = True
             st.session_state.pending_run_config = run_config
             st.rerun()
+
+if st.session_state.last_run_result is not None:
+    last_result = st.session_state.last_run_result
+    st.success("Document generated successfully.")
+    st.markdown(format_post_run_summary(last_result))
+    _render_generated_document(last_result)

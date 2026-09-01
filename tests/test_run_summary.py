@@ -26,7 +26,7 @@ def test_format_run_summary_includes_all_fields():
 def test_format_post_run_summary_includes_key_metrics():
     summary = format_post_run_summary(
         PipelineRunResult(
-            output_path="output/test.docx",
+            output_path="output/test.pdf",
             run_id="abc123",
             elapsed_seconds=95.0,
             articles_kept=5,
