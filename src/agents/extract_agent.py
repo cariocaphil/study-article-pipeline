@@ -9,66 +9,75 @@ import json
 import logging
 
 import anthropic
+from anthropic.types import MessageParam, ToolResultBlockParam
 
 from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
 from src.tools.validate_translation import validate_translation
 from src.tools.verify_quote import verify_quote
 from src.utils import load_skill
+from src.utils.anthropic_utils import as_tool_param, message_text, require_str_field
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
 
 logger = logging.getLogger(__name__)
 
-VERIFY_QUOTE_TOOL = {
-    "name": "verify_quote",
-    "description": (
-        "Check whether a sentence appears verbatim in the article text. "
-        "Returns true if the sentence is an exact quote from the article, "
-        "false otherwise."
-    ),
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "sentence": {
-                "type": "string",
-                "description": "The sentence to verify against the article.",
-            }
-        },
-        "required": ["sentence"],
-    },
-}
-
-
-VALIDATE_TRANSLATION_TOOL = {
-    "name": "validate_translation",
-    "description": (
-        "Check whether a translation is valid for the source phrase. "
-        "Returns true if the translation is non-empty and not identical "
-        "to the source phrase, false otherwise."
-    ),
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "phrase": {
-                "type": "string",
-                "description": "The source-language phrase.",
+VERIFY_QUOTE_TOOL = as_tool_param(
+    {
+        "name": "verify_quote",
+        "description": (
+            "Check whether a sentence appears verbatim in the article text. "
+            "Returns true if the sentence is an exact quote from the article, "
+            "false otherwise."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sentence": {
+                    "type": "string",
+                    "description": "The sentence to verify against the article.",
+                }
             },
-            "translation": {
-                "type": "string",
-                "description": "The proposed translation.",
-            },
+            "required": ["sentence"],
         },
-        "required": ["phrase", "translation"],
-    },
-}
+    }
+)
 
 
-def _run_verify_quote_tool(tool_input: dict, article_text: str) -> bool:
-    return verify_quote(tool_input["sentence"], article_text)
+VALIDATE_TRANSLATION_TOOL = as_tool_param(
+    {
+        "name": "validate_translation",
+        "description": (
+            "Check whether a translation is valid for the source phrase. "
+            "Returns true if the translation is non-empty and not identical "
+            "to the source phrase, false otherwise."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "phrase": {
+                    "type": "string",
+                    "description": "The source-language phrase.",
+                },
+                "translation": {
+                    "type": "string",
+                    "description": "The proposed translation.",
+                },
+            },
+            "required": ["phrase", "translation"],
+        },
+    }
+)
 
 
-def _run_validate_translation_tool(tool_input: dict) -> bool:
-    return validate_translation(tool_input["phrase"], tool_input["translation"])
+def _run_verify_quote_tool(tool_input: object, article_text: str) -> bool:
+    sentence = require_str_field(tool_input, "sentence")
+    return verify_quote(sentence, article_text)
+
+
+def _run_validate_translation_tool(tool_input: object) -> bool:
+    phrase = require_str_field(tool_input, "phrase")
+    translation = require_str_field(tool_input, "translation")
+    return validate_translation(phrase, translation)
 
 
 MAX_PARSE_ATTEMPTS = 3
@@ -98,10 +107,6 @@ def _parse_retry_prompt(response_text: str, stop_reason: str | None) -> str:
     if stop_reason == "max_tokens" or _looks_truncated_json(response_text):
         return TRUNCATED_JSON_PROMPT
     return CONTINUATION_PROMPT
-
-
-def _response_text(response) -> str:
-    return " ".join(block.text for block in response.content if hasattr(block, "text"))
 
 
 def extract_phrases(
@@ -165,7 +170,7 @@ Example format:
 ]
 """
 
-    messages = [{"role": "user", "content": prompt}]
+    messages: list[MessageParam] = [{"role": "user", "content": prompt}]
     verification_results: dict[str, bool] = {}
     translation_results: dict[tuple[str, str], bool] = {}
     response = None
@@ -183,18 +188,21 @@ Example format:
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "tool_use":
-            tool_results = []
+            tool_results: list[ToolResultBlockParam] = []
             for block in response.content:
                 if block.type != "tool_use":
                     continue
 
                 if block.name == "verify_quote":
                     verified = _run_verify_quote_tool(block.input, full_text)
-                    verification_results[block.input["sentence"]] = verified
+                    sentence = require_str_field(block.input, "sentence")
+                    verification_results[sentence] = verified
                     result = verified
                 elif block.name == "validate_translation":
                     valid = _run_validate_translation_tool(block.input)
-                    translation_key = (block.input["phrase"], block.input["translation"])
+                    phrase = require_str_field(block.input, "phrase")
+                    translation = require_str_field(block.input, "translation")
+                    translation_key = (phrase, translation)
                     translation_results[translation_key] = valid
                     result = valid
                 else:
@@ -211,7 +219,7 @@ Example format:
                 messages.append({"role": "user", "content": tool_results})
                 continue
 
-        full_response = _response_text(response)
+        full_response = message_text(response)
         try:
             raw_phrases = extract_json(full_response, "[", "]")
             break

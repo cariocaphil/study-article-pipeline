@@ -8,14 +8,23 @@ Discards URLs that fail the review check.
 """
 
 import logging
+from typing import cast
 
 import anthropic
+from anthropic.types import ToolUnionParam
 
+from src.schemas.article import FilteredArticle
 from src.utils import load_skill
+from src.utils.anthropic_utils import message_text
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
 
 logger = logging.getLogger(__name__)
+
+WEB_SEARCH_TOOL: ToolUnionParam = cast(
+    ToolUnionParam,
+    {"type": "web_search_20250305", "name": "web_search"},
+)
 
 
 def filter_articles(
@@ -24,7 +33,7 @@ def filter_articles(
     client: anthropic.Anthropic,
     *,
     usage: UsageTracker | None = None,
-) -> list[dict]:
+) -> list[FilteredArticle]:
 
     filter_criteria = load_skill("article-filter-criteria")
 
@@ -65,12 +74,12 @@ Return ONLY a JSON object with these exact keys, no other text:
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=4000,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
+            tools=[WEB_SEARCH_TOOL],
             messages=[{"role": "user", "content": prompt}],
         )
         record_api_usage(response, agent="filter_agent", usage=usage, logger=logger)
 
-        full_text = " ".join(block.text for block in response.content if hasattr(block, "text"))
+        full_text = message_text(response)
 
         try:
             data = extract_json(full_text, "{", "}")
