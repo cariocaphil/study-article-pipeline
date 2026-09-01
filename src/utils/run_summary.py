@@ -10,9 +10,7 @@ _MARKDOWN_ESCAPE_CHARS = "\\`*_{}[]()#+-.!|"
 def escape_markdown_text(text: str) -> str:
     """Escape user-controlled text before embedding it in Streamlit markdown."""
     normalized = " ".join(text.split())
-    return "".join(
-        f"\\{char}" if char in _MARKDOWN_ESCAPE_CHARS else char for char in normalized
-    )
+    return "".join(f"\\{char}" if char in _MARKDOWN_ESCAPE_CHARS else char for char in normalized)
 
 
 def format_run_summary(
