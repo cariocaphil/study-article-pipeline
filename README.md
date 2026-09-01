@@ -68,6 +68,13 @@ tool. Tool implementations live in `src/tools/`.
 
    This file is gitignored — never commit it.
 
+3. Install Git pre-commit hooks (optional but recommended — runs Ruff format and
+   check before each commit):
+
+   ```bash
+   uv run pre-commit install
+   ```
+
 ## Usage
 
 ### Web app (recommended)
@@ -146,13 +153,16 @@ Skip slow tests that call the live Anthropic API:
 uv run pytest -m "not slow"
 ```
 
-Run lint checks locally:
+Run lint checks locally (see also `AGENTS.md`):
 
 ```bash
 uv run ruff check .
 uv run ruff format --check .
 uv run pyright
 ```
+
+Or install pre-commit hooks once (`uv run pre-commit install`) so Ruff runs
+automatically on each commit.
 
 CI runs on pushes and pull requests to `main` via GitHub Actions
 (`.github/workflows/ci.yml`): Ruff lint/format, Pyright type checking, fast
@@ -321,7 +331,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 30**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 31**.
 
 ### Initial Setup ✅
 
@@ -524,7 +534,14 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 30
 - [x] Improve Streamlit error messages after exhausted API retries
 - [x] Add unit tests for retry behavior and user-facing API errors
 
-### PR 30 — Containerization
+### PR 30 — Enforce Python Formatting
+
+- [ ] Add `.pre-commit-config.yaml` with Ruff format and check hooks
+- [ ] Add `pre-commit` to dev dependencies
+- [ ] Document hook setup in README and `AGENTS.md`
+- [ ] Verify hooks catch and fix misformatted Python locally
+
+### PR 31 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -532,7 +549,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 30
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 31 — Azure Container Apps Deployment
+### PR 32 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -542,7 +559,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 30
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 32 — Continuous Deployment
+### PR 33 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`
