@@ -322,7 +322,7 @@ output/                        # generated .docx files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 23**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 24**.
 
 ### Initial Setup ✅
 
@@ -473,7 +473,16 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 23
 - [x] Support optional `topic_type` in CLI and store on `PipelineOutput`
 - [x] Add pre-run confirmation summary card in Streamlit UI
 
-### PR 23 — Containerization
+### PR 23 — Pipeline Observability ✅
+
+- [x] Replace `print()` with stdlib `logging` across agents, tools, and orchestrator
+- [x] Add per-run ID and stage timing (search, filter, extract, compile)
+- [x] Log Anthropic API token usage on agent calls
+- [x] Add user-facing error handling in Streamlit (sanitized messages, server-side tracebacks)
+- [x] Add post-run summary in Streamlit (articles, phrases, elapsed time, tokens)
+- [x] Replace generic spinner with per-stage progress via `st.status`
+
+### PR 24 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -481,7 +490,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 23
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 24 — Azure Container Apps Deployment
+### PR 25 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -491,7 +500,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 23
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 25 — Continuous Deployment
+### PR 26 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`
