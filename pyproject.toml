@@ -15,6 +15,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "pyright>=1.1.400",
     "ruff>=0.16.0",
 ]
 
@@ -31,3 +32,15 @@ pythonpath = ["."]
 markers = [
     "slow: marks tests that make real Anthropic API calls (deselect with '-m \"not slow\"')",
 ]
+
+[tool.pyright]
+include = ["src", "evals", "tests", "app.py"]
+exclude = [
+    "output",
+    "evals/results",
+    "**/__pycache__",
+]
+typeCheckingMode = "standard"
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
