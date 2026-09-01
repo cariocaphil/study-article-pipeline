@@ -52,12 +52,20 @@ def test_user_facing_pipeline_error_generic_for_unexpected():
 
 
 def test_record_api_usage_logs_and_accumulates(caplog):
-    from types import SimpleNamespace
+    from anthropic.types import Message, Usage
 
     from src.utils.observability import record_api_usage
 
     usage = UsageTracker()
-    response = SimpleNamespace(usage=SimpleNamespace(input_tokens=10, output_tokens=5))
+    response = Message(
+        id="msg_test",
+        content=[],
+        model="claude-sonnet-4-6",
+        role="assistant",
+        stop_reason="end_turn",
+        type="message",
+        usage=Usage(input_tokens=10, output_tokens=5),
+    )
 
     with caplog.at_level(logging.INFO):
         record_api_usage(response, agent="search_agent", usage=usage)

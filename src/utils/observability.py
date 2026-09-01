@@ -9,7 +9,8 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+
+from anthropic.types import Message
 
 StageCallback = Callable[[str], None]
 
@@ -77,15 +78,14 @@ class _StageContext:
 
 
 def record_api_usage(
-    response: Any,
+    response: Message,
     *,
     agent: str,
     usage: UsageTracker | None = None,
     logger: logging.Logger | None = None,
 ) -> None:
-    usage_obj = getattr(response, "usage", None)
-    input_tokens = getattr(usage_obj, "input_tokens", 0) or 0
-    output_tokens = getattr(usage_obj, "output_tokens", 0) or 0
+    input_tokens = response.usage.input_tokens
+    output_tokens = response.usage.output_tokens
     if usage is not None:
         usage.add(input_tokens, output_tokens)
     log = logger or logging.getLogger(__name__)
