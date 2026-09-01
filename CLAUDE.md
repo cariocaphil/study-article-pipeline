@@ -11,6 +11,7 @@ and compiles everything into a printable Word document for language study.
 - Anthropic Python SDK (claude-sonnet-4-6, web search tool enabled)
 - python-docx (Word document generation)
 - Pydantic (schema validation between agents)
+- stdlib `logging` (no `print()` in pipeline code)
 
 ## Agents and responsibilities
 | Agent       | File                        | Owns |
@@ -47,9 +48,29 @@ parseable JSON: it sends a continuation prompt and re-calls the API (up to 3
 parse attempts) before raising. Apply the same pattern if another agent's tool
 loop can end with planning text rather than structured output.
 
+Agents that call `client.messages.create()` should call `record_api_usage()`
+from `src/utils/observability.py` after each response when a `UsageTracker` is
+available (passed from the orchestrator).
+
 ## Schema
-All inter-agent data passes through Pydantic models in src/schemas/article.py.
-Never pass raw strings between agents.
+All inter-agent data passes through Pydantic models in `src/schemas/article.py`.
+`run_pipeline()` returns `PipelineRunResult` from `src/schemas/pipeline_result.py`
+(path, run ID, stage timings, token counts). Never pass raw strings between agents.
+
+## Observability
+
+`src/utils/observability.py` provides pipeline-wide logging and run metrics:
+
+- `configure_logging()` — called once at pipeline start
+- `new_run_id()`, `StageTimer`, `UsageTracker` — per-run ID, stage timing, token totals
+- `record_api_usage()` — log Anthropic `Message.usage` after each API call
+- `user_facing_pipeline_error()` — map internal exceptions to Streamlit-safe messages
+
+`run_pipeline()` returns `PipelineRunResult` (not a bare path string). The
+orchestrator accepts an optional `on_stage` callback for UI progress updates.
+
+Use `logging.getLogger(__name__)` in agents and tools. Validation tools support
+`quiet=True` to suppress info logs when called from evals or bulk tests.
 
 ## Output
 Generated .docx files land in output/
