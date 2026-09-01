@@ -11,6 +11,7 @@ and compiles everything into a printable Word document for language study.
 - Anthropic Python SDK (claude-sonnet-4-6, web search tool enabled)
 - python-docx (Word document generation)
 - Pydantic (schema validation between agents)
+- Pyright (`standard` type checking — config in `pyproject.toml`)
 - stdlib `logging` (no `print()` in pipeline code)
 
 ## Agents and responsibilities
@@ -52,10 +53,35 @@ Agents that call `client.messages.create()` should call `record_api_usage()`
 from `src/utils/observability.py` after each response when a `UsageTracker` is
 available (passed from the orchestrator).
 
+### Anthropic API typing
+
+Agent tool loops use typed Anthropic SDK types. Shared helpers live in
+`src/utils/anthropic_utils.py`:
+
+| Helper | Use for |
+|--------|---------|
+| `message_text(response)` | Extract joined text from a `Message` (check `block.type == "text"`) |
+| `as_tool_param(schema)` | Cast client-side tool JSON schemas to `ToolParam` |
+| `require_str_field(data, field)` | Safely read string fields from `tool_use` block inputs |
+
+Conventions for agents with tool loops:
+
+- Type conversation history as `list[MessageParam]`
+- Type tool result payloads as `list[ToolResultBlockParam]`
+- In unit tests, mock responses via `tests/anthropic_mocks.mock_message()` so
+  `usage` metadata is present (required by `record_api_usage`)
+
 ## Schema
-All inter-agent data passes through Pydantic models in `src/schemas/article.py`.
-`run_pipeline()` returns `PipelineRunResult` from `src/schemas/pipeline_result.py`
-(path, run ID, stage timings, token counts). Never pass raw strings between agents.
+Inter-agent data passes through typed models in `src/schemas/`:
+
+| Model | File | Purpose |
+|-------|------|---------|
+| `Article`, `ExtractedPhrase`, `PipelineOutput`, … | `src/schemas/article.py` | Pydantic models between agents |
+| `FilteredArticle` | `src/schemas/article.py` | TypedDict returned by `filter_agent` before `Article` construction |
+| `PipelineRunResult` | `src/schemas/pipeline_result.py` | Orchestrator return value (path, run ID, timings, token counts) |
+
+Prefer Pydantic models or TypedDicts over raw `dict` at agent boundaries.
+Never pass unstructured strings between agents when a schema exists.
 
 ## Observability
 
@@ -86,6 +112,20 @@ Do not pad the document with low-quality matches.
 
 ## Environment
 ANTHROPIC_API_KEY in .env — never commit this file.
+
+## Development checks
+
+Run before opening a PR:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest -m "not slow"
+```
+
+CI (`.github/workflows/ci.yml`) runs Ruff, Pyright, fast pytest, and offline
+eval smoke tests on pushes and pull requests to `main`.
 
 ## Skills
 Skills are located in `.claude/skills/`. Claude Code should load them when relevant.
@@ -162,8 +202,6 @@ uv run python -m evals.runners.compare_runs \
 
 Results are written to `evals/results/{run_id}/` (`report.json`, `scores.json`,
 `failures.jsonl`). Fast eval tests live in `tests/test_evals.py`.
-
-CI runs offline eval suites as smoke tests (see `.github/workflows/ci.yml`).
 
 Use `--live` with `translation_quality` locally when you want to run the LLM
 judge against the labeled dataset (requires `ANTHROPIC_API_KEY`).
