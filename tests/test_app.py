@@ -194,7 +194,9 @@ class TestGenerateButton:
             app.button[0].click().run(timeout=30)
 
         assert not app.exception
-        assert [e.value for e in app.error] == ["An unexpected error occurred. Please try again later."]
+        assert [e.value for e in app.error] == [
+            "An unexpected error occurred. Please try again later."
+        ]
 
     def test_topic_is_stripped_before_being_passed_to_pipeline(self, app):
         app.text_input[0].input("  Entroncamento  ")
