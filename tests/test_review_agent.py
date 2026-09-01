@@ -36,9 +36,7 @@ def test_prompt_wraps_phrase_list_as_untrusted_content():
     client.messages.create.return_value = mock_message(
         [
             _text_block(
-                json.dumps(
-                    [{"phrase": "teia de cumplicidades", "action": "keep", "reason": "ok"}]
-                )
+                json.dumps([{"phrase": "teia de cumplicidades", "action": "keep", "reason": "ok"}])
             )
         ],
         "end_turn",
