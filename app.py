@@ -5,6 +5,7 @@ import streamlit as st
 from src.orchestrator import run_pipeline
 from src.schemas.article import TopicType
 from src.tools.validate_topic import topic_validation_error
+from src.utils.run_summary import format_run_summary
 
 TOPIC_TYPE_OPTIONS = {
     "Film": TopicType.film,
@@ -19,6 +20,9 @@ st.set_page_config(
     page_icon="📚",
     layout="centered",
 )
+
+if "awaiting_confirmation" not in st.session_state:
+    st.session_state.awaiting_confirmation = False
 
 st.title("📚 Study Article Collection")
 st.markdown("**Prepare for language lessons through real-world reading.**")
@@ -98,26 +102,64 @@ with col4:
 
 st.divider()
 
+topic_error = topic_validation_error(topic)
+stripped_topic = topic.strip()
+run_config = (
+    stripped_topic,
+    topic_type,
+    source_language,
+    translation_language,
+    user_level,
+    n_articles,
+)
+
+if st.session_state.get("pending_run_config") != run_config:
+    st.session_state.awaiting_confirmation = False
+
 # ── Run ───────────────────────────────────────────────────────────────────────
-if st.button("Generate study document", type="primary", use_container_width=True):
-    topic_error = topic_validation_error(topic)
-    if topic_error:
-        st.error(topic_error)
-    else:
+if st.session_state.awaiting_confirmation and not topic_error:
+    st.markdown("### Review your request")
+    st.markdown(
+        format_run_summary(
+            topic=stripped_topic,
+            topic_type_label=topic_type,
+            source_language=source_language,
+            translation_language=translation_language,
+            user_level=user_level,
+            n_articles=n_articles,
+        )
+    )
+
+    confirm_col, back_col = st.columns(2)
+    with confirm_col:
+        confirm_clicked = st.button(
+            "Confirm & generate",
+            type="primary",
+            use_container_width=True,
+        )
+    with back_col:
+        back_clicked = st.button("Go back", use_container_width=True)
+
+    if back_clicked:
+        st.session_state.awaiting_confirmation = False
+        st.session_state.pending_run_config = None
+        st.rerun()
+
+    if confirm_clicked:
         with st.spinner("Running pipeline — this takes 2-3 minutes..."):
-            log_output = st.empty()
             try:
                 output_path = run_pipeline(
-                    topic=topic.strip(),
+                    topic=stripped_topic,
                     source_language=source_language,
                     translation_language=translation_language,
                     user_level=user_level,
                     n_articles=n_articles,
                     topic_type=TOPIC_TYPE_OPTIONS[topic_type],
                 )
+                st.session_state.awaiting_confirmation = False
+                st.session_state.pending_run_config = None
                 st.success("Document generated successfully.")
 
-                # ── Download button ───────────────────────────────────────────
                 with open(output_path, "rb") as f:
                     st.download_button(
                         label="⬇️ Download your study document",
@@ -131,3 +173,11 @@ if st.button("Generate study document", type="primary", use_container_width=True
                 st.error(str(e))
             except Exception as e:
                 st.error(f"Something went wrong: {e}")
+else:
+    if st.button("Generate study document", type="primary", use_container_width=True):
+        if topic_error:
+            st.error(topic_error)
+        else:
+            st.session_state.awaiting_confirmation = True
+            st.session_state.pending_run_config = run_config
+            st.rerun()

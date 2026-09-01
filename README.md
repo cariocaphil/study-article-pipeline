@@ -471,6 +471,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 23
 - [x] Add topic type dropdown to Streamlit UI
 - [x] Steer search agent prompts by topic type
 - [x] Support optional `topic_type` in CLI and store on `PipelineOutput`
+- [x] Add pre-run confirmation summary card in Streamlit UI
 
 ### PR 23 — Containerization
 
