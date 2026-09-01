@@ -69,6 +69,29 @@ def test_validate_url_reachable_returns_false_for_malformed_url():
     assert validate_url_reachable("not-a-valid-url") is False
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://127.0.0.1",
+        "http://localhost",
+        "http://169.254.169.254",
+        "file:///etc/passwd",
+    ],
+)
+def test_validate_url_reachable_blocks_unsafe_urls_without_network(url):
+    with patch("src.tools.validate_url_reachable.urllib.request.urlopen") as mock_urlopen:
+        assert validate_url_reachable(url) is False
+
+    mock_urlopen.assert_not_called()
+
+
+def test_validate_url_reachable_logs_blocked_url(caplog):
+    with caplog.at_level(logging.INFO, logger="src.tools.validate_url_reachable"):
+        assert validate_url_reachable("http://127.0.0.1") is False
+
+    assert "http://127.0.0.1 → blocked" in caplog.text
+
+
 def test_validate_url_reachable_logs_result(caplog):
     response = SimpleNamespace(status=200)
 
