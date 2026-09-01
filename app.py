@@ -1,3 +1,4 @@
+import logging
 import os
 
 import streamlit as st
@@ -5,7 +6,10 @@ import streamlit as st
 from src.orchestrator import run_pipeline
 from src.schemas.article import TopicType
 from src.tools.validate_topic import topic_validation_error
-from src.utils.run_summary import format_run_summary
+from src.utils.observability import STAGE_LABELS, user_facing_pipeline_error
+from src.utils.run_summary import format_post_run_summary, format_run_summary
+
+logger = logging.getLogger(__name__)
 
 TOPIC_TYPE_OPTIONS = {
     "Film": TopicType.film,
@@ -146,33 +150,43 @@ if st.session_state.awaiting_confirmation and not topic_error:
         st.rerun()
 
     if confirm_clicked:
-        with st.spinner("Running pipeline — this takes 2-3 minutes..."):
+        with st.status("Running pipeline…", expanded=True) as status:
+
+            def on_stage(stage: str) -> None:
+                status.update(label=STAGE_LABELS.get(stage, stage))
+
             try:
-                output_path = run_pipeline(
+                result = run_pipeline(
                     topic=stripped_topic,
                     source_language=source_language,
                     translation_language=translation_language,
                     user_level=user_level,
                     n_articles=n_articles,
                     topic_type=TOPIC_TYPE_OPTIONS[topic_type],
+                    on_stage=on_stage,
                 )
+                status.update(label="Pipeline complete", state="complete", expanded=False)
                 st.session_state.awaiting_confirmation = False
                 st.session_state.pending_run_config = None
                 st.success("Document generated successfully.")
+                st.markdown(format_post_run_summary(result))
 
-                with open(output_path, "rb") as f:
+                with open(result.output_path, "rb") as f:
                     st.download_button(
                         label="⬇️ Download your study document",
                         data=f,
-                        file_name=os.path.basename(output_path),
+                        file_name=os.path.basename(result.output_path),
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         use_container_width=True,
                     )
 
             except ValueError as e:
-                st.error(str(e))
+                status.update(label="Pipeline failed", state="error", expanded=False)
+                st.error(user_facing_pipeline_error(e))
             except Exception as e:
-                st.error(f"Something went wrong: {e}")
+                status.update(label="Pipeline failed", state="error", expanded=False)
+                logger.exception("Unexpected pipeline error")
+                st.error(user_facing_pipeline_error(e))
 else:
     if st.button("Generate study document", type="primary", use_container_width=True):
         if topic_error:
