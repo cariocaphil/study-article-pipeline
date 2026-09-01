@@ -15,7 +15,9 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Flowable, PageBreak, Paragraph, SimpleDocTemplate, Spacer
+from reportlab.platypus.doctemplate import BaseDocTemplate
 
 from src.schemas.article import PipelineOutput
 
@@ -23,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 _FONT_NAME = "StudyDocUnicode"
 _FONT_REGISTERED = False
+_FOOTER_FONT_SIZE = 9
+_FOOTER_Y_OFFSET = 1.2 * cm
 
 
 def _register_unicode_font() -> None:
@@ -116,6 +120,48 @@ def _bold_label(label: str, value: str, style: ParagraphStyle) -> Paragraph:
     return Paragraph(f"<b>{escape(label)}</b>{escape(value)}", style)
 
 
+def _document_title(topic: str) -> str:
+    return f'Study Article Collection regarding "{topic}"'
+
+
+def _truncate_footer_title(title: str, canvas: Canvas, max_width: float) -> str:
+    if canvas.stringWidth(title, _FONT_NAME, _FOOTER_FONT_SIZE) <= max_width:
+        return title
+
+    ellipsis = "…"
+    trimmed = title
+    while (
+        trimmed
+        and canvas.stringWidth(trimmed + ellipsis, _FONT_NAME, _FOOTER_FONT_SIZE) > max_width
+    ):
+        trimmed = trimmed[:-1]
+    return trimmed.rstrip() + ellipsis if trimmed else ellipsis
+
+
+def _make_footer_drawer(document_title: str):
+    def _draw_footer(canvas: Canvas, doc: BaseDocTemplate) -> None:
+        canvas.saveState()
+        canvas.setFont(_FONT_NAME, _FOOTER_FONT_SIZE)
+
+        page_num = str(canvas.getPageNumber())
+        page_num_width = canvas.stringWidth(page_num, _FONT_NAME, _FOOTER_FONT_SIZE)
+        canvas.drawRightString(
+            doc.pagesize[0] - doc.rightMargin,
+            _FOOTER_Y_OFFSET,
+            page_num,
+        )
+
+        max_title_width = (
+            doc.pagesize[0] - doc.leftMargin - doc.rightMargin - page_num_width - 0.5 * cm
+        )
+        footer_title = _truncate_footer_title(document_title, canvas, max_title_width)
+        canvas.drawString(doc.leftMargin, _FOOTER_Y_OFFSET, footer_title)
+
+        canvas.restoreState()
+
+    return _draw_footer
+
+
 def compile_document(output: PipelineOutput, output_path: str) -> str:
     """
     Generates a PDF file from a PipelineOutput.
@@ -123,6 +169,8 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
     """
 
     styles = _styles()
+    document_title = _document_title(output.topic)
+    draw_footer = _make_footer_drawer(document_title)
     doc = SimpleDocTemplate(
         output_path,
         pagesize=A4,
@@ -130,14 +178,14 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
         rightMargin=4.5 * cm,
         topMargin=2.5 * cm,
         bottomMargin=2.5 * cm,
-        title=f'Study Article Collection regarding "{output.topic}"',
+        title=document_title,
     )
 
     story: list[Flowable] = []
 
     story.append(
         Paragraph(
-            f'Study Article Collection regarding "{escape(output.topic)}"',
+            escape(document_title),
             styles["title"],
         )
     )
@@ -202,7 +250,7 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
         if i < len(output.articles):
             story.append(PageBreak())
 
-    doc.build(story)
+    doc.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)
     logger.info("Document saved to %s", output_path)
     return output_path
 

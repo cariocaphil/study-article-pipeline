@@ -331,7 +331,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 31**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 32**.
 
 ### Initial Setup ✅
 
@@ -534,14 +534,20 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 31
 - [x] Improve Streamlit error messages after exhausted API retries
 - [x] Add unit tests for retry behavior and user-facing API errors
 
-### PR 30 — Enforce Python Formatting
+### PR 30 — Enforce Python Formatting ✅
 
-- [ ] Add `.pre-commit-config.yaml` with Ruff format and check hooks
-- [ ] Add `pre-commit` to dev dependencies
-- [ ] Document hook setup in README and `AGENTS.md`
-- [ ] Verify hooks catch and fix misformatted Python locally
+- [x] Add `.pre-commit-config.yaml` with Ruff format and check hooks
+- [x] Add `pre-commit` to dev dependencies
+- [x] Document hook setup in README and `AGENTS.md`
+- [x] Verify hooks catch and fix misformatted Python locally
 
-### PR 31 — Containerization
+### PR 31 — PDF Footer and Page Numbers
+
+- [ ] Add document title and page numbers to every PDF page footer
+- [ ] Truncate long titles in the footer with an ellipsis
+- [ ] Update PDF formatting skill and add compile agent tests
+
+### PR 32 — Containerization
 
 - [ ] Add Containerfile for the Streamlit app
 - [ ] Package the application and its dependencies
@@ -549,7 +555,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 31
 - [ ] Expose Streamlit on port 8501
 - [ ] Document the local container workflow
 
-### PR 32 — Azure Container Apps Deployment
+### PR 33 — Azure Container Apps Deployment
 
 - [ ] Create Azure resource group and Container Registry
 - [ ] Build a Linux AMD64 container image
@@ -559,7 +565,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 31
 - [ ] Configure external HTTPS ingress on port 8501
 - [ ] Verify the app through its public Azure URL
 
-### PR 33 — Continuous Deployment
+### PR 34 — Continuous Deployment
 
 - [ ] Create Microsoft Entra application for GitHub Actions
 - [ ] Configure GitHub OIDC federated credential for `main`
