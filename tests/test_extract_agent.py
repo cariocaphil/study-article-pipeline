@@ -13,6 +13,7 @@ import pytest
 
 from src.agents.extract_agent import extract_phrases
 from src.schemas.article import CEFRLevel, ExtractedPhrase
+from src.utils.untrusted_content import UNTRUSTED_CONTENT_PREAMBLE
 from tests.anthropic_mocks import mock_message
 
 
@@ -106,6 +107,31 @@ class TestExtractPhrasesToolLoop:
         assert phrases[0].phrase == "turbulento"
         assert phrases[0].sentence_context == verified_sentence
         assert phrases[0].translation == "turbulent"
+
+    def test_prompt_wraps_article_as_untrusted_content(self, mock_verify, mock_validate):
+        article = "Laura foge de um passado turbulento."
+        mock_verify.return_value = True
+        mock_validate.return_value = True
+
+        client = MagicMock()
+        client.messages.create.return_value = mock_message(
+            [_text_block(_phrases_json())],
+            "end_turn",
+        )
+
+        extract_phrases(
+            full_text=article,
+            source_language="portuguese",
+            translation_language="german",
+            user_level=CEFRLevel.C1,
+            client=client,
+        )
+
+        prompt = client.messages.create.call_args.kwargs["messages"][0]["content"]
+        assert UNTRUSTED_CONTENT_PREAMBLE in prompt
+        assert "<untrusted_retrieved_article>" in prompt
+        assert article in prompt
+        assert "---\nLaura" not in prompt
 
     def test_drops_items_not_verified_by_quote_tool(self, mock_verify, mock_validate):
         article = "Laura foge de um passado turbulento."

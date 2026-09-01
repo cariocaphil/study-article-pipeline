@@ -113,6 +113,19 @@ Do not pad the document with low-quality matches.
 ## Environment
 ANTHROPIC_API_KEY in .env — never commit this file.
 
+## Trust boundaries
+
+External content is treated as untrusted data, not instructions:
+
+| Boundary | Mechanism | File |
+|----------|-----------|------|
+| User topic input | `validate_topic()` rejects empty, oversized, or unsafe strings | `src/tools/validate_topic.py` |
+| Retrieved article text | `wrap_untrusted_content()` + preamble in agent prompts | `src/utils/untrusted_content.py` |
+
+Agents that consume internet-sourced text (`filter_agent`, `extract_agent`, `review_agent`)
+use `UNTRUSTED_CONTENT_PREAMBLE` and explicit delimiters. This reduces prompt-injection
+risk from malicious article pages but does not eliminate it.
+
 ## Development checks
 
 Run before opening a PR:

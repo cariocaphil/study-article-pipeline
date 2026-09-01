@@ -2,8 +2,8 @@
 Review agent.
 Independently reviews the extracted phrase list and removes low-quality items.
 Applies the phrase-quality-reviewer skill as its evaluation criteria.
-Does not see the original article text or the extract agent's reasoning —
-only the phrase list itself.
+Does not see the original article text directly, but phrase entries include
+sentence_context quotes from the article — those are wrapped as untrusted data.
 """
 
 import json
@@ -16,6 +16,7 @@ from src.utils import load_skill
 from src.utils.anthropic_utils import message_text
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
+from src.utils.untrusted_content import UNTRUSTED_CONTENT_PREAMBLE, wrap_untrusted_content
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ def review_phrases(
     phrase_list_json = json.dumps(
         [p.model_dump(mode="json") for p in phrases], ensure_ascii=False, indent=2
     )
+    wrapped_phrase_list = wrap_untrusted_content(phrase_list_json, label="extracted_phrases")
 
     prompt = f"""
 You are independently auditing a list of language-learning phrases for
@@ -49,10 +51,11 @@ The topic of the article this phrase list was extracted from is: "{topic}"
 Flag any phrase that is just the topic itself, or a derivative of it, for
 removal.
 
+{UNTRUSTED_CONTENT_PREAMBLE}
+
 Here is the phrase list to review:
----
-{phrase_list_json}
----
+
+{wrapped_phrase_list}
 
 For each phrase, decide whether to keep it, flag it for review, or remove it.
 
