@@ -5,6 +5,8 @@ These make real calls to the Anthropic API, so they're marked slow.
 Run `uv run pytest -m "not slow"` to skip them.
 """
 
+import logging
+
 import pytest
 
 from src.agents.review_agent import review_phrases
@@ -20,11 +22,11 @@ def test_review_removes_proper_nouns(anthropic_client, sample_phrases):
 
 
 @pytest.mark.slow
-def test_review_flags_duplicates(anthropic_client, sample_phrases, capsys):
-    review_phrases(sample_phrases, topic="Entroncamento", client=anthropic_client)
+def test_review_flags_duplicates(anthropic_client, sample_phrases, caplog):
+    with caplog.at_level(logging.INFO, logger="src.agents.review_agent"):
+        review_phrases(sample_phrases, topic="Entroncamento", client=anthropic_client)
 
-    captured = capsys.readouterr()
-    flagged_lines = [line for line in captured.out.splitlines() if "Flagged for review" in line]
+    flagged_lines = [line for line in caplog.text.splitlines() if "Flagged for review" in line]
 
     assert len(flagged_lines) >= 1
     assert any(

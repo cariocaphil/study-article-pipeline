@@ -6,6 +6,7 @@ Returns a list of ExtractedPhrase objects.
 """
 
 import json
+import logging
 
 import anthropic
 
@@ -14,6 +15,9 @@ from src.tools.validate_translation import validate_translation
 from src.tools.verify_quote import verify_quote
 from src.utils import load_skill
 from src.utils.json_utils import extract_json
+from src.utils.observability import UsageTracker, record_api_usage
+
+logger = logging.getLogger(__name__)
 
 VERIFY_QUOTE_TOOL = {
     "name": "verify_quote",
@@ -106,6 +110,8 @@ def extract_phrases(
     translation_language: str,
     user_level: CEFRLevel,
     client: anthropic.Anthropic,
+    *,
+    usage: UsageTracker | None = None,
 ) -> list[ExtractedPhrase]:
 
     cefr_guide = load_skill("cefr-extraction-guide")
@@ -173,6 +179,7 @@ Example format:
             tools=[VERIFY_QUOTE_TOOL, VALIDATE_TRANSLATION_TOOL],
             messages=messages,
         )
+        record_api_usage(response, agent="extract_agent", usage=usage, logger=logger)
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "tool_use":
@@ -232,11 +239,11 @@ Example format:
         translation_text = item.get("translation", "")
 
         if verification_results.get(sentence_context) is not True:
-            print(f"[extract_agent] Skipping unverified quote: {sentence_context[:80]}")
+            logger.debug("Skipping unverified quote: %s", sentence_context[:80])
             continue
 
         if translation_results.get((phrase_text, translation_text)) is not True:
-            print(f"[extract_agent] Skipping invalid translation: {phrase_text[:80]}")
+            logger.debug("Skipping invalid translation: %s", phrase_text[:80])
             continue
 
         try:
@@ -251,10 +258,10 @@ Example format:
             if phrase.estimated_level >= user_level:
                 phrases.append(phrase)
         except (KeyError, ValueError) as e:
-            print(f"[extract_agent] Skipping malformed item: {item} — {e}")
+            logger.warning("Skipping malformed item: %s — %s", item, e)
             continue
 
-    print(f"[extract_agent] Extracted {len(phrases)} phrases at or above {user_level}.")
+    logger.info("Extracted %d phrases at or above %s.", len(phrases), user_level)
     return phrases
 
 
