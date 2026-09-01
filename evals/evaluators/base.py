@@ -182,6 +182,8 @@ def load_review_dataset(path: Path):
 
 
 def load_review_predictions(path: Path) -> dict[str, dict[str, ReviewAction]]:
+    from evals.evaluators.review_actions import ReviewAction as ReviewActionType
+
     valid_actions = {"keep", "review", "remove"}
     predictions: dict[str, dict[str, ReviewAction]] = {}
 
@@ -192,7 +194,7 @@ def load_review_predictions(path: Path) -> dict[str, dict[str, ReviewAction]]:
                 raise ValueError(
                     f"Invalid review action {action!r} for phrase {phrase!r} in case {record['id']}"
                 )
-            actions[phrase] = cast(ReviewAction, action)
+            actions[phrase] = cast(ReviewActionType, action)
         predictions[record["id"]] = actions
 
     return predictions
