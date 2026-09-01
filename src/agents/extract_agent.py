@@ -73,6 +73,27 @@ CONTINUATION_PROMPT = (
     "When finished, return ONLY the final JSON array with no other text, "
     "markdown, or explanation."
 )
+TRUNCATED_JSON_PROMPT = (
+    "Your previous JSON array was cut off before it finished. "
+    "Return ONLY the complete JSON array with all phrase objects. "
+    "Keep each sentence_context as a verbatim quote. "
+    "If needed, return fewer high-quality items so the full array fits. "
+    "No markdown or explanation."
+)
+
+
+def _looks_truncated_json(text: str, open_char: str = "[", close_char: str = "]") -> bool:
+    clean = text.strip()
+    if open_char not in clean:
+        return False
+    start = clean.index(open_char)
+    return close_char not in clean[start:]
+
+
+def _parse_retry_prompt(response_text: str, stop_reason: str | None) -> str:
+    if stop_reason == "max_tokens" or _looks_truncated_json(response_text):
+        return TRUNCATED_JSON_PROMPT
+    return CONTINUATION_PROMPT
 
 
 def _response_text(response) -> str:
@@ -148,7 +169,7 @@ Example format:
     while True:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=2000,
+            max_tokens=4096,
             tools=[VERIFY_QUOTE_TOOL, VALIDATE_TRANSLATION_TOOL],
             messages=messages,
         )
@@ -191,7 +212,12 @@ Example format:
             parse_attempts += 1
             if parse_attempts >= MAX_PARSE_ATTEMPTS:
                 raise ValueError(f"Extract agent could not parse phrase list.\n{e}")
-            messages.append({"role": "user", "content": CONTINUATION_PROMPT})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": _parse_retry_prompt(full_response, response.stop_reason),
+                }
+            )
             continue
 
     if not isinstance(raw_phrases, list):
