@@ -10,14 +10,27 @@ mocked in every scenario that would otherwise trigger it).
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
 from src.schemas.article import TopicType
+from src.schemas.pipeline_result import PipelineRunResult
 
 APP_PATH = Path(__file__).resolve().parent.parent / "app.py"
+
+
+def _pipeline_result(output_path: str) -> PipelineRunResult:
+    return PipelineRunResult(
+        output_path=output_path,
+        run_id="test-run",
+        elapsed_seconds=12.0,
+        articles_kept=5,
+        phrase_count=10,
+        token_input=1000,
+        token_output=500,
+    )
 
 
 @pytest.fixture
@@ -119,7 +132,10 @@ class TestGenerateButton:
             with os.fdopen(fd, "wb") as f:
                 f.write(b"fake docx bytes")
 
-            with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
+            with patch(
+                "src.orchestrator.run_pipeline",
+                return_value=_pipeline_result(tmp_path),
+            ) as mock_run:
                 app.button[0].click().run(timeout=30)
                 app.button[0].click().run(timeout=30)
 
@@ -130,6 +146,7 @@ class TestGenerateButton:
                 user_level="C1",
                 n_articles=5,
                 topic_type=TopicType.film,
+                on_stage=ANY,
             )
             assert not app.exception
             assert [s.value for s in app.success] == ["Document generated successfully."]
@@ -147,7 +164,10 @@ class TestGenerateButton:
             with os.fdopen(fd, "wb") as f:
                 f.write(b"fake docx bytes")
 
-            with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
+            with patch(
+                "src.orchestrator.run_pipeline",
+                return_value=_pipeline_result(tmp_path),
+            ) as mock_run:
                 app.button[0].click().run(timeout=30)
                 app.button[0].click().run(timeout=30)
 
@@ -174,7 +194,9 @@ class TestGenerateButton:
             app.button[0].click().run(timeout=30)
 
         assert not app.exception
-        assert [e.value for e in app.error] == ["Something went wrong: boom"]
+        assert [e.value for e in app.error] == [
+            "An unexpected error occurred. Please try again later."
+        ]
 
     def test_topic_is_stripped_before_being_passed_to_pipeline(self, app):
         app.text_input[0].input("  Entroncamento  ")
@@ -184,7 +206,10 @@ class TestGenerateButton:
             with os.fdopen(fd, "wb") as f:
                 f.write(b"fake docx bytes")
 
-            with patch("src.orchestrator.run_pipeline", return_value=tmp_path) as mock_run:
+            with patch(
+                "src.orchestrator.run_pipeline",
+                return_value=_pipeline_result(tmp_path),
+            ) as mock_run:
                 app.button[0].click().run(timeout=30)
                 app.button[0].click().run(timeout=30)
 

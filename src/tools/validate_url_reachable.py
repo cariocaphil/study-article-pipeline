@@ -4,8 +4,11 @@ Performs a lightweight HTTP HEAD request to check whether a candidate
 article URL actually resolves, without fetching the full page body.
 """
 
+import logging
 import urllib.error
 import urllib.request
+
+logger = logging.getLogger(__name__)
 
 TIMEOUT_SECONDS = 5
 
@@ -31,5 +34,5 @@ def validate_url_reachable(url: str) -> bool:
         reachable = False
 
     status_label = "reachable" if reachable else "unreachable"
-    print(f"[url_validator] {url} → {status_label}")
+    logger.info("%s → %s", url, status_label)
     return reachable

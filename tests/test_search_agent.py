@@ -13,6 +13,7 @@ import pytest
 
 from src.agents.search_agent import search_articles
 from src.schemas.article import TopicType
+from tests.anthropic_mocks import mock_message
 
 
 def _text_block(text: str):
@@ -28,10 +29,6 @@ def _tool_use(tool_id: str, url: str):
     )
 
 
-def _response(content, stop_reason: str):
-    return SimpleNamespace(content=content, stop_reason=stop_reason)
-
-
 class TestSearchArticlesToolLoop:
     @patch("src.agents.search_agent.validate_url_reachable")
     def test_returns_only_reachable_urls_validated_via_tool(self, mock_validate):
@@ -41,14 +38,14 @@ class TestSearchArticlesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response(
+            mock_message(
                 [
                     _tool_use("tool-1", good_url),
                     _tool_use("tool-2", bad_url),
                 ],
                 "tool_use",
             ),
-            _response(
+            mock_message(
                 [_text_block(f'["{good_url}", "{bad_url}"]')],
                 "end_turn",
             ),
@@ -66,8 +63,8 @@ class TestSearchArticlesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response([_tool_use("tool-1", validated_url)], "tool_use"),
-            _response(
+            mock_message([_tool_use("tool-1", validated_url)], "tool_use"),
+            mock_message(
                 [_text_block('["https://example.com/validated", "https://example.com/skipped"]')],
                 "end_turn",
             ),
@@ -85,8 +82,8 @@ class TestSearchArticlesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response([_tool_use("tool-1", bad_url)], "tool_use"),
-            _response([_text_block(f'["{bad_url}"]')], "end_turn"),
+            mock_message([_tool_use("tool-1", bad_url)], "tool_use"),
+            mock_message([_text_block(f'["{bad_url}"]')], "end_turn"),
         ]
 
         with pytest.raises(ValueError, match="no reachable URLs"):
@@ -99,9 +96,9 @@ class TestSearchArticlesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response([], "pause_turn"),
-            _response([_tool_use("tool-1", good_url)], "tool_use"),
-            _response([_text_block(f'["{good_url}"]')], "end_turn"),
+            mock_message([], "pause_turn"),
+            mock_message([_tool_use("tool-1", good_url)], "tool_use"),
+            mock_message([_text_block(f'["{good_url}"]')], "end_turn"),
         ]
 
         urls = search_articles("Entroncamento", "portuguese", 1, client)
@@ -116,8 +113,8 @@ class TestSearchArticlesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response([_tool_use("tool-1", good_url)], "tool_use"),
-            _response([_text_block("Sorry, I could not find any articles.")], "end_turn"),
+            mock_message([_tool_use("tool-1", good_url)], "tool_use"),
+            mock_message([_text_block("Sorry, I could not find any articles.")], "end_turn"),
         ]
 
         with pytest.raises(ValueError, match="could not parse URL list"):
@@ -130,8 +127,8 @@ class TestSearchArticlesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response([_tool_use("tool-1", good_url)], "tool_use"),
-            _response([_text_block(f'["{good_url}"]')], "end_turn"),
+            mock_message([_tool_use("tool-1", good_url)], "tool_use"),
+            mock_message([_text_block(f'["{good_url}"]')], "end_turn"),
         ]
 
         search_articles(

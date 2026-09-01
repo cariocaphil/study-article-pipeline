@@ -13,6 +13,7 @@ import pytest
 
 from src.agents.extract_agent import extract_phrases
 from src.schemas.article import CEFRLevel, ExtractedPhrase
+from tests.anthropic_mocks import mock_message
 
 
 def _text_block(text: str):
@@ -35,10 +36,6 @@ def _validate_translation_tool_use(tool_id: str, phrase: str, translation: str):
         name="validate_translation",
         input={"phrase": phrase, "translation": translation},
     )
-
-
-def _response(content, stop_reason: str):
-    return SimpleNamespace(content=content, stop_reason=stop_reason)
 
 
 def _phrases_json(*items: dict) -> str:
@@ -73,7 +70,7 @@ class TestExtractPhrasesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response(
+            mock_message(
                 [
                     _verify_quote_tool_use("tool-1", verified_sentence),
                     _verify_quote_tool_use("tool-2", unverified_sentence),
@@ -81,7 +78,7 @@ class TestExtractPhrasesToolLoop:
                 ],
                 "tool_use",
             ),
-            _response(
+            mock_message(
                 [
                     _text_block(
                         _phrases_json(
@@ -118,14 +115,14 @@ class TestExtractPhrasesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response(
+            mock_message(
                 [
                     _verify_quote_tool_use("tool-1", verified_sentence),
                     _validate_translation_tool_use("tool-2", "turbulento", "turbulent"),
                 ],
                 "tool_use",
             ),
-            _response(
+            mock_message(
                 [
                     _text_block(
                         _phrases_json(
@@ -161,14 +158,14 @@ class TestExtractPhrasesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response(
+            mock_message(
                 [
                     _verify_quote_tool_use("tool-1", verified_sentence),
                     _validate_translation_tool_use("tool-3", "turbulento", "turbulent"),
                 ],
                 "tool_use",
             ),
-            _response(
+            mock_message(
                 [
                     _text_block(
                         _phrases_json(
@@ -208,14 +205,14 @@ class TestExtractPhrasesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response(
+            mock_message(
                 [
                     _verify_quote_tool_use("tool-1", sentence),
                     _validate_translation_tool_use("tool-2", "Laura", "Laura"),
                 ],
                 "tool_use",
             ),
-            _response(
+            mock_message(
                 [
                     _text_block(
                         _phrases_json(
@@ -249,18 +246,18 @@ class TestExtractPhrasesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response(
+            mock_message(
                 [_text_block("Let me verify all sentence contexts first.")],
                 "end_turn",
             ),
-            _response(
+            mock_message(
                 [
                     _verify_quote_tool_use("tool-1", verified_sentence),
                     _validate_translation_tool_use("tool-2", "turbulento", "turbulent"),
                 ],
                 "tool_use",
             ),
-            _response(
+            mock_message(
                 [
                     _text_block(
                         _phrases_json(
@@ -295,18 +292,18 @@ class TestExtractPhrasesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response(
+            mock_message(
                 [
                     _verify_quote_tool_use("tool-1", verified_sentence),
                     _validate_translation_tool_use("tool-2", "turbulento", "turbulent"),
                 ],
                 "tool_use",
             ),
-            _response(
+            mock_message(
                 [_text_block('[{"phrase": "turbulento", "sentence_context": "Laura')],
                 "max_tokens",
             ),
-            _response(
+            mock_message(
                 [
                     _text_block(
                         _phrases_json(
@@ -348,16 +345,16 @@ class TestExtractPhrasesToolLoop:
 
         client = MagicMock()
         client.messages.create.side_effect = [
-            _response(
+            mock_message(
                 [
                     _verify_quote_tool_use("tool-1", sentence),
                     _validate_translation_tool_use("tool-2", "turbulento", "turbulent"),
                 ],
                 "tool_use",
             ),
-            _response([_text_block("Sorry, I could not extract phrases.")], "end_turn"),
-            _response([_text_block("Still working on it.")], "end_turn"),
-            _response([_text_block("Still not ready.")], "end_turn"),
+            mock_message([_text_block("Sorry, I could not extract phrases.")], "end_turn"),
+            mock_message([_text_block("Still working on it.")], "end_turn"),
+            mock_message([_text_block("Still not ready.")], "end_turn"),
         ]
 
         with pytest.raises(ValueError, match="could not parse phrase list"):

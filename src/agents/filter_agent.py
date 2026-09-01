@@ -7,16 +7,23 @@ For each candidate URL:
 Discards URLs that fail the review check.
 """
 
+import logging
+
 import anthropic
 
 from src.utils import load_skill
 from src.utils.json_utils import extract_json
+from src.utils.observability import UsageTracker, record_api_usage
+
+logger = logging.getLogger(__name__)
 
 
 def filter_articles(
     urls: list[str],
     source_language: str,
     client: anthropic.Anthropic,
+    *,
+    usage: UsageTracker | None = None,
 ) -> list[dict]:
 
     filter_criteria = load_skill("article-filter-criteria")
@@ -24,7 +31,7 @@ def filter_articles(
     results = []
 
     for url in urls:
-        print(f"[filter_agent] Checking: {url}")
+        logger.info("Checking URL: %s", url)
 
         prompt = f"""
 You are helping a language learner collect review articles for study.
@@ -61,17 +68,18 @@ Return ONLY a JSON object with these exact keys, no other text:
             tools=[{"type": "web_search_20250305", "name": "web_search"}],
             messages=[{"role": "user", "content": prompt}],
         )
+        record_api_usage(response, agent="filter_agent", usage=usage, logger=logger)
 
         full_text = " ".join(block.text for block in response.content if hasattr(block, "text"))
 
         try:
             data = extract_json(full_text, "{", "}")
         except ValueError as e:
-            print(f"[filter_agent] Could not parse response for {url}: {e}")
+            logger.warning("Could not parse response for %s: %s", url, e)
             continue
 
         if not data.get("is_review") or not data.get("is_correct_language"):
-            print(f"[filter_agent] Rejected: {url}")
+            logger.info("Rejected URL: %s", url)
             continue
 
         results.append(
@@ -83,7 +91,7 @@ Return ONLY a JSON object with these exact keys, no other text:
                 "full_text": data.get("full_text", ""),
             }
         )
-        print(f"[filter_agent] Accepted: {data.get('title', url)}")
+        logger.info("Accepted article: %s", data.get("title", url))
 
     return results
 

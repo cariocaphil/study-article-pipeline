@@ -3,11 +3,15 @@ Compile agent.
 Takes a validated PipelineOutput and produces a printable .docx file.
 """
 
+import logging
+
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm
 
 from src.schemas.article import PipelineOutput
+
+logger = logging.getLogger(__name__)
 
 
 def compile_document(output: PipelineOutput, output_path: str) -> str:
@@ -96,7 +100,7 @@ def compile_document(output: PipelineOutput, output_path: str) -> str:
             doc.add_page_break()
 
     doc.save(output_path)
-    print(f"[compile_agent] Document saved to {output_path}")
+    logger.info("Document saved to %s", output_path)
     return output_path
 
 

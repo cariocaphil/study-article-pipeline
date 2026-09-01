@@ -2,6 +2,8 @@
 Tests for src/tools/validate_translation.py.
 """
 
+import logging
+
 from src.tools.validate_translation import validate_translation
 
 
@@ -22,15 +24,15 @@ def test_validate_translation_rejects_identical_copy_case_insensitive():
     assert validate_translation("Turbulento", "turbulento") is False
 
 
-def test_validate_translation_logs_valid(capsys):
-    validate_translation("turbulento", "turbulent")
+def test_validate_translation_logs_valid(caplog):
+    with caplog.at_level(logging.INFO, logger="src.tools.validate_translation"):
+        validate_translation("turbulento", "turbulent")
 
-    captured = capsys.readouterr()
-    assert "[translation_validator] turbulento → turbulent → valid" in captured.out
+    assert "turbulento → turbulent → valid" in caplog.text
 
 
-def test_validate_translation_logs_invalid(capsys):
-    validate_translation("turbulento", "turbulento")
+def test_validate_translation_logs_invalid(caplog):
+    with caplog.at_level(logging.INFO, logger="src.tools.validate_translation"):
+        validate_translation("turbulento", "turbulento")
 
-    captured = capsys.readouterr()
-    assert "[translation_validator] turbulento → turbulento → invalid" in captured.out
+    assert "turbulento → turbulento → invalid" in caplog.text

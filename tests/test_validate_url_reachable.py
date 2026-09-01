@@ -4,6 +4,7 @@ Tests for src/tools/validate_url_reachable.py.
 Network I/O is mocked so these run quickly without external requests.
 """
 
+import logging
 import urllib.error
 import urllib.request
 from types import SimpleNamespace
@@ -67,15 +68,15 @@ def test_validate_url_reachable_returns_false_for_malformed_url():
     assert validate_url_reachable("not-a-valid-url") is False
 
 
-def test_validate_url_reachable_logs_result(capsys):
+def test_validate_url_reachable_logs_result(caplog):
     response = SimpleNamespace(status=200)
 
     with patch("src.tools.validate_url_reachable.urllib.request.urlopen") as mock_urlopen:
         mock_urlopen.return_value.__enter__.return_value = response
-        validate_url_reachable("https://example.com/article")
+        with caplog.at_level(logging.INFO, logger="src.tools.validate_url_reachable"):
+            validate_url_reachable("https://example.com/article")
 
-    captured = capsys.readouterr()
-    assert "[url_validator] https://example.com/article → reachable" in captured.out
+    assert "https://example.com/article → reachable" in caplog.text
 
 
 def test_validate_url_reachable_uses_head_request():

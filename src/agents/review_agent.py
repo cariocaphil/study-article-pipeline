@@ -7,18 +7,24 @@ only the phrase list itself.
 """
 
 import json
+import logging
 
 import anthropic
 
 from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
 from src.utils import load_skill
 from src.utils.json_utils import extract_json
+from src.utils.observability import UsageTracker, record_api_usage
+
+logger = logging.getLogger(__name__)
 
 
 def review_phrases(
     phrases: list[ExtractedPhrase],
     topic: str,
     client: anthropic.Anthropic,
+    *,
+    usage: UsageTracker | None = None,
 ) -> list[ExtractedPhrase]:
 
     if not phrases:
@@ -65,6 +71,7 @@ Example format:
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
     )
+    record_api_usage(response, agent="review_agent", usage=usage, logger=logger)
 
     full_response = " ".join(block.text for block in response.content if hasattr(block, "text"))
 
@@ -78,7 +85,7 @@ Example format:
         try:
             verdicts_by_phrase[item["phrase"]] = (item["action"], item.get("reason", ""))
         except (KeyError, TypeError) as e:
-            print(f"[review_agent] Skipping malformed verdict: {item} — {e}")
+            logger.warning("Skipping malformed verdict: %s — %s", item, e)
             continue
 
     kept = []
@@ -89,18 +96,21 @@ Example format:
 
         if action == "remove":
             n_removed += 1
-            print(f"[review_agent] Removed '{phrase.phrase}': {reason}")
+            logger.info("Removed phrase %r: %s", phrase.phrase, reason)
             continue
 
         if action == "review":
             n_flagged += 1
-            print(f"[review_agent] Flagged for review '{phrase.phrase}': {reason}")
+            logger.info("Flagged for review %r: %s", phrase.phrase, reason)
 
         kept.append(phrase)
 
-    print(
-        f"[review_agent] Kept {len(kept)}, flagged {n_flagged} for review, "
-        f"removed {n_removed} (of {len(phrases)} phrases)."
+    logger.info(
+        "Kept %d, flagged %d for review, removed %d (of %d phrases).",
+        len(kept),
+        n_flagged,
+        n_removed,
+        len(phrases),
     )
     return kept
 

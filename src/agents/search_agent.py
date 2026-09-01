@@ -5,12 +5,16 @@ Returns a list of raw URLs — no content fetching happens here.
 """
 
 import json
+import logging
 
 import anthropic
 
 from src.schemas.article import TOPIC_TYPE_LABELS, TopicType
 from src.tools.validate_url_reachable import validate_url_reachable
 from src.utils.json_utils import extract_json
+from src.utils.observability import UsageTracker, record_api_usage
+
+logger = logging.getLogger(__name__)
 
 VALIDATE_URL_TOOL = {
     "name": "validate_url_reachable",
@@ -71,6 +75,7 @@ def search_articles(
     client: anthropic.Anthropic,
     *,
     topic_type: TopicType = TopicType.film,
+    usage: UsageTracker | None = None,
 ) -> list[str]:
     topic_label = TOPIC_TYPE_LABELS[topic_type]
 
@@ -110,6 +115,7 @@ Example format: ["https://...", "https://...", "https://..."]
             ],
             messages=messages,
         )
+        record_api_usage(response, agent="search_agent", usage=usage, logger=logger)
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "tool_use":
@@ -152,7 +158,7 @@ Example format: ["https://...", "https://...", "https://..."]
     if not reachable_urls:
         raise ValueError(f"Search agent returned no reachable URLs for topic '{topic}'.")
 
-    print(f"[search_agent] Found {len(reachable_urls)} reachable URLs.")
+    logger.info("Found %d reachable URLs.", len(reachable_urls))
     return reachable_urls
 
 
