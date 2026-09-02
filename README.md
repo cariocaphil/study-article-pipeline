@@ -343,27 +343,39 @@ PR 33 manual deploy) — the CD workflow only updates the container image.
 ### Authentication and quotas
 
 Public Azure deployments use **Container Apps Authentication** (Easy Auth) so
-users sign in with **Microsoft** before reaching Streamlit (Google sign-in is
-planned in **PR 36**). ACA forwards identity in the `X-MS-CLIENT-PRINCIPAL`
-header; the app reads it in `src/utils/aca_identity.py` and enforces a per-user
-daily generation limit in `src/utils/quota.py` (checked on **Confirm & generate**,
-before the pipeline runs).
+users sign in with **Microsoft** or **Google** before reaching Streamlit. Unauthenticated
+requests to `/` redirect to Microsoft by default; the app also links to
+`/.auth/login/google` and `/.auth/login/aad` when sign-in is required.
+
+ACA forwards identity in `X-MS-CLIENT-PRINCIPAL` (and shorthand
+`X-MS-CLIENT-PRINCIPAL-ID` / `-NAME` / `-IDP` headers). The app reads these in
+`src/utils/aca_identity.py` — Microsoft users are keyed by Entra `oid`; Google
+users by a namespaced id (`google:{sub}`) because Easy Auth maps Google's subject
+to a `nameidentifier` claim. Daily limits are enforced in `src/utils/quota.py`
+(checked on **Confirm & generate**, before the pipeline runs).
 
 One-time Azure setup (in addition to the Container App from PR 33):
 
-1. **Enable Authentication** on the Container App: require authentication, add
-   Microsoft Entra ID as an identity provider.
-2. **Create a Storage account** and table `UserDailyQuota` (PartitionKey = user
+1. **Enable Authentication** on the Container App: require authentication.
+2. Add **Microsoft Entra ID** as an identity provider (default redirect).
+3. Add **Google** as a second identity provider:
+   - Create an OAuth **Web application** client in Google Cloud Console.
+   - Authorized redirect URI: `https://<your-fqdn>/.auth/login/google/callback`
+   - Paste the Google client ID and secret into the Container App auth settings.
+4. **Create a Storage account** and table `UserDailyQuota` (PartitionKey = user
    id, RowKey = UTC date `YYYY-MM-DD`, `count` column).
-3. Grant the Container App **managed identity** `Storage Table Data Contributor`
+5. Grant the Container App **managed identity** `Storage Table Data Contributor`
    on the storage account.
-4. **Add Container App environment variables**:
+6. **Add Container App environment variables**:
    - `AZURE_STORAGE_ACCOUNT` — storage account name
    - `QUOTA_TABLE_NAME` — `UserDailyQuota`
    - `DAILY_QUOTA` — max generations per user per UTC day (e.g. `3`)
 
 Do **not** set `QUOTA_DEV_MODE` in production. OAuth client secrets and storage
 keys stay in Azure — never commit them.
+
+Signed-in users see their display name, provider, remaining quota, and a
+[Sign out](/.auth/logout) link in the Streamlit caption.
 
 **Local development** (no Easy Auth): add to `.env` to test quota logic locally:
 
@@ -571,7 +583,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 36**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 37**.
 
 ### Initial Setup ✅
 
@@ -815,20 +827,21 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 36
 - [x] Trigger CD after successful CI on `main`
 - [x] Verify the complete automated deployment flow
 
-### PR 35 — Authentication and Quotas
+### PR 35 — Authentication and Quotas ✅
 
 - [x] Enable ACA Easy Auth (Microsoft Entra ID)
 - [x] Add Azure Table Storage for daily per-user generation counts
 - [x] Parse authenticated user identity from ACA headers in Streamlit
 - [x] Enforce daily quota before pipeline runs
 - [x] Add unit tests and document Azure/local setup
-- [ ] Verify auth and quota enforcement on the public deployment
+- [x] Verify auth and quota enforcement on the public deployment
 
 ### PR 36 — Google Authentication
 
-- [ ] Add Google as an ACA Easy Auth identity provider
-- [ ] Add provider-selection/login UX
-- [ ] Verify identity + quota behavior with Google users
+- [x] Add Google as an ACA Easy Auth identity provider
+- [x] Parse Google identity claims and add provider login/sign-out links
+- [x] Namespace Google user IDs for quota tracking (`google:{sub}`)
+- [ ] Verify identity + quota behavior with Google users on the public deployment
 
 ## Notes
 
