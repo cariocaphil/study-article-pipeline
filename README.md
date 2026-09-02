@@ -342,10 +342,18 @@ PR 33 manual deploy) — the CD workflow only updates the container image.
 
 ### Authentication and quotas
 
-Public Azure deployments use **Container Apps Authentication** (Easy Auth) so
-users sign in with **Microsoft** or **Google** before reaching Streamlit. Unauthenticated
-requests to `/` redirect to Microsoft by default; the app also links to
-`/.auth/login/google` and `/.auth/login/aad` when sign-in is required.
+Public Azure deployments use **Container Apps Authentication** (Easy Auth) with
+**Allow unauthenticated access** so the Streamlit app can show a dedicated login
+landing instead of ACA auto-redirecting every visitor to Microsoft. The app still
+gates pipeline access: when `AZURE_STORAGE_ACCOUNT` is set,
+`identity_required()` and an early `st.stop()` in `app.py` block the generate
+form until a user is parsed from Easy Auth headers.
+
+Unauthenticated visitors see a login landing with **Sign in with Microsoft** and
+**Sign in with Google** buttons. Links are built by `login_url()` and
+`logout_url()` in `src/utils/aca_identity.py`, which append
+`post_login_redirect_uri=/` and `post_logout_redirect_uri=/` so users return
+directly to the app instead of the Azure "Return to the website" page.
 
 ACA forwards identity in `X-MS-CLIENT-PRINCIPAL` (and shorthand
 `X-MS-CLIENT-PRINCIPAL-ID` / `-NAME` / `-IDP` headers). The app reads these in
@@ -356,8 +364,9 @@ to a `nameidentifier` claim. Daily limits are enforced in `src/utils/quota.py`
 
 One-time Azure setup (in addition to the Container App from PR 33):
 
-1. **Enable Authentication** on the Container App: require authentication.
-2. Add **Microsoft Entra ID** as an identity provider (default redirect).
+1. **Enable Authentication** on the Container App: **Allow unauthenticated access**
+   (not "Require authentication" — the app handles the login gate).
+2. Add **Microsoft Entra ID** as an identity provider.
 3. Add **Google** as a second identity provider:
    - Create an OAuth **Web application** client in Google Cloud Console.
    - Authorized redirect URI: `https://<your-fqdn>/.auth/login/google/callback`
@@ -374,8 +383,8 @@ One-time Azure setup (in addition to the Container App from PR 33):
 Do **not** set `QUOTA_DEV_MODE` in production. OAuth client secrets and storage
 keys stay in Azure — never commit them.
 
-Signed-in users see their display name, provider, remaining quota, and a
-[Sign out](/.auth/logout) link in the Streamlit caption.
+Signed-in users see their display name, provider, remaining quota, and a sign-out
+link (via `logout_url()`) in the Streamlit caption.
 
 **Local development** (no Easy Auth): add to `.env` to test quota logic locally:
 
@@ -583,7 +592,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 37**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 38**.
 
 ### Initial Setup ✅
 
@@ -836,12 +845,20 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 37
 - [x] Add unit tests and document Azure/local setup
 - [x] Verify auth and quota enforcement on the public deployment
 
-### PR 36 — Google Authentication
+### PR 36 — Google Authentication ✅
 
 - [x] Add Google as an ACA Easy Auth identity provider
 - [x] Parse Google identity claims and add provider login/sign-out links
 - [x] Namespace Google user IDs for quota tracking (`google:{sub}`)
 - [ ] Verify identity + quota behavior with Google users on the public deployment
+
+### PR 37 — Authentication provider selection ✅
+
+- [x] Switch ACA auth to **Allow unauthenticated access** (app-level gate unchanged)
+- [x] Add login landing with Microsoft and Google sign-in buttons
+- [x] Add `login_url()` / `logout_url()` with post-login and post-logout redirects
+- [x] Update tests and document multi-provider login UX
+- [ ] Verify login landing and both providers on the public deployment
 
 ## Notes
 
