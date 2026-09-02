@@ -114,8 +114,13 @@ Do not pad the document with low-quality matches.
 
 ## Environment
 ANTHROPIC_API_KEY in `.env` locally, `-e ANTHROPIC_API_KEY=...` when running a
-container, or a Container Apps secret in Azure — never commit this value. See README
-**Container** and **Azure Container Apps** for build/run/deploy commands.
+container, or a Container Apps secret in Azure — never commit this value.
+
+Production Azure deployments also use ACA Easy Auth (Microsoft identity via
+`X-MS-CLIENT-PRINCIPAL`; Google planned in PR 36) and quota env vars
+(`AZURE_STORAGE_ACCOUNT`, `QUOTA_TABLE_NAME`, `DAILY_QUOTA`). Local quota testing:
+`QUOTA_DEV_MODE=1` and `QUOTA_DEV_USER`. See README **Container**, **Azure Container
+Apps**, and **Authentication and quotas**.
 
 ## Trust boundaries
 
@@ -126,6 +131,7 @@ External content is treated as untrusted data, not instructions:
 | User topic input | `validate_topic()` rejects empty, oversized, or unsafe strings | `src/tools/validate_topic.py` |
 | Outbound URL fetch | `is_safe_fetch_url()` blocks private/local addresses before HTTP HEAD | `src/tools/url_safety.py` |
 | Streamlit user topic | `escape_markdown_text()` before embedding topic in confirmation markdown | `src/utils/run_summary.py` |
+| Pipeline cost / abuse | ACA Easy Auth + daily per-user quota before `run_pipeline()` | `src/utils/aca_identity.py`, `src/utils/quota.py`, `app.py` |
 | Retrieved article text | `wrap_untrusted_content()` + preamble in agent prompts | `src/utils/untrusted_content.py` |
 
 Agents that consume internet-sourced text (`filter_agent`, `extract_agent`, `review_agent`)
