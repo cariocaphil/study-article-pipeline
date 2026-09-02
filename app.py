@@ -7,7 +7,11 @@ from src.orchestrator import run_pipeline
 from src.schemas.article import TopicType
 from src.schemas.pipeline_result import PipelineRunResult
 from src.tools.validate_topic import topic_validation_error
-from src.utils.aca_identity import get_authenticated_user, identity_required
+from src.utils.aca_identity import (
+    get_authenticated_user,
+    identity_provider_label,
+    identity_required,
+)
 from src.utils.observability import STAGE_LABELS, user_facing_pipeline_error
 from src.utils.quota import (
     QuotaExceededError,
@@ -41,14 +45,20 @@ if "last_run_result" not in st.session_state:
 
 authenticated_user = get_authenticated_user()
 if identity_required() and authenticated_user is None:
-    st.error("Sign-in required. Refresh the page and authenticate to continue.")
+    st.error("Sign-in required. Choose a provider to continue.")
+    st.markdown(
+        "[Sign in with Microsoft](/.auth/login/aad) · [Sign in with Google](/.auth/login/google)"
+    )
     st.stop()
 
 if authenticated_user is not None and quota_enabled():
     remaining = get_remaining(authenticated_user.user_id)
+    provider_label = identity_provider_label(authenticated_user.identity_provider)
+    provider_suffix = f" via {provider_label}" if provider_label else ""
     st.caption(
-        f"Signed in as {authenticated_user.display_name} · "
-        f"{remaining} generation(s) left today (UTC)."
+        f"Signed in as {authenticated_user.display_name}{provider_suffix} · "
+        f"{remaining} generation(s) left today (UTC). "
+        f"[Sign out](/.auth/logout)"
     )
 
 
