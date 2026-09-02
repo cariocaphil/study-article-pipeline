@@ -8,6 +8,8 @@ from src.utils.aca_identity import (
     get_authenticated_user,
     identity_provider_label,
     identity_required,
+    login_url,
+    logout_url,
     parse_client_principal,
 )
 
@@ -147,6 +149,15 @@ def test_identity_provider_label():
     assert identity_provider_label("aad") == "Microsoft"
     assert identity_provider_label("google") == "Google"
     assert identity_provider_label(None) is None
+
+
+def test_login_url_includes_provider_and_post_login_redirect():
+    assert login_url("aad") == "/.auth/login/aad?post_login_redirect_uri=/"
+    assert login_url("google") == "/.auth/login/google?post_login_redirect_uri=/"
+
+
+def test_logout_url_includes_post_logout_redirect():
+    assert logout_url() == "/.auth/logout?post_logout_redirect_uri=/"
 
 
 def test_identity_required_false_in_dev_mode(monkeypatch):

@@ -8,6 +8,7 @@ import logging
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,16 @@ def identity_provider_label(identity_provider: str | None) -> str | None:
     if identity_provider == "google":
         return "Google"
     return identity_provider
+
+
+def login_url(provider: str, *, redirect_path: str = "/") -> str:
+    encoded_redirect = quote(redirect_path, safe="/")
+    return f"/.auth/login/{provider}?post_login_redirect_uri={encoded_redirect}"
+
+
+def logout_url(*, redirect_path: str = "/") -> str:
+    encoded_redirect = quote(redirect_path, safe="/")
+    return f"/.auth/logout?post_logout_redirect_uri={encoded_redirect}"
 
 
 def _claim_value(claims: list[dict[str, str]], *types: str) -> str | None:
