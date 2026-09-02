@@ -6,9 +6,12 @@ import json
 from src.utils.aca_identity import (
     AuthenticatedUser,
     get_authenticated_user,
+    identity_provider_label,
     identity_required,
     parse_client_principal,
 )
+
+_NAME_IDENTIFIER_CLAIM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
 
 
 def _encode_principal(*claims: tuple[str, str], auth_typ: str = "aad") -> str:
@@ -19,7 +22,7 @@ def _encode_principal(*claims: tuple[str, str], auth_typ: str = "aad") -> str:
     return base64.b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
 
 
-def test_parse_client_principal_reads_oid_and_name():
+def test_parse_client_principal_reads_oid_and_name_for_microsoft():
     header = _encode_principal(
         ("oid", "user-123"),
         ("name", "Ada Lovelace"),
@@ -27,19 +30,43 @@ def test_parse_client_principal_reads_oid_and_name():
 
     user = parse_client_principal(header)
 
-    assert user == AuthenticatedUser(user_id="user-123", display_name="Ada Lovelace")
+    assert user == AuthenticatedUser(
+        user_id="user-123",
+        display_name="Ada Lovelace",
+        identity_provider="aad",
+    )
+
+
+def test_parse_client_principal_reads_google_nameidentifier_claim():
+    header = _encode_principal(
+        (_NAME_IDENTIFIER_CLAIM, "google-sub-456"),
+        ("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", "ada@example.com"),
+        auth_typ="google",
+    )
+
+    user = parse_client_principal(header)
+
+    assert user == AuthenticatedUser(
+        user_id="google:google-sub-456",
+        display_name="ada@example.com",
+        identity_provider="google",
+    )
 
 
 def test_parse_client_principal_falls_back_to_sub_for_google():
     header = _encode_principal(
-        ("sub", "google-sub-456"),
+        ("sub", "google-sub-789"),
         ("email", "ada@example.com"),
         auth_typ="google",
     )
 
     user = parse_client_principal(header)
 
-    assert user == AuthenticatedUser(user_id="google-sub-456", display_name="ada@example.com")
+    assert user == AuthenticatedUser(
+        user_id="google:google-sub-789",
+        display_name="ada@example.com",
+        identity_provider="google",
+    )
 
 
 def test_parse_client_principal_returns_none_for_invalid_header():
@@ -56,11 +83,70 @@ def test_get_authenticated_user_uses_dev_bypass(monkeypatch):
     assert user == AuthenticatedUser(user_id="local-dev", display_name="local-dev")
 
 
-def test_get_authenticated_user_reads_aca_header():
+def test_get_authenticated_user_reads_aca_principal_header_for_microsoft():
     header = _encode_principal(("oid", "aca-user"), ("name", "Reviewer"))
     user = get_authenticated_user(headers={"X-MS-CLIENT-PRINCIPAL": header})
 
-    assert user == AuthenticatedUser(user_id="aca-user", display_name="Reviewer")
+    assert user == AuthenticatedUser(
+        user_id="aca-user",
+        display_name="Reviewer",
+        identity_provider="aad",
+    )
+
+
+def test_get_authenticated_user_falls_back_to_aca_shorthand_headers_for_google():
+    user = get_authenticated_user(
+        headers={
+            "X-MS-CLIENT-PRINCIPAL-IDP": "google",
+            "X-MS-CLIENT-PRINCIPAL-ID": "google-sub-999",
+            "X-MS-CLIENT-PRINCIPAL-NAME": "ada@example.com",
+        }
+    )
+
+    assert user == AuthenticatedUser(
+        user_id="google:google-sub-999",
+        display_name="ada@example.com",
+        identity_provider="google",
+    )
+
+
+def test_get_authenticated_user_falls_back_to_aca_shorthand_headers_for_microsoft():
+    user = get_authenticated_user(
+        headers={
+            "X-MS-CLIENT-PRINCIPAL-IDP": "aad",
+            "X-MS-CLIENT-PRINCIPAL-ID": "microsoft-oid-111",
+            "X-MS-CLIENT-PRINCIPAL-NAME": "reviewer@example.com",
+        }
+    )
+
+    assert user == AuthenticatedUser(
+        user_id="microsoft-oid-111",
+        display_name="reviewer@example.com",
+        identity_provider="aad",
+    )
+
+
+def test_microsoft_and_google_users_do_not_share_quota_keys():
+    microsoft = parse_client_principal(_encode_principal(("oid", "shared-value"), ("name", "MS")))
+    google = parse_client_principal(
+        _encode_principal(
+            (_NAME_IDENTIFIER_CLAIM, "shared-value"),
+            ("email", "g@example.com"),
+            auth_typ="google",
+        )
+    )
+
+    assert microsoft is not None
+    assert google is not None
+    assert microsoft.user_id == "shared-value"
+    assert google.user_id == "google:shared-value"
+    assert microsoft.user_id != google.user_id
+
+
+def test_identity_provider_label():
+    assert identity_provider_label("aad") == "Microsoft"
+    assert identity_provider_label("google") == "Google"
+    assert identity_provider_label(None) is None
 
 
 def test_identity_required_false_in_dev_mode(monkeypatch):

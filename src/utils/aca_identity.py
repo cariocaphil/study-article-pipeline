@@ -12,18 +12,31 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 CLIENT_PRINCIPAL_HEADER = "x-ms-client-principal"
+CLIENT_PRINCIPAL_ID_HEADER = "x-ms-client-principal-id"
+CLIENT_PRINCIPAL_NAME_HEADER = "x-ms-client-principal-name"
+CLIENT_PRINCIPAL_IDP_HEADER = "x-ms-client-principal-idp"
 
 _OBJECT_ID_CLAIM = "http://schemas.microsoft.com/identity/claims/objectidentifier"
+_NAME_IDENTIFIER_CLAIM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
 
 
 @dataclass(frozen=True)
 class AuthenticatedUser:
     user_id: str
     display_name: str
+    identity_provider: str | None = None
 
 
 def _dev_mode_enabled() -> bool:
     return os.getenv("QUOTA_DEV_MODE", "").strip() == "1"
+
+
+def identity_provider_label(identity_provider: str | None) -> str | None:
+    if identity_provider == "aad":
+        return "Microsoft"
+    if identity_provider == "google":
+        return "Google"
+    return identity_provider
 
 
 def _claim_value(claims: list[dict[str, str]], *types: str) -> str | None:
@@ -35,6 +48,30 @@ def _claim_value(claims: list[dict[str, str]], *types: str) -> str | None:
             if value:
                 return value
     return None
+
+
+def _canonical_user_id(*, identity_provider: str | None, raw_id: str) -> str:
+    """Keep Microsoft object IDs unchanged; namespace other providers."""
+    if identity_provider == "aad":
+        return raw_id
+    if identity_provider:
+        return f"{identity_provider}:{raw_id}"
+    return raw_id
+
+
+def _resolve_user_id_from_claims(
+    typed_claims: list[dict[str, str]],
+    identity_provider: str | None,
+) -> str | None:
+    if identity_provider == "aad":
+        raw_id = _claim_value(typed_claims, "oid", _OBJECT_ID_CLAIM)
+    else:
+        raw_id = _claim_value(typed_claims, "sub", _NAME_IDENTIFIER_CLAIM)
+
+    if not raw_id:
+        return None
+
+    return _canonical_user_id(identity_provider=identity_provider, raw_id=raw_id)
 
 
 def parse_client_principal(header_value: str | None) -> AuthenticatedUser | None:
@@ -54,7 +91,11 @@ def parse_client_principal(header_value: str | None) -> AuthenticatedUser | None
 
     typed_claims = [claim for claim in claims if isinstance(claim, dict)]
 
-    user_id = _claim_value(typed_claims, "oid", _OBJECT_ID_CLAIM, "sub")
+    identity_provider = payload.get("auth_typ")
+    if not isinstance(identity_provider, str) or not identity_provider:
+        identity_provider = None
+
+    user_id = _resolve_user_id_from_claims(typed_claims, identity_provider)
     if not user_id:
         return None
 
@@ -68,7 +109,11 @@ def parse_client_principal(header_value: str | None) -> AuthenticatedUser | None
     if not display_name:
         display_name = user_id
 
-    return AuthenticatedUser(user_id=user_id, display_name=display_name)
+    return AuthenticatedUser(
+        user_id=user_id,
+        display_name=display_name,
+        identity_provider=identity_provider,
+    )
 
 
 def _header_value(headers: Mapping[str, str], name: str) -> str | None:
@@ -77,6 +122,20 @@ def _header_value(headers: Mapping[str, str], name: str) -> str | None:
         if key.lower() == lowered:
             return value
     return None
+
+
+def _user_from_aca_headers(headers: Mapping[str, str]) -> AuthenticatedUser | None:
+    identity_provider = _header_value(headers, CLIENT_PRINCIPAL_IDP_HEADER)
+    raw_id = _header_value(headers, CLIENT_PRINCIPAL_ID_HEADER)
+    if not raw_id or not identity_provider:
+        return None
+
+    display_name = _header_value(headers, CLIENT_PRINCIPAL_NAME_HEADER) or raw_id
+    return AuthenticatedUser(
+        user_id=_canonical_user_id(identity_provider=identity_provider, raw_id=raw_id),
+        display_name=display_name,
+        identity_provider=identity_provider,
+    )
 
 
 def get_authenticated_user(headers: Mapping[str, str] | None = None) -> AuthenticatedUser | None:
@@ -96,7 +155,7 @@ def get_authenticated_user(headers: Mapping[str, str] | None = None) -> Authenti
     if principal is not None:
         return principal
 
-    return None
+    return _user_from_aca_headers(headers)
 
 
 def identity_required() -> bool:
