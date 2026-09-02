@@ -117,8 +117,10 @@ ANTHROPIC_API_KEY in `.env` locally, `-e ANTHROPIC_API_KEY=...` when running a
 container, or a Container Apps secret in Azure — never commit this value.
 
 Production Azure deployments use ACA Easy Auth (Microsoft and Google via
-`X-MS-CLIENT-PRINCIPAL` and related ACA headers) and quota env vars
-(`AZURE_STORAGE_ACCOUNT`, `QUOTA_TABLE_NAME`, `DAILY_QUOTA`). Local quota testing:
+`X-MS-CLIENT-PRINCIPAL` and related ACA headers) with **Allow unauthenticated
+access** at the platform layer; the Streamlit app renders the multi-provider
+login landing and enforces identity before pipeline runs. Quota env vars:
+`AZURE_STORAGE_ACCOUNT`, `QUOTA_TABLE_NAME`, `DAILY_QUOTA`. Local quota testing:
 `QUOTA_DEV_MODE=1` and `QUOTA_DEV_USER`. See README **Container**, **Azure Container
 Apps**, and **Authentication and quotas**.
 
@@ -131,7 +133,7 @@ External content is treated as untrusted data, not instructions:
 | User topic input | `validate_topic()` rejects empty, oversized, or unsafe strings | `src/tools/validate_topic.py` |
 | Outbound URL fetch | `is_safe_fetch_url()` blocks private/local addresses before HTTP HEAD | `src/tools/url_safety.py` |
 | Streamlit user topic | `escape_markdown_text()` before embedding topic in confirmation markdown | `src/utils/run_summary.py` |
-| Pipeline cost / abuse | ACA Easy Auth (Microsoft + Google) + daily per-user quota before `run_pipeline()` | `src/utils/aca_identity.py`, `src/utils/quota.py`, `app.py` |
+| Pipeline cost / abuse | ACA Easy Auth (Microsoft + Google) + app login landing + daily per-user quota before `run_pipeline()` | `src/utils/aca_identity.py`, `src/utils/quota.py`, `app.py` |
 | Retrieved article text | `wrap_untrusted_content()` + preamble in agent prompts | `src/utils/untrusted_content.py` |
 
 Agents that consume internet-sourced text (`filter_agent`, `extract_agent`, `review_agent`)

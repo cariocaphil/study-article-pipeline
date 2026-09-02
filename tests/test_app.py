@@ -108,6 +108,46 @@ class TestAppLayout:
         assert app.button[0].label == "Generate study document"
 
 
+class TestLoginLanding:
+    def test_unauthenticated_shows_login_landing_not_pipeline_form(self, monkeypatch):
+        monkeypatch.delenv("QUOTA_DEV_MODE", raising=False)
+        monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "prodaccount")
+
+        with patch("app.get_authenticated_user", return_value=None):
+            at = AppTest.from_file(str(APP_PATH))
+            at.run(timeout=30)
+
+        assert not at.exception
+        assert at.title[0].value == "📚 Study Article Collection"
+        body = " ".join(m.value for m in at.markdown)
+        assert "Sign in to create printable study documents" in body
+        assert "Choose a topic" not in body
+        assert not at.text_input
+        assert not at.button
+
+    def test_render_login_landing_uses_provider_login_urls(self):
+        import app
+
+        with (
+            patch.object(app.st, "title"),
+            patch.object(app.st, "markdown"),
+            patch.object(app.st, "link_button") as mock_link_button,
+        ):
+            app._render_login_landing()
+
+        mock_link_button.assert_any_call(
+            "Sign in with Microsoft",
+            url="/.auth/login/aad?post_login_redirect_uri=/",
+            use_container_width=True,
+        )
+        mock_link_button.assert_any_call(
+            "Sign in with Google",
+            url="/.auth/login/google?post_login_redirect_uri=/",
+            use_container_width=True,
+        )
+        assert mock_link_button.call_count == 2
+
+
 class TestGenerateButton:
     def test_blank_topic_shows_error_without_entering_confirmation(self, app):
         with patch("src.orchestrator.run_pipeline") as mock_run:

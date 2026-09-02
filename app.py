@@ -11,6 +11,8 @@ from src.utils.aca_identity import (
     get_authenticated_user,
     identity_provider_label,
     identity_required,
+    login_url,
+    logout_url,
 )
 from src.utils.observability import STAGE_LABELS, user_facing_pipeline_error
 from src.utils.quota import (
@@ -43,12 +45,28 @@ if "awaiting_confirmation" not in st.session_state:
 if "last_run_result" not in st.session_state:
     st.session_state.last_run_result = None
 
+
+def _render_login_landing() -> None:
+    st.title("📚 Study Article Collection")
+    st.markdown("**Prepare for language lessons through real-world reading.**")
+    st.markdown(
+        "Sign in to create printable study documents from authentic native-language articles."
+    )
+    st.link_button(
+        "Sign in with Microsoft",
+        url=login_url("aad"),
+        use_container_width=True,
+    )
+    st.link_button(
+        "Sign in with Google",
+        url=login_url("google"),
+        use_container_width=True,
+    )
+
+
 authenticated_user = get_authenticated_user()
 if identity_required() and authenticated_user is None:
-    st.error("Sign-in required. Choose a provider to continue.")
-    st.markdown(
-        "[Sign in with Microsoft](/.auth/login/aad) · [Sign in with Google](/.auth/login/google)"
-    )
+    _render_login_landing()
     st.stop()
 
 if authenticated_user is not None and quota_enabled():
@@ -58,7 +76,7 @@ if authenticated_user is not None and quota_enabled():
     st.caption(
         f"Signed in as {authenticated_user.display_name}{provider_suffix} · "
         f"{remaining} generation(s) left today (UTC). "
-        f"[Sign out](/.auth/logout)"
+        f"[Sign out]({logout_url()})"
     )
 
 
