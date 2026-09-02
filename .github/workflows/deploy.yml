@@ -1,0 +1,60 @@
+name: Deploy to Azure Container Apps
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to ACR
+        run: az acr login --name acrstudyarticlepipeline
+
+      - name: Build image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -f Containerfile \
+            -t acrstudyarticlepipeline.azurecr.io/study-a:${{ github.event.workflow_run.head_sha }} \
+            .
+
+      - name: Push image
+        run: |
+          docker push \
+            acrstudyarticlepipeline.azurecr.io/study-a:${{ github.event.workflow_run.head_sha }}
+
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name ca-study-article-pipeline \
+            --resource-group rg-study-article-pipeline \
+            --image acrstudyarticlepipeline.azurecr.io/study-a:${{ github.event.workflow_run.head_sha }}

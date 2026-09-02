@@ -320,7 +320,25 @@ az containerapp update \
   --image "${ACR_NAME}.azurecr.io/${IMAGE}"
 ```
 
-Automated deploys on merge to `main` are planned in **PR 34 — Continuous Deployment**.
+### Continuous deployment
+
+Merges to `main` deploy automatically after CI passes. The workflow
+(`.github/workflows/deploy.yml`) runs on successful completion of the CI
+workflow, builds a **linux/amd64** image tagged with the commit SHA, pushes to
+ACR, and updates the Container App.
+
+One-time Azure and GitHub setup:
+
+1. Create a Microsoft Entra application for GitHub Actions OIDC login.
+2. Add a federated credential for `repo:<owner>/<repo>:ref:refs/heads/main`.
+3. Grant the app **AcrPush** on the registry and **Contributor** on the resource group.
+4. Add GitHub repository secrets:
+   - `AZURE_CLIENT_ID`
+   - `AZURE_TENANT_ID`
+   - `AZURE_SUBSCRIPTION_ID`
+
+`ANTHROPIC_API_KEY` stays on the Container App as a secret (configured during
+PR 33 manual deploy) — the CD workflow only updates the container image.
 
 ## Testing
 
@@ -450,7 +468,9 @@ Results are saved under `evals/results/` (gitignored).
 ```
 app.py                        # Streamlit web UI entry point
 .github/
-└── workflows/ci.yml          # GitHub Actions: Ruff, Pyright, pytest, offline evals
+├── workflows/
+│   ├── ci.yml                # Ruff, Pyright, pytest, offline evals
+│   └── deploy.yml            # CD to Azure Container Apps after CI on main
 evals/
 ├── datasets/
 │   ├── filter/urls.jsonl       # labeled accept/reject URL dataset
@@ -750,12 +770,12 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 34
 
 ### PR 34 — Continuous Deployment
 
-- [ ] Create Microsoft Entra application for GitHub Actions
-- [ ] Configure GitHub OIDC federated credential for `main`
-- [ ] Grant deployment identity `Contributor` and `AcrPush` access
-- [ ] Configure Azure identifiers as GitHub Actions secrets
-- [ ] Add deployment workflow (build → push SHA-tagged image → deploy to ACA)
-- [ ] Trigger CD after successful CI on `main`
+- [x] Create Microsoft Entra application for GitHub Actions
+- [x] Configure GitHub OIDC federated credential for `main`
+- [x] Grant deployment identity `Contributor` and `AcrPush` access
+- [x] Configure Azure identifiers as GitHub Actions secrets
+- [x] Add deployment workflow (build → push SHA-tagged image → deploy to ACA)
+- [x] Trigger CD after successful CI on `main`
 - [ ] Verify the complete automated deployment flow
 
 ## Notes
