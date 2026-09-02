@@ -11,7 +11,7 @@ Five agents run in sequence, each owning one stage of the pipeline:
 
 | Stage | Agent | File | Responsibility |
 |-------|-------|------|-----------------|
-| 1 | Search | `src/agents/search_agent.py` | Find candidate article URLs; validate reachability before returning |
+| 1 | Search | `src/agents/search_agent.py` | Find candidate article URLs; preserve topic + content-type + optional year for disambiguation; validate reachability before returning |
 | 2 | Filter | `src/agents/filter_agent.py` | Confirm each URL is a genuine review, fetch full text + author |
 | 3 | Extract | `src/agents/extract_agent.py` | Pull vocabulary/constructions/idioms at or above your CEFR level; verify quotes and translations |
 | 4 | Review | `src/agents/review_agent.py` | Independently audit extracted phrases for quality, drop low-quality items |
@@ -86,8 +86,11 @@ uv run streamlit run app.py
 ```
 
 Fill in the topic, source language, translation language, and your CEFR
-level in the browser, then click **Generate study document**. Preview the
-PDF in the browser and download it once the pipeline finishes.
+level in the browser, then click **Generate study document**. For films,
+books, series, theatre productions, or albums with similar titles, add an
+optional release or premiere year to the topic (for example, `Madre (2017)`)
+to help the search step find the correct work. Preview the PDF in the browser
+and download it once the pipeline finishes.
 
 ### Command line
 
@@ -115,8 +118,8 @@ Arguments (CLI and web app):
 
 | Argument | Description | Example |
 |----------|-------------|---------|
-| `topic` | Film, book, play, album, or subject to search for | `"Amadeus"` |
-| `topic_type` | Kind of work — disambiguates search (web app dropdown; CLI optional) | `theatre` |
+| `topic` | Film, book, play, album, or subject to search for; optional trailing year disambiguates (web app help text) | `"Madre (2017)"` |
+| `topic_type` | Kind of work — combined with topic (and year when present) to disambiguate search (web app dropdown; CLI optional) | `film` |
 | `source_language` | Language the review articles are written in | `portuguese` |
 | `translation_language` | Language to translate extracted phrases into | `german` |
 | `cefr_level` | Your CEFR level — only phrases at or above this level are kept | `C1` |
@@ -567,7 +570,8 @@ src/
     ├── aca_identity.py       # parse ACA Easy Auth client principal header
     ├── anthropic_retry.py    # retry transient Anthropic API failures
     ├── json_utils.py         # robust JSON extraction from LLM responses
-    └── quota.py              # daily per-user generation limits (Table Storage)
+    ├── quota.py              # daily per-user generation limits (Table Storage)
+    └── topic_disambiguation.py  # parse optional release year; build search disambiguation text
 tests/
 ├── conftest.py               # shared fixtures (API client, sample text/phrases)
 ├── test_aca_identity.py      # ACA identity header parsing
@@ -582,6 +586,7 @@ tests/
 ├── test_quota.py             # daily quota reservation logic
 ├── test_review_agent.py
 ├── test_search_agent.py
+├── test_topic_disambiguation.py  # release-year parsing + search prompt guidance
 ├── test_validate_translation.py
 ├── test_validate_topic.py
 ├── test_validate_url_reachable.py
@@ -592,7 +597,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 39**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 40**.
 
 ### Initial Setup ✅
 
@@ -868,6 +873,14 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 39
 - [x] Keep controls disabled during confirmation and pipeline execution
 - [x] Re-enable controls after success, failure, or quota error
 - [x] Add AppTest coverage for locked and restored widget states
+
+### PR 39 — Topic disambiguation (release year) ✅
+
+- [x] Encourage optional release/premiere year in the Topic field (web app help text)
+- [x] Parse trailing `(19xx|20xx)` years from topic strings
+- [x] Inject year + content-type disambiguation guidance into search prompts
+- [x] Apply year disambiguation for all content types (film, series, book, theatre, album)
+- [x] Add unit and search-prompt regression tests (including `Madre (2017)` case)
 
 ## Notes
 

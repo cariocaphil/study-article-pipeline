@@ -17,6 +17,7 @@ from src.utils.anthropic_retry import create_message_with_retry
 from src.utils.anthropic_utils import as_tool_param, message_text, require_str_field
 from src.utils.json_utils import extract_json
 from src.utils.observability import UsageTracker, record_api_usage
+from src.utils.topic_disambiguation import topic_disambiguation_guidance
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,8 @@ def search_articles(
     usage: UsageTracker | None = None,
 ) -> list[str]:
     topic_label = TOPIC_TYPE_LABELS[topic_type]
+    disambiguation_guidance = topic_disambiguation_guidance(topic, topic_type)
+    disambiguation_section = f"\n{disambiguation_guidance}\n" if disambiguation_guidance else ""
 
     prompt = f"""
 You are a research assistant helping a language learner find articles to study.
@@ -97,7 +100,7 @@ Search for {n_articles} review articles about "{topic}" written in {source_langu
 
 Topic type: {topic_label}.
 {_topic_type_search_guidance(topic_type)}
-
+{disambiguation_section}
 Requirements:
 - Articles must be written IN {source_language} (not translated into it).
 - Articles must be genuine reviews or critical analyses — not plot summaries,
