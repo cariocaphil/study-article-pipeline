@@ -113,7 +113,8 @@ If fewer than 3 articles pass the filter stage, log a clear warning and stop.
 Do not pad the document with low-quality matches.
 
 ## Environment
-ANTHROPIC_API_KEY in .env — never commit this file.
+ANTHROPIC_API_KEY in `.env` locally or `-e ANTHROPIC_API_KEY=...` when running the
+container — never commit this value. See README **Container** for build/run commands.
 
 ## Trust boundaries
 
