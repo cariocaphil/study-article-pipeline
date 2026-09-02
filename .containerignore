@@ -1,0 +1,11 @@
+.env
+.git
+.github
+.venv
+__pycache__
+*.pyc
+.DS_Store
+output/
+evals/results/
+tests/
+evals/

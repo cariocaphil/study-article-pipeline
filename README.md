@@ -139,6 +139,36 @@ extracted phrases with sentence context, translation, category
 The Streamlit app previews the PDF inline and offers a download button.
 CLI runs print the output path when complete.
 
+## Container
+
+Build the image with Podman or Docker:
+
+```bash
+podman build -t study-article-pipeline -f Containerfile .
+# docker build -t study-article-pipeline -f Containerfile .
+```
+
+Run locally on port 8501 (pass your API key at runtime — do not bake it into the image):
+
+```bash
+podman run --rm -p 8501:8501 \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  study-article-pipeline
+```
+
+Open [http://localhost:8501](http://localhost:8501).
+
+To persist generated PDFs on the host, mount the `output/` directory:
+
+```bash
+podman run --rm -p 8501:8501 \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  -v "$(pwd)/output:/app/output" \
+  study-article-pipeline
+```
+
+The image installs DejaVu Sans so PDF generation works on Linux without bundling font files.
+
 ## Testing
 
 Run the full test suite:
@@ -331,7 +361,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 32**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 33**.
 
 ### Initial Setup ✅
 
@@ -547,13 +577,13 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 32
 - [x] Truncate long titles in the footer with an ellipsis
 - [x] Update PDF formatting skill and add compile agent tests
 
-### PR 32 — Containerization
+### PR 32 — Containerization ✅
 
-- [ ] Add Containerfile for the Streamlit app
-- [ ] Package the application and its dependencies
-- [ ] Build and run locally as a container
-- [ ] Expose Streamlit on port 8501
-- [ ] Document the local container workflow
+- [x] Add Containerfile for the Streamlit app
+- [x] Package the application and its dependencies
+- [x] Build and run locally as a container
+- [x] Expose Streamlit on port 8501
+- [x] Document the local container workflow
 
 ### PR 33 — Azure Container Apps Deployment
 
