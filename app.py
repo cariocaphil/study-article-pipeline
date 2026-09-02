@@ -189,7 +189,7 @@ if st.session_state.display_error:
 # ── Inputs ────────────────────────────────────────────────────────────────────
 topic = st.text_input(
     "Topic",
-    placeholder='e.g. "Entroncamento", "Amadeus", "Madre (2017)"',
+    placeholder='e.g. "Entroncamento", "O som ao redor", "Madre (2017)", "Touki Bouki"',
     help=(
         "Include a release, publication, or premiere year when it helps disambiguate "
         "the work (for example, Madre (2017)). The year is optional."
