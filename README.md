@@ -541,11 +541,11 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 32
 - [x] Document hook setup in README and `AGENTS.md`
 - [x] Verify hooks catch and fix misformatted Python locally
 
-### PR 31 — PDF Footer and Page Numbers
+### PR 31 — PDF Footer and Page Numbers ✅
 
-- [ ] Add document title and page numbers to every PDF page footer
-- [ ] Truncate long titles in the footer with an ellipsis
-- [ ] Update PDF formatting skill and add compile agent tests
+- [x] Add document title and page numbers to every PDF page footer
+- [x] Truncate long titles in the footer with an ellipsis
+- [x] Update PDF formatting skill and add compile agent tests
 
 ### PR 32 — Containerization
 
