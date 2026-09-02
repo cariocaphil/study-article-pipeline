@@ -169,6 +169,30 @@ class TestSearchArticlesToolLoop:
         assert "Do not substitute a different work" in prompt
 
     @patch("src.agents.search_agent.validate_url_reachable")
+    def test_includes_year_disambiguation_for_series_with_release_year(self, mock_validate):
+        good_url = "https://example.com/series-review"
+        mock_validate.return_value = True
+
+        client = MagicMock()
+        client.messages.create.side_effect = [
+            mock_message([_tool_use("tool-1", good_url)], "tool_use"),
+            mock_message([_text_block(f'["{good_url}"]')], "end_turn"),
+        ]
+
+        search_articles(
+            "Dark (2017)",
+            "german",
+            1,
+            client,
+            topic_type=TopicType.series,
+        )
+
+        prompt = client.messages.create.call_args_list[0].kwargs["messages"][0]["content"]
+        assert '"Dark (2017)"' in prompt
+        assert "Disambiguation:" in prompt
+        assert "TV series" in prompt
+
+    @patch("src.agents.search_agent.validate_url_reachable")
     def test_omits_year_disambiguation_for_topics_without_year(self, mock_validate):
         good_url = "https://example.com/review"
         mock_validate.return_value = True

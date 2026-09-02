@@ -43,12 +43,29 @@ class TestTopicDisambiguationGuidance:
         assert "book" in guidance
         assert "1999" in guidance
 
+    def test_includes_year_guidance_for_series(self):
+        guidance = topic_disambiguation_guidance("Dark (2017)", TopicType.series)
+
+        assert guidance
+        assert "TV series" in guidance
+        assert "2017" in guidance
+
+    def test_includes_year_guidance_for_theatre(self):
+        guidance = topic_disambiguation_guidance("Hamlet (2015)", TopicType.theatre)
+
+        assert guidance
+        assert "theatre production" in guidance
+        assert "2015" in guidance
+
+    def test_includes_year_guidance_for_albums(self):
+        guidance = topic_disambiguation_guidance("Blonde (2016)", TopicType.album)
+
+        assert guidance
+        assert "album" in guidance
+        assert "2016" in guidance
+
     def test_returns_empty_string_when_year_missing(self):
         assert topic_disambiguation_guidance("Entroncamento", TopicType.film) == ""
-
-    def test_returns_empty_string_for_non_disambiguation_topic_types(self):
-        assert topic_disambiguation_guidance("Madre (2017)", TopicType.series) == ""
-        assert topic_disambiguation_guidance("Madre (2017)", TopicType.album) == ""
 
     def test_madre_regression_mentions_exact_work_not_mother(self):
         guidance = topic_disambiguation_guidance("Madre (2017)", TopicType.film)

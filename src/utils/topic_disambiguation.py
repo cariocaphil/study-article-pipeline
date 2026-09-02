@@ -8,8 +8,6 @@ from src.schemas.article import TOPIC_TYPE_LABELS, TopicType
 
 _TRAILING_RELEASE_YEAR = re.compile(r"^(?P<base>.+?)\s*\(\s*(?P<year>(?:19|20)\d{2})\s*\)\s*$")
 
-_DISAMBIGUATION_TOPIC_TYPES = frozenset({TopicType.film, TopicType.book})
-
 
 def parse_optional_release_year(topic: str) -> tuple[str, int | None]:
     """Return the base title and trailing release/publication year when present."""
@@ -26,7 +24,7 @@ def topic_disambiguation_guidance(
 ) -> str:
     """Return prompt text that keeps title, content type, and year aligned."""
     _, release_year = parse_optional_release_year(topic)
-    if release_year is None or topic_type not in _DISAMBIGUATION_TOPIC_TYPES:
+    if release_year is None:
         return ""
 
     topic_label = TOPIC_TYPE_LABELS[topic_type]
