@@ -18,7 +18,7 @@ and compiles everything into a printable PDF for language study.
 | Agent       | File                        | Owns |
 |-------------|-----------------------------|------|
 | Orchestrator | src/orchestrator.py        | Input parsing, agent sequencing, fallback handling |
-| Search      | src/agents/search_agent.py  | Find candidate article URLs in the source language |
+| Search      | src/agents/search_agent.py  | Find candidate article URLs in the source language; optional year disambiguation via `src/utils/topic_disambiguation.py` |
 | Filter      | src/agents/filter_agent.py  | Confirm each URL is a real review, fetch full text + author |
 | Extract     | src/agents/extract_agent.py | Pull phrases above user's CEFR level, with translations |
 | Review      | src/agents/review_agent.py  | Independently audit extracted phrases for quality, drop low-quality items |
@@ -131,6 +131,7 @@ External content is treated as untrusted data, not instructions:
 | Boundary | Mechanism | File |
 |----------|-----------|------|
 | User topic input | `validate_topic()` rejects empty, oversized, or unsafe strings | `src/tools/validate_topic.py` |
+| Search topic identity | Trailing release year + content type injected into search prompt so similar titles are not substituted | `src/utils/topic_disambiguation.py`, `src/agents/search_agent.py` |
 | Outbound URL fetch | `is_safe_fetch_url()` blocks private/local addresses before HTTP HEAD | `src/tools/url_safety.py` |
 | Streamlit user topic | `escape_markdown_text()` before embedding topic in confirmation markdown | `src/utils/run_summary.py` |
 | Pipeline cost / abuse | ACA Easy Auth (Microsoft + Google) + app login landing + daily per-user quota before `run_pipeline()` | `src/utils/aca_identity.py`, `src/utils/quota.py`, `app.py` |
