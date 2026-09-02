@@ -340,6 +340,39 @@ One-time Azure and GitHub setup:
 `ANTHROPIC_API_KEY` stays on the Container App as a secret (configured during
 PR 33 manual deploy) — the CD workflow only updates the container image.
 
+### Authentication and quotas
+
+Public Azure deployments use **Container Apps Authentication** (Easy Auth) so
+users sign in with **Microsoft** before reaching Streamlit (Google sign-in is
+planned in **PR 36**). ACA forwards identity in the `X-MS-CLIENT-PRINCIPAL`
+header; the app reads it in `src/utils/aca_identity.py` and enforces a per-user
+daily generation limit in `src/utils/quota.py` (checked on **Confirm & generate**,
+before the pipeline runs).
+
+One-time Azure setup (in addition to the Container App from PR 33):
+
+1. **Enable Authentication** on the Container App: require authentication, add
+   Microsoft Entra ID as an identity provider.
+2. **Create a Storage account** and table `UserDailyQuota` (PartitionKey = user
+   id, RowKey = UTC date `YYYY-MM-DD`, `count` column).
+3. Grant the Container App **managed identity** `Storage Table Data Contributor`
+   on the storage account.
+4. **Add Container App environment variables**:
+   - `AZURE_STORAGE_ACCOUNT` — storage account name
+   - `QUOTA_TABLE_NAME` — `UserDailyQuota`
+   - `DAILY_QUOTA` — max generations per user per UTC day (e.g. `3`)
+
+Do **not** set `QUOTA_DEV_MODE` in production. OAuth client secrets and storage
+keys stay in Azure — never commit them.
+
+**Local development** (no Easy Auth): add to `.env` to test quota logic locally:
+
+```
+QUOTA_DEV_MODE=1
+QUOTA_DEV_USER=local-dev
+DAILY_QUOTA=3
+```
+
 ## Testing
 
 Run the full test suite:
@@ -510,10 +543,13 @@ src/
 │   └── article.py            # Pydantic models shared between agents
 └── utils/
     ├── __init__.py           # load_skill() helper
+    ├── aca_identity.py       # parse ACA Easy Auth client principal header
     ├── anthropic_retry.py    # retry transient Anthropic API failures
-    └── json_utils.py         # robust JSON extraction from LLM responses
+    ├── json_utils.py         # robust JSON extraction from LLM responses
+    └── quota.py              # daily per-user generation limits (Table Storage)
 tests/
 ├── conftest.py               # shared fixtures (API client, sample text/phrases)
+├── test_aca_identity.py      # ACA identity header parsing
 ├── test_app.py               # Streamlit UI tests (AppTest)
 ├── test_anthropic_retry.py
 ├── test_compile_agent.py
@@ -522,6 +558,7 @@ tests/
 ├── test_filter_agent.py
 ├── test_json_utils.py        # JSON repair/parsing tests
 ├── test_orchestrator.py      # topic input guardrails
+├── test_quota.py             # daily quota reservation logic
 ├── test_review_agent.py
 ├── test_search_agent.py
 ├── test_validate_translation.py
@@ -534,7 +571,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 34**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 36**.
 
 ### Initial Setup ✅
 
@@ -768,7 +805,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 34
 - [x] Configure external HTTPS ingress on port 8501
 - [x] Verify the app through its public Azure URL
 
-### PR 34 — Continuous Deployment
+### PR 34 — Continuous Deployment ✅
 
 - [x] Create Microsoft Entra application for GitHub Actions
 - [x] Configure GitHub OIDC federated credential for `main`
@@ -776,7 +813,22 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 34
 - [x] Configure Azure identifiers as GitHub Actions secrets
 - [x] Add deployment workflow (build → push SHA-tagged image → deploy to ACA)
 - [x] Trigger CD after successful CI on `main`
-- [ ] Verify the complete automated deployment flow
+- [x] Verify the complete automated deployment flow
+
+### PR 35 — Authentication and Quotas
+
+- [x] Enable ACA Easy Auth (Microsoft Entra ID)
+- [x] Add Azure Table Storage for daily per-user generation counts
+- [x] Parse authenticated user identity from ACA headers in Streamlit
+- [x] Enforce daily quota before pipeline runs
+- [x] Add unit tests and document Azure/local setup
+- [ ] Verify auth and quota enforcement on the public deployment
+
+### PR 36 — Google Authentication
+
+- [ ] Add Google as an ACA Easy Auth identity provider
+- [ ] Add provider-selection/login UX
+- [ ] Verify identity + quota behavior with Google users
 
 ## Notes
 

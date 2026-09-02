@@ -21,6 +21,18 @@ from src.schemas.pipeline_result import PipelineRunResult
 APP_PATH = Path(__file__).resolve().parent.parent / "app.py"
 
 
+@pytest.fixture(autouse=True)
+def quota_dev_mode(monkeypatch):
+    monkeypatch.setenv("QUOTA_DEV_MODE", "1")
+    monkeypatch.setenv("QUOTA_DEV_USER", "test-user")
+    monkeypatch.setenv("DAILY_QUOTA", "3")
+    from src.utils.quota import reset_dev_quota_for_tests
+
+    reset_dev_quota_for_tests()
+    yield
+    reset_dev_quota_for_tests()
+
+
 def _sample_pdf_path() -> str:
     from reportlab.pdfgen import canvas
 
@@ -228,3 +240,21 @@ class TestGenerateButton:
 
         mock_run.assert_not_called()
         assert app.button[0].label == "Generate study document"
+
+    def test_quota_exceeded_blocks_pipeline_run(self, app, monkeypatch):
+        monkeypatch.setenv("DAILY_QUOTA", "1")
+        from src.utils.quota import consume_generation, reset_dev_quota_for_tests
+
+        reset_dev_quota_for_tests()
+        consume_generation("test-user")
+
+        app.text_input[0].input("Entroncamento")
+
+        with patch("src.orchestrator.run_pipeline") as mock_run:
+            app.button[0].click().run(timeout=30)
+            app.button[0].click().run(timeout=30)
+
+        mock_run.assert_not_called()
+        assert [e.value for e in app.error] == [
+            "Daily generation limit reached. Try again tomorrow (UTC)."
+        ]

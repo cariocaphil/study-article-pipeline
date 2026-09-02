@@ -7,7 +7,15 @@ from src.orchestrator import run_pipeline
 from src.schemas.article import TopicType
 from src.schemas.pipeline_result import PipelineRunResult
 from src.tools.validate_topic import topic_validation_error
+from src.utils.aca_identity import get_authenticated_user, identity_required
 from src.utils.observability import STAGE_LABELS, user_facing_pipeline_error
+from src.utils.quota import (
+    QuotaExceededError,
+    QuotaUnavailableError,
+    consume_generation,
+    get_remaining,
+    quota_enabled,
+)
 from src.utils.run_summary import format_post_run_summary, format_run_summary
 
 logger = logging.getLogger(__name__)
@@ -31,6 +39,18 @@ if "awaiting_confirmation" not in st.session_state:
 if "last_run_result" not in st.session_state:
     st.session_state.last_run_result = None
 
+authenticated_user = get_authenticated_user()
+if identity_required() and authenticated_user is None:
+    st.error("Sign-in required. Refresh the page and authenticate to continue.")
+    st.stop()
+
+if authenticated_user is not None and quota_enabled():
+    remaining = get_remaining(authenticated_user.user_id)
+    st.caption(
+        f"Signed in as {authenticated_user.display_name} · "
+        f"{remaining} generation(s) left today (UTC)."
+    )
+
 
 def _render_generated_document(result: PipelineRunResult) -> None:
     if not os.path.exists(result.output_path):
@@ -47,6 +67,44 @@ def _render_generated_document(result: PipelineRunResult) -> None:
         mime="application/pdf",
         use_container_width=True,
     )
+
+
+def _run_confirmed_pipeline(
+    *,
+    stripped_topic: str,
+    source_language: str,
+    translation_language: str,
+    user_level: str,
+    n_articles: int,
+    topic_type: TopicType,
+) -> None:
+    with st.status("Running pipeline…", expanded=True) as status:
+
+        def on_stage(stage: str) -> None:
+            status.update(label=STAGE_LABELS.get(stage, stage))
+
+        try:
+            result = run_pipeline(
+                topic=stripped_topic,
+                source_language=source_language,
+                translation_language=translation_language,
+                user_level=user_level,
+                n_articles=n_articles,
+                topic_type=topic_type,
+                on_stage=on_stage,
+            )
+            status.update(label="Pipeline complete", state="complete", expanded=False)
+            st.session_state.awaiting_confirmation = False
+            st.session_state.pending_run_config = None
+            st.session_state.last_run_result = result
+
+        except ValueError as e:
+            status.update(label="Pipeline failed", state="error", expanded=False)
+            st.error(user_facing_pipeline_error(e))
+        except Exception as e:
+            status.update(label="Pipeline failed", state="error", expanded=False)
+            logger.exception("Unexpected pipeline error")
+            st.error(user_facing_pipeline_error(e))
 
 
 st.title("📚 Study Article Collection")
@@ -154,6 +212,9 @@ if st.session_state.awaiting_confirmation and not topic_error:
             n_articles=n_articles,
         )
     )
+    if authenticated_user is not None and quota_enabled():
+        remaining = get_remaining(authenticated_user.user_id)
+        st.info(f"{remaining} generation(s) remaining today (UTC).")
 
     confirm_col, back_col = st.columns(2)
     with confirm_col:
@@ -172,33 +233,32 @@ if st.session_state.awaiting_confirmation and not topic_error:
 
     if confirm_clicked:
         st.session_state.last_run_result = None
-        with st.status("Running pipeline…", expanded=True) as status:
 
-            def on_stage(stage: str) -> None:
-                status.update(label=STAGE_LABELS.get(stage, stage))
-
+        if authenticated_user is not None and quota_enabled():
             try:
-                result = run_pipeline(
-                    topic=stripped_topic,
+                consume_generation(authenticated_user.user_id)
+            except QuotaExceededError:
+                st.error("Daily generation limit reached. Try again tomorrow (UTC).")
+            except QuotaUnavailableError:
+                st.error("Could not verify your daily quota. Please try again in a moment.")
+            else:
+                _run_confirmed_pipeline(
+                    stripped_topic=stripped_topic,
                     source_language=source_language,
                     translation_language=translation_language,
                     user_level=user_level,
                     n_articles=n_articles,
                     topic_type=TOPIC_TYPE_OPTIONS[topic_type],
-                    on_stage=on_stage,
                 )
-                status.update(label="Pipeline complete", state="complete", expanded=False)
-                st.session_state.awaiting_confirmation = False
-                st.session_state.pending_run_config = None
-                st.session_state.last_run_result = result
-
-            except ValueError as e:
-                status.update(label="Pipeline failed", state="error", expanded=False)
-                st.error(user_facing_pipeline_error(e))
-            except Exception as e:
-                status.update(label="Pipeline failed", state="error", expanded=False)
-                logger.exception("Unexpected pipeline error")
-                st.error(user_facing_pipeline_error(e))
+        else:
+            _run_confirmed_pipeline(
+                stripped_topic=stripped_topic,
+                source_language=source_language,
+                translation_language=translation_language,
+                user_level=user_level,
+                n_articles=n_articles,
+                topic_type=TOPIC_TYPE_OPTIONS[topic_type],
+            )
 else:
     if st.button("Generate study document", type="primary", use_container_width=True):
         if topic_error:

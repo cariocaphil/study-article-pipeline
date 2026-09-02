@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "anthropic>=1.2.0",
+    "azure-data-tables>=12.6.0",
+    "azure-identity>=1.21.0",
     "pydantic>=2.13.5",
     "reportlab>=4.4.0",
     "python-dotenv>=1.2.3",
