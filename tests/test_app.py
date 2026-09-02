@@ -15,10 +15,12 @@ from unittest.mock import ANY, patch
 import pytest
 from streamlit.testing.v1 import AppTest
 
+import app as app_module
 from src.schemas.article import TopicType
 from src.schemas.pipeline_result import PipelineRunResult
 
 APP_PATH = Path(__file__).resolve().parent.parent / "app.py"
+APP_TITLE = app_module.APP_TITLE
 
 
 @pytest.fixture(autouse=True)
@@ -68,7 +70,7 @@ class TestAppLayout:
         assert not app.exception
 
     def test_title(self, app):
-        assert app.title[0].value == "📚 Study Article Collection"
+        assert app.title[0].value == APP_TITLE
 
     def test_intro_copy_present(self, app):
         body = " ".join(m.value for m in app.markdown)
@@ -103,7 +105,7 @@ class TestAppLayout:
         assert user_level.value == "C1"
 
         assert app.slider[0].label == "Number of articles"
-        assert app.slider[0].value == 5
+        assert app.slider[0].value == 3
 
         assert app.button[0].label == "Generate study document"
 
@@ -118,7 +120,7 @@ class TestLoginLanding:
             at.run(timeout=30)
 
         assert not at.exception
-        assert at.title[0].value == "📚 Study Article Collection"
+        assert at.title[0].value == APP_TITLE
         body = " ".join(m.value for m in at.markdown)
         assert "Sign in to create printable study documents" in body
         assert "Choose a topic" not in body
@@ -186,6 +188,9 @@ class TestGenerateButton:
         assert "**Topic:** Amadeus (Theatre production)" in body
         assert app.button[0].label == "Confirm & generate"
         assert app.button[1].label == "Go back"
+        assert app.text_input[0].disabled is True
+        assert all(selectbox.disabled for selectbox in app.selectbox)
+        assert app.slider[0].disabled is True
 
     def test_successful_run_shows_success_and_download_button(self, app):
         app.text_input[0].input("Entroncamento")
@@ -204,7 +209,7 @@ class TestGenerateButton:
                 source_language="portuguese",
                 translation_language="german",
                 user_level="C1",
-                n_articles=5,
+                n_articles=3,
                 topic_type=TopicType.film,
                 on_stage=ANY,
             )
@@ -212,6 +217,8 @@ class TestGenerateButton:
             assert [s.value for s in app.success] == ["Document generated successfully."]
             assert len(app.download_button) == 1
             assert app.download_button[0].label == "⬇️ Download your study document"
+            assert app.text_input[0].disabled is False
+            assert app.slider[0].disabled is False
         finally:
             os.remove(tmp_path)
 
@@ -242,6 +249,7 @@ class TestGenerateButton:
 
         assert not app.exception
         assert [e.value for e in app.error] == [message]
+        assert app.text_input[0].disabled is False
 
     def test_unexpected_error_from_pipeline_shown_with_prefix(self, app):
         app.text_input[0].input("Entroncamento")
@@ -254,6 +262,7 @@ class TestGenerateButton:
         assert [e.value for e in app.error] == [
             "An unexpected error occurred. Please try again later."
         ]
+        assert app.text_input[0].disabled is False
 
     def test_topic_is_stripped_before_being_passed_to_pipeline(self, app):
         app.text_input[0].input("  Entroncamento  ")
@@ -280,6 +289,7 @@ class TestGenerateButton:
 
         mock_run.assert_not_called()
         assert app.button[0].label == "Generate study document"
+        assert app.text_input[0].disabled is False
 
     def test_quota_exceeded_blocks_pipeline_run(self, app, monkeypatch):
         monkeypatch.setenv("DAILY_QUOTA", "1")
@@ -298,3 +308,4 @@ class TestGenerateButton:
         assert [e.value for e in app.error] == [
             "Daily generation limit reached. Try again tomorrow (UTC)."
         ]
+        assert app.text_input[0].disabled is False

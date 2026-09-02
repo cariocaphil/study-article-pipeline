@@ -592,7 +592,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 38**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 39**.
 
 ### Initial Setup ✅
 
@@ -859,6 +859,15 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 38
 - [x] Add `login_url()` / `logout_url()` with post-login and post-logout redirects
 - [x] Update tests and document multi-provider login UX
 - [ ] Verify login landing and both providers on the public deployment
+
+### PR 38 — Generation UX ✅
+
+- [x] Rename displayed app title to **Study Article Collection Generator.**
+- [x] Default article count in the web UI to **3**
+- [x] Disable form controls after **Generate study document** is clicked
+- [x] Keep controls disabled during confirmation and pipeline execution
+- [x] Re-enable controls after success, failure, or quota error
+- [x] Add AppTest coverage for locked and restored widget states
 
 ## Notes
 

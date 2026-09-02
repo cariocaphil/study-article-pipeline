@@ -26,6 +26,10 @@ from src.utils.run_summary import format_post_run_summary, format_run_summary
 
 logger = logging.getLogger(__name__)
 
+APP_TITLE = "📚 Study Article Collection Generator."
+PAGE_TITLE = "Study Article Collection Generator"
+DEFAULT_N_ARTICLES = 3
+
 TOPIC_TYPE_OPTIONS = {
     "Film": TopicType.film,
     "Series": TopicType.series,
@@ -35,7 +39,7 @@ TOPIC_TYPE_OPTIONS = {
 }
 
 st.set_page_config(
-    page_title="Study Article Collection",
+    page_title=PAGE_TITLE,
     page_icon="📚",
     layout="centered",
 )
@@ -44,10 +48,16 @@ if "awaiting_confirmation" not in st.session_state:
     st.session_state.awaiting_confirmation = False
 if "last_run_result" not in st.session_state:
     st.session_state.last_run_result = None
+if "inputs_locked" not in st.session_state:
+    st.session_state.inputs_locked = False
+if "pipeline_running" not in st.session_state:
+    st.session_state.pipeline_running = False
+if "display_error" not in st.session_state:
+    st.session_state.display_error = None
 
 
 def _render_login_landing() -> None:
-    st.title("📚 Study Article Collection")
+    st.title(APP_TITLE)
     st.markdown("**Prepare for language lessons through real-world reading.**")
     st.markdown(
         "Sign in to create printable study documents from authentic native-language articles."
@@ -128,14 +138,14 @@ def _run_confirmed_pipeline(
 
         except ValueError as e:
             status.update(label="Pipeline failed", state="error", expanded=False)
-            st.error(user_facing_pipeline_error(e))
+            st.session_state.display_error = user_facing_pipeline_error(e)
         except Exception as e:
             status.update(label="Pipeline failed", state="error", expanded=False)
             logger.exception("Unexpected pipeline error")
-            st.error(user_facing_pipeline_error(e))
+            st.session_state.display_error = user_facing_pipeline_error(e)
 
 
-st.title("📚 Study Article Collection")
+st.title(APP_TITLE)
 st.markdown("**Prepare for language lessons through real-world reading.**")
 
 st.markdown(
@@ -169,15 +179,24 @@ st.markdown(
 
 st.divider()
 
+inputs_locked = st.session_state.inputs_locked
+pipeline_running = st.session_state.pipeline_running
+
+if st.session_state.display_error:
+    st.error(st.session_state.display_error)
+    st.session_state.display_error = None
+
 # ── Inputs ────────────────────────────────────────────────────────────────────
 topic = st.text_input(
     "Topic",
     placeholder='e.g. "Entroncamento", "Amadeus", "Que Horas Ela Volta?"',
+    disabled=inputs_locked,
 )
 
 topic_type = st.selectbox(
     "Topic type",
     list(TOPIC_TYPE_OPTIONS.keys()),
+    disabled=inputs_locked,
 )
 
 col1, col2 = st.columns(2)
@@ -186,12 +205,14 @@ with col1:
     source_language = st.selectbox(
         "Source language",
         ["portuguese", "spanish", "catalan", "french", "italian", "german"],
+        disabled=inputs_locked,
     )
 
 with col2:
     translation_language = st.selectbox(
         "Translation language",
         ["german", "english", "french", "spanish", "portuguese", "italian"],
+        disabled=inputs_locked,
     )
 
 col3, col4 = st.columns(2)
@@ -201,6 +222,7 @@ with col3:
         "Your CEFR level",
         ["A1", "A2", "B1", "B2", "C1", "C2"],
         index=4,  # default to C1
+        disabled=inputs_locked,
     )
 
 with col4:
@@ -208,7 +230,8 @@ with col4:
         "Number of articles",
         min_value=3,
         max_value=8,
-        value=5,
+        value=DEFAULT_N_ARTICLES,
+        disabled=inputs_locked,
     )
 
 st.divider()
@@ -224,7 +247,18 @@ run_config = (
     n_articles,
 )
 
-if st.session_state.get("pending_run_config") != run_config:
+pending_run_config = st.session_state.get("pending_run_config")
+if st.session_state.inputs_locked and pending_run_config is not None:
+    (
+        stripped_topic,
+        topic_type,
+        source_language,
+        translation_language,
+        user_level,
+        n_articles,
+    ) = pending_run_config
+    topic_error = None
+elif pending_run_config != run_config:
     st.session_state.awaiting_confirmation = False
 
 # ── Run ───────────────────────────────────────────────────────────────────────
@@ -250,25 +284,37 @@ if st.session_state.awaiting_confirmation and not topic_error:
             "Confirm & generate",
             type="primary",
             use_container_width=True,
+            disabled=pipeline_running,
         )
     with back_col:
-        back_clicked = st.button("Go back", use_container_width=True)
+        back_clicked = st.button(
+            "Go back",
+            use_container_width=True,
+            disabled=pipeline_running,
+        )
 
     if back_clicked:
         st.session_state.awaiting_confirmation = False
         st.session_state.pending_run_config = None
+        st.session_state.inputs_locked = False
         st.rerun()
 
     if confirm_clicked:
+        st.session_state.pipeline_running = True
         st.session_state.last_run_result = None
+        st.session_state.display_error = None
 
         if authenticated_user is not None and quota_enabled():
             try:
                 consume_generation(authenticated_user.user_id)
             except QuotaExceededError:
-                st.error("Daily generation limit reached. Try again tomorrow (UTC).")
+                st.session_state.display_error = (
+                    "Daily generation limit reached. Try again tomorrow (UTC)."
+                )
             except QuotaUnavailableError:
-                st.error("Could not verify your daily quota. Please try again in a moment.")
+                st.session_state.display_error = (
+                    "Could not verify your daily quota. Please try again in a moment."
+                )
             else:
                 _run_confirmed_pipeline(
                     stripped_topic=stripped_topic,
@@ -287,13 +333,23 @@ if st.session_state.awaiting_confirmation and not topic_error:
                 n_articles=n_articles,
                 topic_type=TOPIC_TYPE_OPTIONS[topic_type],
             )
+
+        st.session_state.pipeline_running = False
+        st.session_state.inputs_locked = False
+        st.rerun()
 else:
-    if st.button("Generate study document", type="primary", use_container_width=True):
+    if st.button(
+        "Generate study document",
+        type="primary",
+        use_container_width=True,
+        disabled=inputs_locked,
+    ):
         if topic_error:
             st.error(topic_error)
         else:
             st.session_state.awaiting_confirmation = True
             st.session_state.pending_run_config = run_config
+            st.session_state.inputs_locked = True
             st.rerun()
 
 if st.session_state.last_run_result is not None:
