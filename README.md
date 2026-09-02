@@ -169,6 +169,159 @@ podman run --rm -p 8501:8501 \
 
 The image installs DejaVu Sans so PDF generation works on Linux without bundling font files.
 
+For Azure, build for **linux/amd64** (Container Apps runs AMD64 nodes):
+
+```bash
+podman build --platform linux/amd64 -t study-article-pipeline -f Containerfile .
+# docker build --platform linux/amd64 -t study-article-pipeline -f Containerfile .
+```
+
+## Azure Container Apps
+
+Manual deployment runbook for hosting the Streamlit app on [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/overview) (ACA). Requires the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) and an active subscription.
+
+Set names once (adjust region and names as needed):
+
+```bash
+RESOURCE_GROUP=study-article-rg
+LOCATION=westeurope
+ACR_NAME=studyarticleacr          # globally unique, alphanumeric only
+ENV_NAME=study-article-env
+APP_NAME=study-article-app
+IMAGE=study-article-pipeline:latest
+```
+
+### 1. Create resource group and Container Registry
+
+```bash
+az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
+
+az acr create \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$ACR_NAME" \
+  --sku Basic \
+  --admin-enabled false
+```
+
+### 2. Build and push a Linux AMD64 image
+
+From the repo root, build for AMD64 and push to ACR:
+
+```bash
+az acr login --name "$ACR_NAME"
+
+podman build --platform linux/amd64 \
+  -t "${ACR_NAME}.azurecr.io/${IMAGE}" \
+  -f Containerfile .
+podman push "${ACR_NAME}.azurecr.io/${IMAGE}"
+```
+
+Docker equivalent:
+
+```bash
+docker build --platform linux/amd64 \
+  -t "${ACR_NAME}.azurecr.io/${IMAGE}" \
+  -f Containerfile .
+docker push "${ACR_NAME}.azurecr.io/${IMAGE}"
+```
+
+### 3. Create Container Apps environment and app
+
+```bash
+az containerapp env create \
+  --name "$ENV_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --location "$LOCATION"
+
+az containerapp create \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --environment "$ENV_NAME" \
+  --image "${ACR_NAME}.azurecr.io/${IMAGE}" \
+  --target-port 8501 \
+  --ingress external \
+  --min-replicas 0 \
+  --max-replicas 1 \
+  --cpu 1.0 \
+  --memory 2.0Gi \
+  --registry-server "${ACR_NAME}.azurecr.io" \
+  --system-assigned \
+  --secrets anthropic-api-key=<your-anthropic-api-key> \
+  --env-vars ANTHROPIC_API_KEY=secretref:anthropic-api-key
+```
+
+Replace `<your-anthropic-api-key>` with your key. Store it as a Container Apps secret — never commit it or bake it into the image.
+
+### 4. Grant managed identity access to ACR
+
+The container app uses a system-assigned managed identity to pull from ACR (admin user stays disabled):
+
+```bash
+APP_ID=$(az containerapp show \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query identity.principalId -o tsv)
+
+ACR_ID=$(az acr show \
+  --name "$ACR_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query id -o tsv)
+
+az role assignment create \
+  --assignee "$APP_ID" \
+  --role AcrPull \
+  --scope "$ACR_ID"
+```
+
+If the app was created before the role assignment, update it so the revision picks up registry auth:
+
+```bash
+az containerapp update \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --image "${ACR_NAME}.azurecr.io/${IMAGE}"
+```
+
+### 5. Verify
+
+Print the public HTTPS URL:
+
+```bash
+az containerapp show \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query properties.configuration.ingress.fqdn -o tsv
+```
+
+Open `https://<fqdn>` in a browser. The app serves Streamlit on port 8501 with external HTTPS ingress terminated by ACA.
+
+Run an end-to-end pipeline test: enter a topic, languages, and CEFR level, then confirm the PDF preview and download work. Check revision logs if anything fails:
+
+```bash
+az containerapp logs show \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --follow
+```
+
+### Updating the deployed image
+
+After code changes, rebuild for AMD64, push a new tag, and update the app:
+
+```bash
+podman build --platform linux/amd64 \
+  -t "${ACR_NAME}.azurecr.io/${IMAGE}" \
+  -f Containerfile .
+podman push "${ACR_NAME}.azurecr.io/${IMAGE}"
+
+az containerapp update \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --image "${ACR_NAME}.azurecr.io/${IMAGE}"
+```
+
+Automated deploys on merge to `main` are planned in **PR 34 — Continuous Deployment**.
+
 ## Testing
 
 Run the full test suite:
@@ -361,7 +514,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 33**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 34**.
 
 ### Initial Setup ✅
 
@@ -585,15 +738,15 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 33
 - [x] Expose Streamlit on port 8501
 - [x] Document the local container workflow
 
-### PR 33 — Azure Container Apps Deployment
+### PR 33 — Azure Container Apps Deployment ✅
 
-- [ ] Create Azure resource group and Container Registry
-- [ ] Build a Linux AMD64 container image
-- [ ] Push the image to ACR
-- [ ] Create a Container Apps Environment and Container App
-- [ ] Configure managed-identity access to ACR
-- [ ] Configure external HTTPS ingress on port 8501
-- [ ] Verify the app through its public Azure URL
+- [x] Create Azure resource group and Container Registry
+- [x] Build a Linux AMD64 container image
+- [x] Push the image to ACR
+- [x] Create a Container Apps Environment and Container App
+- [x] Configure managed-identity access to ACR
+- [x] Configure external HTTPS ingress on port 8501
+- [x] Verify the app through its public Azure URL
 
 ### PR 34 — Continuous Deployment
 
