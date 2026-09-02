@@ -189,7 +189,11 @@ if st.session_state.display_error:
 # ── Inputs ────────────────────────────────────────────────────────────────────
 topic = st.text_input(
     "Topic",
-    placeholder='e.g. "Entroncamento", "Amadeus", "Que Horas Ela Volta?"',
+    placeholder='e.g. "Entroncamento", "Amadeus", "Madre (2017)"',
+    help=(
+        "Include a release or publication year when it helps disambiguate films or books "
+        "(for example, Madre (2017)). The year is optional."
+    ),
     disabled=inputs_locked,
 )
 

@@ -143,6 +143,47 @@ class TestSearchArticlesToolLoop:
         assert "theatre production" in prompt
         assert "not the film, TV series" in prompt
 
+    @patch("src.agents.search_agent.validate_url_reachable")
+    def test_includes_year_disambiguation_for_film_with_release_year(self, mock_validate):
+        good_url = "https://example.com/madre-review"
+        mock_validate.return_value = True
+
+        client = MagicMock()
+        client.messages.create.side_effect = [
+            mock_message([_tool_use("tool-1", good_url)], "tool_use"),
+            mock_message([_text_block(f'["{good_url}"]')], "end_turn"),
+        ]
+
+        search_articles(
+            "Madre (2017)",
+            "spanish",
+            1,
+            client,
+            topic_type=TopicType.film,
+        )
+
+        prompt = client.messages.create.call_args_list[0].kwargs["messages"][0]["content"]
+        assert '"Madre (2017)"' in prompt
+        assert "Disambiguation:" in prompt
+        assert "2017" in prompt
+        assert "Do not substitute a different work" in prompt
+
+    @patch("src.agents.search_agent.validate_url_reachable")
+    def test_omits_year_disambiguation_for_topics_without_year(self, mock_validate):
+        good_url = "https://example.com/review"
+        mock_validate.return_value = True
+
+        client = MagicMock()
+        client.messages.create.side_effect = [
+            mock_message([_tool_use("tool-1", good_url)], "tool_use"),
+            mock_message([_text_block(f'["{good_url}"]')], "end_turn"),
+        ]
+
+        search_articles("Entroncamento", "portuguese", 1, client)
+
+        prompt = client.messages.create.call_args_list[0].kwargs["messages"][0]["content"]
+        assert "Disambiguation:" not in prompt
+
 
 @pytest.mark.slow
 def test_search_articles_returns_urls(anthropic_client):
