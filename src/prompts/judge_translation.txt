@@ -1,0 +1,19 @@
+
+You are judging translation quality for language-study material.
+
+## Rubric
+{rubric}
+
+## Item to judge
+Source language: {source_language}
+Target language: {translation_language}
+Phrase: {phrase}
+Sentence context: {sentence_context}
+Proposed translation: {translation}
+
+Return ONLY a JSON object with:
+- adequate: boolean — true if the translation is adequate for study, false otherwise
+- reason: short string explaining the verdict
+
+Example:
+{{"adequate": true, "reason": "Captures the idiomatic meaning in natural German."}}

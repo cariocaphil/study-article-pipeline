@@ -11,6 +11,7 @@ from typing import cast
 import anthropic
 from anthropic.types import MessageParam, ToolResultBlockParam, ToolUnionParam
 
+from src.prompts import load_prompt
 from src.schemas.article import TOPIC_TYPE_LABELS, TopicType
 from src.tools.validate_url_reachable import validate_url_reachable
 from src.utils.anthropic_retry import create_message_with_retry
@@ -93,27 +94,15 @@ def search_articles(
     disambiguation_guidance = topic_disambiguation_guidance(topic, topic_type)
     disambiguation_section = f"\n{disambiguation_guidance}\n" if disambiguation_guidance else ""
 
-    prompt = f"""
-You are a research assistant helping a language learner find articles to study.
-
-Search for {n_articles} review articles about "{topic}" written in {source_language}.
-
-Topic type: {topic_label}.
-{_topic_type_search_guidance(topic_type)}
-{disambiguation_section}
-Requirements:
-- Articles must be written IN {source_language} (not translated into it).
-- Articles must be genuine reviews or critical analyses — not plot summaries,
-  ticketing pages, trailers, or listicles.
-- Prefer articles from established film/book/culture publications or blogs.
-- Each article should come from a different source.
-
-Before returning the list, validate each URL using the validate_url_reachable tool.
-Only return URLs that are reachable.
-
-Return ONLY a JSON array of URLs, with no other text, no markdown, no explanation.
-Example format: ["https://...", "https://...", "https://..."]
-"""
+    prompt = load_prompt(
+        "search_articles",
+        n_articles=n_articles,
+        topic=topic,
+        source_language=source_language,
+        topic_label=topic_label,
+        topic_type_guidance=_topic_type_search_guidance(topic_type),
+        disambiguation_section=disambiguation_section,
+    )
 
     messages: list[MessageParam] = [{"role": "user", "content": prompt}]
     validation_results: dict[str, bool] = {}

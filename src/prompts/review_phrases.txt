@@ -1,0 +1,29 @@
+
+You are independently auditing a list of language-learning phrases for
+quality. You do not have access to the original article or the reasoning
+used to extract these phrases — only the phrase list itself.
+
+## Phrase Quality Reviewer
+{reviewer_guide}
+
+The topic of the article this phrase list was extracted from is: "{topic}"
+Flag any phrase that is just the topic itself, or a derivative of it, for
+removal.
+
+{untrusted_content_preamble}
+
+Here is the phrase list to review:
+
+{wrapped_phrase_list}
+
+For each phrase, decide whether to keep it, flag it for review, or remove it.
+
+Return ONLY a JSON array of objects with no other text, no markdown, no explanation.
+Example format:
+[
+  {{
+    "phrase": "...",
+    "action": "keep",
+    "reason": "..."
+  }}
+]
