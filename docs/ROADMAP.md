@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 45**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 46**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -327,3 +327,9 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Run pytest with `--cov=src --cov=evals` in CI and upload `coverage.xml` to Codecov
 - [x] Add CI and Codecov status badges to README header
 - [x] Document `CODECOV_TOKEN` repository secret for GitHub Actions
+
+### PR 45 — Commit uv lockfile ✅
+
+- [x] Stop gitignoring `uv.lock` and commit the resolved lockfile
+- [x] Use `uv sync --frozen` in CI and the Containerfile for reproducible installs
+- [x] Document lockfile update workflow in README setup

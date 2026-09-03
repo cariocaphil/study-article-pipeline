@@ -15,6 +15,8 @@ Install Git pre-commit hooks once per clone (auto-formats and fixes Ruff issues 
 uv run pre-commit install
 ```
 
+When you change dependencies in `pyproject.toml`, run `uv lock` and commit `uv.lock`.
+
 CI (`.github/workflows/ci.yml`) runs the same Ruff, Pyright, and fast pytest checks on pushes and pull requests to `main`.
 
 Pipeline architecture, agent contracts, and eval workflows are documented in `CLAUDE.md`.

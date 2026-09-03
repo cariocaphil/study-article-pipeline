@@ -22,17 +22,17 @@ RUN apt-get update \
     && mkdir -p output \
     && chown appuser:appuser output
 
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --python 3.11 --no-dev --no-install-project
+    uv sync --frozen --python 3.11 --no-dev --no-install-project
 
 COPY app.py ./
 COPY src ./src
 COPY .claude/skills ./.claude/skills
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --python 3.11 --no-dev \
+    uv sync --frozen --python 3.11 --no-dev \
     && chown -R appuser:appuser /app
 
 USER appuser
