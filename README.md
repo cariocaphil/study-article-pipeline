@@ -510,6 +510,10 @@ CI runs on pushes and pull requests to `main` via GitHub Actions
 (`.github/workflows/ci.yml`): Ruff lint/format, Pyright type checking, fast
 pytest, and offline eval smoke tests. No API key is required.
 
+Dependabot (`.github/dependabot.yml`) opens weekly PRs for `uv` dependencies
+(via `pyproject.toml` / `uv.lock`) and GitHub Actions. Review and merge those
+PRs like any other change; run `uv lock` only if you edit version ranges by hand.
+
 Tests cover agents, validation tools, JSON repair (`json_utils`), the
 Streamlit UI (`AppTest`), and deterministic evals (`tests/test_evals.py`).
 
@@ -627,6 +631,7 @@ docs/
 ├── ROADMAP.md                # full PR build history (README Status links here)
 └── samples/                  # portfolio demo assets (sample PDF + UI GIF)
 .github/
+├── dependabot.yml            # weekly uv + GitHub Actions update PRs
 ├── workflows/
 │   ├── ci.yml                # Ruff, Pyright, pytest, offline evals
 │   └── deploy.yml            # CD to Azure Container Apps after CI on main
@@ -716,11 +721,12 @@ Core pipeline, Streamlit UI, evals, containerization, Azure deployment, and
 authentication are in place. README presentation and sample demo assets
 landed in **PR 42**. Document-level LLM-as-judge eval added in **PR 43**.
 Pytest coverage and Codecov badges added in **PR 44**. Committed `uv.lock`
-with frozen sync in CI and container builds in **PR 45**.
+with frozen sync in CI and container builds in **PR 45**. Dependabot weekly
+updates for uv and GitHub Actions added in **PR 46**.
 
 **What's next**
 
-- Further product work continues from **PR 46** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 47** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 

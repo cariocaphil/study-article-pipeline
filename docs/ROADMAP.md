@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 46**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 47**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -333,3 +333,9 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Stop gitignoring `uv.lock` and commit the resolved lockfile
 - [x] Use `uv sync --frozen` in CI and the Containerfile for reproducible installs
 - [x] Document lockfile update workflow in README setup
+
+### PR 46 — Dependabot ✅
+
+- [x] Add `.github/dependabot.yml` for `uv` and `github-actions` ecosystems
+- [x] Schedule weekly update checks with a modest open-PR limit
+- [x] Document Dependabot in README and ROADMAP
