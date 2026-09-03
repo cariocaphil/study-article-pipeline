@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 44**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 43**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -305,7 +305,7 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Preserve prompt text and runtime behavior (no prompt rewriting)
 - [x] Add `tests/test_prompts.py` for loading and rendered-prompt checks
 
-### PR 43 — Repo presentation ✅
+### PR 42 — Repo presentation ✅
 
 - [x] Move completed PR history into `docs/ROADMAP.md`
 - [x] Replace README roadmap with a short Status stub and link

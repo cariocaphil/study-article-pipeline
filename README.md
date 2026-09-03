@@ -689,11 +689,11 @@ output/                        # generated PDF files land here
 
 Core pipeline, Streamlit UI, evals, containerization, Azure deployment, and
 authentication are in place through **PR 41**. README presentation and sample
-demo assets landed in **PR 43**.
+demo assets landed in **PR 42**.
 
 **What's next**
 
-- Further product work continues from **PR 44** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 43** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 
