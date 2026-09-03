@@ -47,6 +47,16 @@ jobs:
             -t acrstudyarticlepipeline.azurecr.io/study-a:${{ github.event.workflow_run.head_sha }} \
             .
 
+      - name: Scan image with Trivy (warn-only)
+        uses: aquasecurity/trivy-action@0.28.0
+        continue-on-error: true
+        with:
+          image-ref: acrstudyarticlepipeline.azurecr.io/study-a:${{ github.event.workflow_run.head_sha }}
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
       - name: Push image
         run: |
           docker push \
