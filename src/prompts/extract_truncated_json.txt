@@ -1,0 +1,1 @@
+Your previous JSON array was cut off before it finished. Return ONLY the complete JSON array with all phrase objects. Keep each sentence_context as a verbatim quote. If needed, return fewer high-quality items so the full array fits. No markdown or explanation.

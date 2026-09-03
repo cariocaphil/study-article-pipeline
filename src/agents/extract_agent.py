@@ -11,6 +11,7 @@ import logging
 import anthropic
 from anthropic.types import MessageParam, ToolResultBlockParam
 
+from src.prompts import load_prompt
 from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
 from src.tools.validate_translation import validate_translation
 from src.tools.verify_quote import verify_quote
@@ -83,18 +84,8 @@ def _run_validate_translation_tool(tool_input: object) -> bool:
 
 
 MAX_PARSE_ATTEMPTS = 3
-CONTINUATION_PROMPT = (
-    "Continue by calling verify_quote and validate_translation for each item. "
-    "When finished, return ONLY the final JSON array with no other text, "
-    "markdown, or explanation."
-)
-TRUNCATED_JSON_PROMPT = (
-    "Your previous JSON array was cut off before it finished. "
-    "Return ONLY the complete JSON array with all phrase objects. "
-    "Keep each sentence_context as a verbatim quote. "
-    "If needed, return fewer high-quality items so the full array fits. "
-    "No markdown or explanation."
-)
+CONTINUATION_PROMPT = load_prompt("extract_continuation")
+TRUNCATED_JSON_PROMPT = load_prompt("extract_truncated_json")
 
 
 def _looks_truncated_json(text: str, open_char: str = "[", close_char: str = "]") -> bool:
@@ -124,54 +115,15 @@ def extract_phrases(
     cefr_guide = load_skill("cefr-extraction-guide")
     wrapped_article = wrap_untrusted_content(full_text)
 
-    prompt = f"""
-You are a language teaching assistant helping a {user_level} level {source_language} learner
-identify vocabulary and expressions worth studying.
-
-## CEFR Level Reference
-{cefr_guide}
-
-{UNTRUSTED_CONTENT_PREAMBLE}
-
-Here is an article in {source_language}:
-
-{wrapped_article}
-
-Extract vocabulary, constructions, and idioms from this article that would be
-useful for a {user_level} level learner to acquire.
-
-Rules:
-- Only include items at or above {user_level} level. Skip anything a {user_level}
-  learner almost certainly already knows.
-- For each item provide:
-    - phrase: the word, expression, or construction as it appears
-    - sentence_context: the exact sentence from the article where it appears
-    - translation: translation into {translation_language}
-    - category: one of "vocab", "construction", or "idiom"
-    - estimated_level: your estimate of its CEFR level (A1/A2/B1/B2/C1/C2)
-- Aim for 8-15 items per article. Prioritise quality over quantity.
-- Do not include proper nouns or character names.
-
-Before returning the list, verify each sentence_context using the verify_quote tool.
-Only return items whose sentence_context is verified as a verbatim quote from the article.
-Validate each translation using the validate_translation tool.
-Only return items whose translation is validated.
-
-Do not list candidates or explain your process in prose. Use the tools directly,
-then return the final JSON array.
-
-Return ONLY a JSON array of objects with no other text, no markdown, no explanation.
-Example format:
-[
-  {{
-    "phrase": "...",
-    "sentence_context": "...",
-    "translation": "...",
-    "category": "vocab",
-    "estimated_level": "B2"
-  }}
-]
-"""
+    prompt = load_prompt(
+        "extract_phrases",
+        user_level=user_level,
+        source_language=source_language,
+        cefr_guide=cefr_guide,
+        untrusted_content_preamble=UNTRUSTED_CONTENT_PREAMBLE,
+        wrapped_article=wrapped_article,
+        translation_language=translation_language,
+    )
 
     messages: list[MessageParam] = [{"role": "user", "content": prompt}]
     verification_results: dict[str, bool] = {}

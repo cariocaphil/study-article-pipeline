@@ -11,6 +11,7 @@ import logging
 
 import anthropic
 
+from src.prompts import load_prompt
 from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
 from src.utils import load_skill
 from src.utils.anthropic_retry import create_message_with_retry
@@ -40,36 +41,13 @@ def review_phrases(
     )
     wrapped_phrase_list = wrap_untrusted_content(phrase_list_json, label="extracted_phrases")
 
-    prompt = f"""
-You are independently auditing a list of language-learning phrases for
-quality. You do not have access to the original article or the reasoning
-used to extract these phrases — only the phrase list itself.
-
-## Phrase Quality Reviewer
-{reviewer_guide}
-
-The topic of the article this phrase list was extracted from is: "{topic}"
-Flag any phrase that is just the topic itself, or a derivative of it, for
-removal.
-
-{UNTRUSTED_CONTENT_PREAMBLE}
-
-Here is the phrase list to review:
-
-{wrapped_phrase_list}
-
-For each phrase, decide whether to keep it, flag it for review, or remove it.
-
-Return ONLY a JSON array of objects with no other text, no markdown, no explanation.
-Example format:
-[
-  {{
-    "phrase": "...",
-    "action": "keep",
-    "reason": "..."
-  }}
-]
-"""
+    prompt = load_prompt(
+        "review_phrases",
+        reviewer_guide=reviewer_guide,
+        topic=topic,
+        untrusted_content_preamble=UNTRUSTED_CONTENT_PREAMBLE,
+        wrapped_phrase_list=wrapped_phrase_list,
+    )
 
     response = create_message_with_retry(
         client,

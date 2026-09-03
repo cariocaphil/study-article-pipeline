@@ -14,6 +14,7 @@ import anthropic
 
 from evals.evaluators.base import EvalFailure, EvalResult
 from evals.evaluators.utils import safe_divide
+from src.prompts import load_prompt
 from src.utils import load_skill
 from src.utils.anthropic_retry import create_message_with_retry
 from src.utils.anthropic_utils import message_text
@@ -144,26 +145,15 @@ def judge_translation(
 ) -> TranslationJudgment:
     rubric = load_skill("translation-adequacy-rubric")
 
-    prompt = f"""
-You are judging translation quality for language-study material.
-
-## Rubric
-{rubric}
-
-## Item to judge
-Source language: {case.source_language}
-Target language: {case.translation_language}
-Phrase: {case.phrase}
-Sentence context: {case.sentence_context}
-Proposed translation: {case.translation}
-
-Return ONLY a JSON object with:
-- adequate: boolean — true if the translation is adequate for study, false otherwise
-- reason: short string explaining the verdict
-
-Example:
-{{"adequate": true, "reason": "Captures the idiomatic meaning in natural German."}}
-"""
+    prompt = load_prompt(
+        "judge_translation",
+        rubric=rubric,
+        source_language=case.source_language,
+        translation_language=case.translation_language,
+        phrase=case.phrase,
+        sentence_context=case.sentence_context,
+        translation=case.translation,
+    )
 
     response = create_message_with_retry(
         client,

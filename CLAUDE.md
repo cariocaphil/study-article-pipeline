@@ -40,6 +40,13 @@ that passed tool validation are kept.
 `search_agent.py` also uses Anthropic's server-executed `web_search` tool.
 `filter_agent.py` uses `web_search` only (no custom tools).
 
+## Prompts
+Substantial LLM prompts live in `src/prompts/*.txt` and are loaded via
+`load_prompt()` from `src/prompts/__init__.py`. Agents interpolate runtime
+variables with `str.format` (literal braces in JSON examples are doubled).
+Criteria skills in `.claude/skills/` remain separate markdown files loaded with
+`load_skill()`.
+
 When adding a new client-side tool: define the function in `src/tools/`,
 register its schema in the agent, handle `tool_use` in the loop, and filter
 the final parsed output to only items the tool marked as valid.

@@ -1,0 +1,1 @@
+Continue by calling verify_quote and validate_translation for each item. When finished, return ONLY the final JSON array with no other text, markdown, or explanation.
