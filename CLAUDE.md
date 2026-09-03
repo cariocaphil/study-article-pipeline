@@ -169,6 +169,9 @@ uv run pytest -m "not slow"
 CI (`.github/workflows/ci.yml`) runs Ruff, Pyright, fast pytest, and offline
 eval smoke tests on pushes and pull requests to `main`.
 
+When you change dependencies in `pyproject.toml`, run `uv lock` and commit
+`uv.lock`. CI and the Containerfile use `uv sync --frozen`.
+
 PR build history lives in `docs/ROADMAP.md` (not the README) — append new PR
 checklist items there.
 

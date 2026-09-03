@@ -72,11 +72,14 @@ Implementations live in `src/tools/`.
 **Quick start** (local — no live demo link in this repo):
 
 ```bash
-uv sync
+uv sync                        # installs from committed uv.lock
 # create .env with ANTHROPIC_API_KEY=sk-ant-...
 uv run pre-commit install   # optional
 uv run streamlit run app.py
 ```
+
+(`uv sync` is fine locally. CI and the container image use `uv sync --frozen`
+so installs fail if `uv.lock` is out of date.)
 
 Fill in topic, languages, and CEFR level, then **Generate study document**.
 For ambiguous titles, add a year (e.g. `Madre (2017)`). Preview and download the
@@ -627,6 +630,8 @@ Results are saved under `evals/results/` (gitignored).
 
 ```
 app.py                        # Streamlit web UI entry point
+pyproject.toml                # project metadata and dependency ranges
+uv.lock                       # committed lockfile (CI/container: uv sync --frozen)
 docs/
 ├── ROADMAP.md                # full PR build history (README Status links here)
 └── samples/                  # portfolio demo assets (sample PDF + UI GIF)
