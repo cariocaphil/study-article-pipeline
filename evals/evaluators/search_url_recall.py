@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import unquote, urlparse, urlunparse
 
 import anthropic
 
@@ -26,6 +26,9 @@ class SearchRecallCase:
     source_language: str
     n_articles: int
     gold_urls: list[str]
+    topic_type: str | None = None
+    forbidden_urls: list[str] | None = None
+    forbidden_url_substrings: list[str] | None = None
 
 
 def _normalize_url(url: str) -> str:
@@ -45,6 +48,12 @@ def _match_url(gold_url: str, predicted_urls: set[str]) -> bool:
 
 def _predicted_url_set(urls: list[str]) -> set[str]:
     return {_normalize_url(url) for url in urls}
+
+
+def _url_contains_forbidden_substring(url: str, substring: str) -> bool:
+    needle = substring.casefold()
+    candidates = (url.casefold(), unquote(url).casefold())
+    return any(needle in candidate for candidate in candidates)
 
 
 class SearchUrlRecallEvaluator:
@@ -97,18 +106,62 @@ class SearchUrlRecallEvaluator:
                         )
                     )
 
+            for forbidden_url in case.forbidden_urls or []:
+                if _match_url(forbidden_url, predicted_urls):
+                    failures.append(
+                        EvalFailure(
+                            case_id=case.id,
+                            category="forbidden_url",
+                            message=(
+                                "Search returned a URL for a different work that must "
+                                "not be treated as a match for this topic"
+                            ),
+                            details={
+                                "forbidden_url": forbidden_url,
+                                "topic": case.topic,
+                                "predicted_urls": case_predictions,
+                            },
+                        )
+                    )
+
+            for substring in case.forbidden_url_substrings or []:
+                matching_urls = [
+                    url
+                    for url in case_predictions
+                    if _url_contains_forbidden_substring(url, substring)
+                ]
+                if matching_urls:
+                    failures.append(
+                        EvalFailure(
+                            case_id=case.id,
+                            category="forbidden_url",
+                            message=(
+                                "Search returned a URL whose path/title matches a "
+                                "forbidden alternate-work marker for this topic"
+                            ),
+                            details={
+                                "forbidden_substring": substring,
+                                "matching_urls": matching_urls,
+                                "topic": case.topic,
+                                "predicted_urls": case_predictions,
+                            },
+                        )
+                    )
+
         recall = safe_divide(matched_gold, total_gold)
+        forbidden_hits = sum(1 for failure in failures if failure.category == "forbidden_url")
 
         metrics = {
             "total_gold_urls": total_gold,
             "matched_gold_urls": matched_gold,
+            "forbidden_hits": forbidden_hits,
             "recall": recall,
             "pass_threshold": self.pass_threshold,
         }
 
         return EvalResult(
             evaluator=self.name,
-            passed=recall >= self.pass_threshold,
+            passed=recall >= self.pass_threshold and forbidden_hits == 0,
             score=recall,
             metrics=metrics,
             failures=failures,
@@ -122,16 +175,27 @@ def collect_live_predictions(
     search_fn: Callable[[str, str, int, anthropic.Anthropic], list[str]] | None = None,
 ) -> dict[str, list[str]]:
     from src.agents.search_agent import search_articles
+    from src.schemas.article import TopicType
 
-    run_search = search_fn or search_articles
     predictions: dict[str, list[str]] = {}
 
     for case in cases:
-        predictions[case.id] = run_search(
+        if search_fn is not None:
+            predictions[case.id] = search_fn(
+                case.topic,
+                case.source_language,
+                case.n_articles,
+                client,
+            )
+            continue
+
+        topic_type = TopicType(case.topic_type) if case.topic_type else TopicType.film
+        predictions[case.id] = search_articles(
             case.topic,
             case.source_language,
             case.n_articles,
             client,
+            topic_type=topic_type,
         )
 
     return predictions

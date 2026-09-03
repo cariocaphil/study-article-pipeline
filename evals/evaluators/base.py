@@ -261,6 +261,9 @@ def load_search_recall_dataset(path: Path):
             source_language=record["source_language"],
             n_articles=int(record["n_articles"]),
             gold_urls=record["gold_urls"],
+            topic_type=record.get("topic_type"),
+            forbidden_urls=record.get("forbidden_urls"),
+            forbidden_url_substrings=record.get("forbidden_url_substrings"),
         )
         for record in load_jsonl(path)
     ]

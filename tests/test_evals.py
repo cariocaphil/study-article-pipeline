@@ -331,9 +331,10 @@ class TestSearchUrlRecallEvaluator:
 
         result = SearchUrlRecallEvaluator(pass_threshold=1.0).run(cases, predictions)
 
-        assert result.metrics["total_gold_urls"] == 3
-        assert result.metrics["matched_gold_urls"] == 2
-        assert result.score == pytest.approx(2 / 3)
+        assert result.metrics["total_gold_urls"] == 4
+        assert result.metrics["matched_gold_urls"] == 3
+        assert result.metrics["forbidden_hits"] == 0
+        assert result.score == pytest.approx(3 / 4)
         assert result.passed is False
         assert len(result.failures) == 1
         assert result.failures[0].case_id == "search-003"
@@ -359,6 +360,69 @@ class TestSearchUrlRecallEvaluator:
         assert result.passed is True
         assert result.failures == []
 
+    def test_madre_case_loads_year_topic_type_and_forbidden_urls(self):
+        cases = load_search_recall_dataset(SEARCH_DATASET_PATH)
+        madre = next(case for case in cases if case.id == "search-004")
+
+        assert madre.topic == "Madre (2017)"
+        assert madre.topic_type == "film"
+        assert madre.source_language == "spanish"
+        assert madre.forbidden_urls is not None
+        assert any("mother-review" in url for url in madre.forbidden_urls)
+        assert madre.forbidden_url_substrings == ["madre!", "¡madre!", "mother!"]
+
+    def test_madre_regression_fails_when_mother_bang_url_is_predicted(self):
+        cases = load_search_recall_dataset(SEARCH_DATASET_PATH)
+        madre = next(case for case in cases if case.id == "search-004")
+        assert madre.forbidden_urls is not None
+
+        predictions = {
+            madre.id: [
+                *madre.gold_urls,
+                madre.forbidden_urls[0],
+            ]
+        }
+
+        result = SearchUrlRecallEvaluator(pass_threshold=1.0).run([madre], predictions)
+
+        assert result.metrics["matched_gold_urls"] == 1
+        assert result.metrics["forbidden_hits"] == 1
+        assert result.score == 1.0
+        assert result.passed is False
+        assert result.failures[0].category == "forbidden_url"
+        assert result.failures[0].case_id == "search-004"
+
+    @pytest.mark.parametrize(
+        "wrong_work_url",
+        [
+            "https://example.com/critica/madre!-aronofsky-2017",
+            "https://example.com/cine/%C2%A1madre!-jennifer-lawrence",
+            "https://example.com/reviews/mother!-darren-aronofsky",
+        ],
+    )
+    def test_madre_regression_fails_on_spanish_and_english_mother_bang_titles(
+        self, wrong_work_url: str
+    ):
+        cases = load_search_recall_dataset(SEARCH_DATASET_PATH)
+        madre = next(case for case in cases if case.id == "search-004")
+
+        predictions = {madre.id: [*madre.gold_urls, wrong_work_url]}
+        result = SearchUrlRecallEvaluator(pass_threshold=1.0).run([madre], predictions)
+
+        assert result.passed is False
+        assert result.metrics["forbidden_hits"] >= 1
+        assert any(failure.category == "forbidden_url" for failure in result.failures)
+
+    def test_madre_gold_url_without_exclamation_is_not_treated_as_forbidden(self):
+        cases = load_search_recall_dataset(SEARCH_DATASET_PATH)
+        madre = next(case for case in cases if case.id == "search-004")
+
+        predictions = {madre.id: list(madre.gold_urls)}
+        result = SearchUrlRecallEvaluator(pass_threshold=1.0).run([madre], predictions)
+
+        assert result.passed is True
+        assert result.metrics["forbidden_hits"] == 0
+
     def test_run_suite_offline_search_url_recall(self):
         result = run_suite(
             "search_url_recall",
@@ -367,7 +431,8 @@ class TestSearchUrlRecallEvaluator:
         )
 
         assert result.evaluator == "search_url_recall"
-        assert result.metrics["recall"] == pytest.approx(2 / 3)
+        assert result.metrics["recall"] == pytest.approx(3 / 4)
+        assert result.metrics["forbidden_hits"] == 0
 
 
 class TestPipelineQualityEvaluator:
