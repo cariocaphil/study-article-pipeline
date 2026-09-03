@@ -873,7 +873,7 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 42
 - [x] Add login landing with Microsoft and Google sign-in buttons
 - [x] Add `login_url()` / `logout_url()` with post-login and post-logout redirects
 - [x] Update tests and document multi-provider login UX
-- [ ] Verify login landing and both providers on the public deployment
+- [x] Verify login landing and both providers on the public deployment
 
 ### PR 38 — Generation UX ✅
 
