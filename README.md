@@ -565,6 +565,15 @@ src/
 │   └── validate_topic.py
 ├── schemas/
 │   └── article.py            # Pydantic models shared between agents
+├── prompts/                  # version-controlled LLM prompt templates
+│   ├── __init__.py           # load_prompt() helper
+│   ├── search_articles.txt
+│   ├── filter_article.txt
+│   ├── extract_phrases.txt
+│   ├── extract_continuation.txt
+│   ├── extract_truncated_json.txt
+│   ├── review_phrases.txt
+│   └── judge_translation.txt
 └── utils/
     ├── __init__.py           # load_skill() helper
     ├── aca_identity.py       # parse ACA Easy Auth client principal header
@@ -583,6 +592,7 @@ tests/
 ├── test_filter_agent.py
 ├── test_json_utils.py        # JSON repair/parsing tests
 ├── test_orchestrator.py      # topic input guardrails
+├── test_prompts.py           # prompt file loading and interpolation
 ├── test_quota.py             # daily quota reservation logic
 ├── test_review_agent.py
 ├── test_search_agent.py
@@ -597,7 +607,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 41**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 42**.
 
 ### Initial Setup ✅
 
@@ -889,6 +899,14 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 41
 - [x] Fail when predictions include *mother!* / `madre!` / `¡madre!` alternate-work markers
 - [x] Pass `topic_type` through live search-eval collection
 - [x] Update offline fixtures and regression tests
+
+### PR 41 — Extract LLM prompts ✅
+
+- [x] Move agent and translation-judge prompts into `src/prompts/*.txt`
+- [x] Add `load_prompt()` for version-controlled templates with `str.format` interpolation
+- [x] Rewire search, filter, extract, review, and translation-judge call sites
+- [x] Preserve prompt text and runtime behavior (no prompt rewriting)
+- [x] Add `tests/test_prompts.py` for loading and rendered-prompt checks
 
 ## Notes
 
