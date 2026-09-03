@@ -26,7 +26,8 @@ parts of the design — not afterthoughts.
   translation quality
 - Streamlit UI, PDF preview/download, Docker/Podman image, Azure Container Apps
   with Easy Auth (Microsoft + Google) and daily quotas
-- CI (Ruff, Pyright, pytest, offline evals) and CD to ACA on `main`
+- CI (Ruff, Pyright, pytest, offline evals, `uv audit`) and CD to ACA on `main`
+  (Trivy image scan on deploy)
 
 ## Architecture
 
@@ -511,11 +512,16 @@ automatically on each commit.
 
 CI runs on pushes and pull requests to `main` via GitHub Actions
 (`.github/workflows/ci.yml`): Ruff lint/format, Pyright type checking, fast
-pytest, and offline eval smoke tests. No API key is required.
+pytest, offline eval smoke tests, and a warn-only `uv audit` of the lockfile.
+No API key is required for those checks.
 
 Dependabot (`.github/dependabot.yml`) opens weekly PRs for `uv` dependencies
 (via `pyproject.toml` / `uv.lock`) and GitHub Actions. Review and merge those
 PRs like any other change; run `uv lock` only if you edit version ranges by hand.
+
+After a successful CI run on `main`, deploy builds the container image and runs
+a warn-only Trivy scan (CRITICAL/HIGH, ignoring unfixed issues) before push.
+Findings do not block deploy yet — tighten exit codes once the noise is known.
 
 Tests cover agents, validation tools, JSON repair (`json_utils`), the
 Streamlit UI (`AppTest`), and deterministic evals (`tests/test_evals.py`).
@@ -638,8 +644,8 @@ docs/
 .github/
 ├── dependabot.yml            # weekly uv + GitHub Actions update PRs
 ├── workflows/
-│   ├── ci.yml                # Ruff, Pyright, pytest, offline evals
-│   └── deploy.yml            # CD to Azure Container Apps after CI on main
+│   ├── ci.yml                # Ruff, Pyright, pytest, offline evals, uv audit
+│   └── deploy.yml            # CD to Azure Container Apps + Trivy image scan
 evals/
 ├── datasets/
 │   ├── filter/urls.jsonl       # labeled accept/reject URL dataset
@@ -727,11 +733,12 @@ authentication are in place. README presentation and sample demo assets
 landed in **PR 42**. Document-level LLM-as-judge eval added in **PR 43**.
 Pytest coverage and Codecov badges added in **PR 44**. Committed `uv.lock`
 with frozen sync in CI and container builds in **PR 45**. Dependabot weekly
-updates for uv and GitHub Actions added in **PR 46**.
+updates for uv and GitHub Actions added in **PR 46**. Warn-only `uv audit` in
+CI and Trivy image scanning on deploy added in **PR 47**.
 
 **What's next**
 
-- Further product work continues from **PR 47** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 48** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 
