@@ -50,7 +50,14 @@ jobs:
         run: uv sync --dev
 
       - name: Pytest
-        run: uv run pytest -m "not slow"
+        run: uv run pytest -m "not slow" --cov=src --cov=evals --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          fail_ci_if_error: false
 
   evals:
     runs-on: ubuntu-latest

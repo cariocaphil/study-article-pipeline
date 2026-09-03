@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 44**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 45**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -320,3 +320,10 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Score structure, relevance, usefulness, phrases, translations, faithfulness, duplication
 - [x] Register `document_quality` suite with offline fixtures and `--live` support
 - [x] Cover loading, parsing, scoring, and failure handling in tests
+
+### PR 44 — Codecov coverage ✅
+
+- [x] Add `pytest-cov` dev dependency
+- [x] Run pytest with `--cov=src --cov=evals` in CI and upload `coverage.xml` to Codecov
+- [x] Add CI and Codecov status badges to README header
+- [x] Document `CODECOV_TOKEN` repository secret for GitHub Actions
