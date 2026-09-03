@@ -9,6 +9,8 @@ import pytest
 
 from evals.evaluators.base import (
     EvalReport,
+    load_document_quality_dataset,
+    load_document_quality_predictions,
     load_extract_predictions,
     load_extract_recall_dataset,
     load_filter_dataset,
@@ -20,6 +22,12 @@ from evals.evaluators.base import (
     load_search_recall_dataset,
     load_translation_dataset,
     load_translation_predictions,
+)
+from evals.evaluators.document_quality import (
+    DOCUMENT_QUALITY_DIMENSIONS,
+    DocumentQualityEvaluator,
+    document_for_judge,
+    parse_document_quality_judgment,
 )
 from evals.evaluators.extract_phrase_recall import ExtractPhraseRecallEvaluator
 from evals.evaluators.filter_classification import FilterClassificationEvaluator
@@ -94,6 +102,16 @@ SEARCH_PREDICTIONS_PATH = (
     / "datasets"
     / "fixtures"
     / "search_predictions.jsonl"
+)
+DOCUMENT_QUALITY_DATASET_PATH = (
+    Path(__file__).resolve().parent.parent / "evals" / "datasets" / "document" / "cases.jsonl"
+)
+DOCUMENT_QUALITY_PREDICTIONS_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "evals"
+    / "datasets"
+    / "fixtures"
+    / "document_quality_predictions.jsonl"
 )
 
 
@@ -471,6 +489,102 @@ class TestPipelineQualityEvaluator:
 
         assert result.evaluator == "pipeline_quality"
         assert result.score == pytest.approx(0.7)
+
+
+class TestDocumentQualityEvaluator:
+    def test_loads_dataset_cases_with_documents(self):
+        cases = load_document_quality_dataset(DOCUMENT_QUALITY_DATASET_PATH)
+
+        assert len(cases) == 3
+        assert cases[0].id == "doc-001"
+        assert cases[0].document.topic == "Entroncamento"
+        assert cases[0].expected_overall_min == pytest.approx(3.5)
+        assert len(cases[0].document.articles) >= 3
+        assert cases[1].expected_overall_min is None
+
+    def test_parse_judgment_requires_all_dimensions_and_valid_scores(self):
+        base = {
+            "overall": 4,
+            "dimensions": {name: 4 for name in DOCUMENT_QUALITY_DIMENSIONS},
+            "summary": "Good pack",
+            "defects": [],
+        }
+        judgment = parse_document_quality_judgment(base)
+        assert judgment.overall == 4
+        assert judgment.summary == "Good pack"
+
+        with pytest.raises(ValueError, match="Missing dimension"):
+            parse_document_quality_judgment(
+                {
+                    **base,
+                    "dimensions": {
+                        name: 4 for name in DOCUMENT_QUALITY_DIMENSIONS if name != "duplication"
+                    },
+                }
+            )
+
+        with pytest.raises(ValueError, match="overall"):
+            parse_document_quality_judgment({**base, "overall": 6})
+
+        with pytest.raises(ValueError, match="summary"):
+            parse_document_quality_judgment({**base, "summary": "  "})
+
+    def test_scores_cached_predictions(self):
+        cases = load_document_quality_dataset(DOCUMENT_QUALITY_DATASET_PATH)
+        predictions = load_document_quality_predictions(DOCUMENT_QUALITY_PREDICTIONS_PATH)
+
+        result = DocumentQualityEvaluator(pass_threshold=0.5).run(cases, predictions)
+
+        assert result.metrics["judged_cases"] == 3
+        assert result.metrics["mean_overall"] == pytest.approx(8 / 3)
+        assert result.score == pytest.approx((8 / 3) / 5)
+        assert result.passed is True
+        assert result.metrics["expected_floor_failures"] == 0
+
+    def test_flags_low_scores_and_missing_predictions(self):
+        cases = load_document_quality_dataset(DOCUMENT_QUALITY_DATASET_PATH)
+        predictions = load_document_quality_predictions(DOCUMENT_QUALITY_PREDICTIONS_PATH)
+        del predictions["doc-003"]
+
+        result = DocumentQualityEvaluator(pass_threshold=0.9).run(cases, predictions)
+
+        categories = {failure.category for failure in result.failures}
+        assert "missing_prediction" in categories
+        assert "low_overall_score" in categories
+        assert result.passed is False
+
+    def test_flags_below_expected_floor(self):
+        cases = load_document_quality_dataset(DOCUMENT_QUALITY_DATASET_PATH)
+        predictions = load_document_quality_predictions(DOCUMENT_QUALITY_PREDICTIONS_PATH)
+        predictions["doc-001"].overall = 2.0
+
+        result = DocumentQualityEvaluator(pass_threshold=0.0).run(cases, predictions)
+
+        assert result.metrics["expected_floor_failures"] == 1
+        assert any(failure.category == "below_expected_floor" for failure in result.failures)
+        assert result.passed is False
+
+    def test_document_for_judge_truncates_long_article_text(self):
+        cases = load_document_quality_dataset(DOCUMENT_QUALITY_DATASET_PATH)
+        document = cases[0].document.model_copy(deep=True)
+        document.articles[0].full_text = "x" * 2000
+
+        payload = document_for_judge(document)
+
+        assert len(payload["articles"][0]["full_text"]) < 2000
+        assert payload["articles"][0]["full_text"].endswith("…")
+
+    def test_run_suite_offline_document_quality(self):
+        result = run_suite(
+            "document_quality",
+            DOCUMENT_QUALITY_DATASET_PATH,
+            predictions_path=DOCUMENT_QUALITY_PREDICTIONS_PATH,
+            pass_threshold=0.5,
+        )
+
+        assert result.evaluator == "document_quality"
+        assert result.score == pytest.approx((8 / 3) / 5)
+        assert result.passed is True
 
 
 class TestCompareRuns:

@@ -96,8 +96,21 @@ def test_review_and_judge_prompts_render():
         sentence_context="Sinto saudade.",
         translation="Sehnsucht",
     )
+    document_judge = load_prompt(
+        "judge_document_quality",
+        rubric="Document rubric",
+        topic="Entroncamento",
+        topic_type="film",
+        source_language="portuguese",
+        translation_language="german",
+        user_level="C1",
+        document_json='{"topic": "Entroncamento"}',
+    )
 
     assert 'topic of the article this phrase list was extracted from is: "Entroncamento"' in review
     assert '"action": "keep"' in review
     assert "Proposed translation: Sehnsucht" in judge
     assert '{"adequate": true' in judge
+    assert "Document rubric" in document_judge
+    assert '"structure_completeness": 1' in document_judge
+    assert "{{" not in document_judge

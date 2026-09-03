@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 43**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 44**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -312,3 +312,11 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Rewrite README front matter (why / architecture / demo / evals narrative)
 - [x] Add sample PDF proof asset under `docs/samples/`
 - [x] Optional demo GIF/screenshot when available
+
+### PR 43 — Eval: Document quality ✅
+
+- [x] Add document-quality rubric skill and LLM-as-judge prompt
+- [x] Add labeled complete-document cases and offline judge predictions
+- [x] Score structure, relevance, usefulness, phrases, translations, faithfulness, duplication
+- [x] Register `document_quality` suite with offline fixtures and `--live` support
+- [x] Cover loading, parsing, scoring, and failure handling in tests

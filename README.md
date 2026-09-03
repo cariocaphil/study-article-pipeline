@@ -102,7 +102,8 @@ The pipeline is designed to **fail closed** and to be **measurable**:
 - **Deterministic guards:** offline suites for quote faithfulness, filter
   classification, review actions, extract recall, search URL recall, and
   composite pipeline quality (no API key in CI).
-- **LLM-as-judge:** translation adequacy (and related judge suites) for cases
+- **LLM-as-judge:** translation adequacy and whole-document quality (structure,
+  relevance, usefulness, phrase quality, faithfulness, duplication) for cases
   tools cannot score alone.
 - **Concrete regression:** `Madre (2017)` search eval forbids *mother!* /
   `madre!` alternate-work hits so year disambiguation stays honest.
@@ -587,6 +588,21 @@ uv run python -m evals.runners.run_evals \
 
 Use `evals/datasets/fixtures/pipeline_output_good.json` for a passing example.
 
+Run document-level quality offline against cached LLM-judge predictions:
+
+```bash
+uv run python -m evals.runners.run_evals \
+  --suite document_quality \
+  --input evals/datasets/document/cases.jsonl \
+  --predictions evals/datasets/fixtures/document_quality_predictions.jsonl
+```
+
+This suite asks whether a complete Study Article Collection is a good study pack
+for the requested topic and languages. The judge scores structure, relevance,
+usefulness, phrase quality, translations, quote faithfulness, duplication, and
+overall usefulness (1–5 each). Offline CI uses cached judgments; add `--live`
+to call the real judge (requires `ANTHROPIC_API_KEY`).
+
 Compare two saved eval runs:
 
 ```bash
@@ -615,8 +631,9 @@ evals/
 │   ├── review/phrase_lists.jsonl  # labeled keep/review/remove phrase lists
 │   ├── translation/phrases.jsonl  # human-labeled translation adequacy cases
 │   ├── search/gold_urls.jsonl  # gold review URLs + optional forbidden alternate-work markers
+│   ├── document/cases.jsonl    # complete PipelineOutput packs for document-quality judge
 │   └── fixtures/               # sample PipelineOutput + cached predictions
-├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall, translation_quality, search_url_recall, pipeline_quality
+├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall, translation_quality, search_url_recall, pipeline_quality, document_quality
 └── runners/
     ├── run_evals.py            # CLI entry point
     └── compare_runs.py         # diff scores between two saved runs
@@ -626,6 +643,7 @@ evals/
 └── skills/                   # agent evaluation criteria (loaded at runtime)
     ├── article-filter-criteria.md   # injected in filter_agent.py
     ├── cefr-extraction-guide.md     # injected in extract_agent.py
+    ├── document-quality-rubric.md   # injected in document quality judge
     ├── pdf-formatted.md             # document layout reference for compile_agent.py
     ├── phrase-quality-reviewer.md   # injected in review_agent.py
     └── translation-adequacy-rubric.md  # injected in translation quality judge
@@ -653,7 +671,8 @@ src/
 │   ├── extract_continuation.txt
 │   ├── extract_truncated_json.txt
 │   ├── review_phrases.txt
-│   └── judge_translation.txt
+│   ├── judge_translation.txt
+│   └── judge_document_quality.txt
 └── utils/
     ├── __init__.py           # load_skill() helper
     ├── aca_identity.py       # parse ACA Easy Auth client principal header
@@ -688,12 +707,12 @@ output/                        # generated PDF files land here
 ## Status
 
 Core pipeline, Streamlit UI, evals, containerization, Azure deployment, and
-authentication are in place through **PR 41**. README presentation and sample
-demo assets landed in **PR 42**.
+authentication are in place. README presentation and sample demo assets
+landed in **PR 42**. Document-level LLM-as-judge eval added in **PR 43**.
 
 **What's next**
 
-- Further product work continues from **PR 43** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 44** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 

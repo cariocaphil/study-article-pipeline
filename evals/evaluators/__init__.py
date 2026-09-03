@@ -1,3 +1,4 @@
+from evals.evaluators.document_quality import DocumentQualityEvaluator
 from evals.evaluators.extract_phrase_recall import ExtractPhraseRecallEvaluator
 from evals.evaluators.filter_classification import FilterClassificationEvaluator
 from evals.evaluators.pipeline_quality import PipelineQualityEvaluator
@@ -7,6 +8,7 @@ from evals.evaluators.search_url_recall import SearchUrlRecallEvaluator
 from evals.evaluators.translation_quality import TranslationQualityEvaluator
 
 __all__ = [
+    "DocumentQualityEvaluator",
     "ExtractPhraseRecallEvaluator",
     "FilterClassificationEvaluator",
     "PipelineQualityEvaluator",
