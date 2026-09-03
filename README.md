@@ -534,7 +534,7 @@ evals/
 │   ├── extract/gold_phrases.jsonl  # human-labeled gold phrases for fixed excerpts
 │   ├── review/phrase_lists.jsonl  # labeled keep/review/remove phrase lists
 │   ├── translation/phrases.jsonl  # human-labeled translation adequacy cases
-│   ├── search/gold_urls.jsonl  # stable gold review URLs per topic
+│   ├── search/gold_urls.jsonl  # gold review URLs + optional forbidden alternate-work markers
 │   └── fixtures/               # sample PipelineOutput + cached predictions
 ├── evaluators/                 # quote_faithfulness, filter_classification, review_actions, extract_phrase_recall, translation_quality, search_url_recall, pipeline_quality
 └── runners/
@@ -597,7 +597,7 @@ output/                        # generated PDF files land here
 
 ## Roadmap
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 40**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 41**.
 
 ### Initial Setup ✅
 
@@ -881,6 +881,14 @@ PR numbers match merged GitHub pull requests. Future work continues from **PR 40
 - [x] Inject year + content-type disambiguation guidance into search prompts
 - [x] Apply year disambiguation for all content types (film, series, book, theatre, album)
 - [x] Add unit and search-prompt regression tests (including `Madre (2017)` case)
+
+### PR 40 — Eval: Madre search disambiguation ✅
+
+- [x] Add labeled `Madre (2017)` case to `search_url_recall` gold dataset
+- [x] Support optional `forbidden_urls` and `forbidden_url_substrings` on search cases
+- [x] Fail when predictions include *mother!* / `madre!` / `¡madre!` alternate-work markers
+- [x] Pass `topic_type` through live search-eval collection
+- [x] Update offline fixtures and regression tests
 
 ## Notes
 
