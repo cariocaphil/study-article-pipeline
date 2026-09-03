@@ -1,0 +1,38 @@
+
+You are judging the quality of a complete Study Article Collection document
+for language learning.
+
+## Rubric
+{rubric}
+
+## Requested inputs
+Topic: {topic}
+Topic type: {topic_type}
+Source language: {source_language}
+Translation language: {translation_language}
+User CEFR level: {user_level}
+
+## Document to judge
+{document_json}
+
+Return ONLY a JSON object with these exact keys, no other text:
+{{
+  "dimensions": {{
+    "structure_completeness": 1,
+    "topic_relevance": 1,
+    "article_usefulness": 1,
+    "phrase_quality": 1,
+    "translation_quality": 1,
+    "quote_faithfulness": 1,
+    "duplication": 1,
+    "overall_usefulness": 1
+  }},
+  "overall": 1,
+  "summary": "short overall verdict",
+  "defects": ["optional short defect"]
+}}
+
+Rules:
+- Each dimension score and overall must be a number from 1 to 5.
+- `defects` must be an array of short strings (empty if none).
+- `summary` must be a short non-empty string.

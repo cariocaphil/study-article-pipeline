@@ -78,7 +78,8 @@ jobs:
             extract_phrase_recall \
             translation_quality \
             search_url_recall \
-            pipeline_quality
+            pipeline_quality \
+            document_quality
           do
             echo "Running eval suite: ${suite}"
             uv run python -m evals.runners.run_evals \

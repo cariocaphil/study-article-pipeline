@@ -34,6 +34,11 @@ Examples:
     uv run python -m evals.runners.run_evals \\
         --suite pipeline_quality \\
         --input evals/datasets/fixtures/sample_pipeline_output.json
+
+    uv run python -m evals.runners.run_evals \\
+        --suite document_quality \\
+        --input evals/datasets/document/cases.jsonl \\
+        --predictions evals/datasets/fixtures/document_quality_predictions.jsonl
 """
 
 from __future__ import annotations
@@ -49,6 +54,8 @@ from dotenv import load_dotenv
 from evals.evaluators.base import (
     EvalReport,
     current_git_sha,
+    load_document_quality_dataset,
+    load_document_quality_predictions,
     load_extract_predictions,
     load_extract_recall_dataset,
     load_filter_dataset,
@@ -61,6 +68,12 @@ from evals.evaluators.base import (
     load_translation_dataset,
     load_translation_predictions,
     new_run_id,
+)
+from evals.evaluators.document_quality import (
+    DocumentQualityEvaluator,
+)
+from evals.evaluators.document_quality import (
+    collect_live_predictions as collect_document_quality_live_predictions,
 )
 from evals.evaluators.extract_phrase_recall import (
     ExtractPhraseRecallEvaluator,
@@ -126,6 +139,10 @@ DEFAULT_SEARCH_PREDICTIONS = (
 DEFAULT_PIPELINE_QUALITY_FIXTURE = (
     PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "sample_pipeline_output.json"
 )
+DEFAULT_DOCUMENT_QUALITY_DATASET = PROJECT_ROOT / "evals" / "datasets" / "document" / "cases.jsonl"
+DEFAULT_DOCUMENT_QUALITY_PREDICTIONS = (
+    PROJECT_ROOT / "evals" / "datasets" / "fixtures" / "document_quality_predictions.jsonl"
+)
 
 SUITE_DEFAULTS = {
     "quote_faithfulness": DEFAULT_PIPELINE_FIXTURE,
@@ -135,6 +152,7 @@ SUITE_DEFAULTS = {
     "translation_quality": DEFAULT_TRANSLATION_DATASET,
     "search_url_recall": DEFAULT_SEARCH_DATASET,
     "pipeline_quality": DEFAULT_PIPELINE_QUALITY_FIXTURE,
+    "document_quality": DEFAULT_DOCUMENT_QUALITY_DATASET,
 }
 
 SUITE_PREDICTION_DEFAULTS = {
@@ -143,6 +161,7 @@ SUITE_PREDICTION_DEFAULTS = {
     "extract_phrase_recall": DEFAULT_EXTRACT_PREDICTIONS,
     "translation_quality": DEFAULT_TRANSLATION_PREDICTIONS,
     "search_url_recall": DEFAULT_SEARCH_PREDICTIONS,
+    "document_quality": DEFAULT_DOCUMENT_QUALITY_PREDICTIONS,
 }
 
 LIVE_SUITES = {
@@ -151,6 +170,7 @@ LIVE_SUITES = {
     "extract_phrase_recall",
     "translation_quality",
     "search_url_recall",
+    "document_quality",
 }
 
 
@@ -316,6 +336,23 @@ def run_suite(
         pipeline_output = load_pipeline_output(input_path)
         evaluator = PipelineQualityEvaluator(pass_threshold=pass_threshold)
         return evaluator.run(pipeline_output, case_id=input_path.stem)
+
+    if suite == "document_quality":
+        cases = load_document_quality_dataset(input_path)
+        evaluator = DocumentQualityEvaluator(pass_threshold=pass_threshold)
+
+        if live:
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("ANTHROPIC_API_KEY is required for --live document_quality runs.")
+            client = anthropic.Anthropic(api_key=api_key)
+            predictions = collect_document_quality_live_predictions(cases, client)
+        else:
+            if predictions_path is None:
+                raise ValueError("document_quality requires --predictions unless --live is set.")
+            predictions = load_document_quality_predictions(predictions_path)
+
+        return evaluator.run(cases, predictions)
 
     raise ValueError(f"Unsupported suite: {suite}")
 

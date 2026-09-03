@@ -273,6 +273,31 @@ def load_search_predictions(path: Path) -> dict[str, list[str]]:
     return {record["id"]: record["urls"] for record in load_jsonl(path)}
 
 
+def load_document_quality_dataset(path: Path):
+    from evals.evaluators.document_quality import DocumentQualityCase
+    from src.schemas.article import PipelineOutput
+
+    cases: list[DocumentQualityCase] = []
+    for record in load_jsonl(path):
+        expected = record.get("expected_overall_min")
+        cases.append(
+            DocumentQualityCase(
+                id=record["id"],
+                document=PipelineOutput.model_validate(record["document"]),
+                expected_overall_min=float(expected) if expected is not None else None,
+            )
+        )
+    return cases
+
+
+def load_document_quality_predictions(path: Path):
+    from evals.evaluators.document_quality import (
+        parse_document_quality_judgment,
+    )
+
+    return {record["id"]: parse_document_quality_judgment(record) for record in load_jsonl(path)}
+
+
 def load_scores(path: Path) -> dict[str, Any]:
     scores_path = path / "scores.json" if path.is_dir() else path
     return json.loads(scores_path.read_text(encoding="utf-8"))
