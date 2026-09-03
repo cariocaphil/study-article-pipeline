@@ -184,7 +184,7 @@ API calls required.
 | `review_actions` | labeled phrase-list dataset (`.jsonl`) | removal precision/recall/F1 and per-action accuracy |
 | `extract_phrase_recall` | gold phrase dataset (`.jsonl`) | phrase recall against human labels |
 | `translation_quality` | labeled translation dataset (`.jsonl`) | judge accuracy vs human adequacy labels |
-| `search_url_recall` | gold URL dataset (`.jsonl`) | URL recall against stable review links |
+| `search_url_recall` | gold URL dataset (`.jsonl`) | URL recall against stable review links; optional forbidden URLs/substrings catch wrong-work matches (e.g. `Madre (2017)` vs *mother!*) |
 | `pipeline_quality` | `PipelineOutput` JSON | composite score: structure, phrase coverage, quotes, translations, level floor |
 
 Run locally:
