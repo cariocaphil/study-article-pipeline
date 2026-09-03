@@ -712,10 +712,11 @@ output/                        # generated PDF files land here
 Core pipeline, Streamlit UI, evals, containerization, Azure deployment, and
 authentication are in place. README presentation and sample demo assets
 landed in **PR 42**. Document-level LLM-as-judge eval added in **PR 43**.
+Pytest coverage and Codecov badges added in **PR 44**.
 
 **What's next**
 
-- Further product work continues from **PR 44** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 45** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 
