@@ -169,6 +169,9 @@ uv run pytest -m "not slow"
 CI (`.github/workflows/ci.yml`) runs Ruff, Pyright, fast pytest, and offline
 eval smoke tests on pushes and pull requests to `main`.
 
+PR build history lives in `docs/ROADMAP.md` (not the README) — append new PR
+checklist items there.
+
 ## Skills
 Skills are located in `.claude/skills/`. Claude Code should load them when relevant.
 
