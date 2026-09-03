@@ -1,5 +1,8 @@
 # Study Article Collection Generator
 
+[![CI](https://github.com/cariocaphil/study-article-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/cariocaphil/study-article-pipeline/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/cariocaphil/study-article-pipeline/branch/main/graph/badge.svg)](https://codecov.io/gh/cariocaphil/study-article-pipeline)
+
 Authentic review articles are excellent language input — but finding the right
 ones, pulling phrases *above* your level, and turning them into a clean study
 pack is tedious and easy to get wrong with a naive LLM wrapper.
