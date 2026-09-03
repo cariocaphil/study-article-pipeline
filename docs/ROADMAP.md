@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 48**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 49**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -345,3 +345,8 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Add warn-only `uv audit --frozen` job to CI (lockfile / OSV)
 - [x] Scan the built container image with Trivy on deploy (CRITICAL/HIGH, warn-only)
 - [x] Document security scanning in README and ROADMAP
+
+### PR 48 — Fix Trivy Action version ✅
+
+- [x] Replace invalid `aquasecurity/trivy-action@0.28.0` with `@v0.36.0` in deploy workflow
+- [x] Keep scan severity, exit-code, and warn-only behaviour unchanged
