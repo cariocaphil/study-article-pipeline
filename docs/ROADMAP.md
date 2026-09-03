@@ -305,10 +305,10 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Preserve prompt text and runtime behavior (no prompt rewriting)
 - [x] Add `tests/test_prompts.py` for loading and rendered-prompt checks
 
-### PR 43 — Repo presentation
+### PR 43 — Repo presentation ✅
 
 - [x] Move completed PR history into `docs/ROADMAP.md`
 - [x] Replace README roadmap with a short Status stub and link
-- [ ] Rewrite README front matter (why / architecture / demo / evals narrative)
-- [ ] Add sample PDF proof asset under `docs/samples/`
-- [ ] Optional demo GIF/screenshot when available
+- [x] Rewrite README front matter (why / architecture / demo / evals narrative)
+- [x] Add sample PDF proof asset under `docs/samples/`
+- [x] Optional demo GIF/screenshot when available

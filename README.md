@@ -1,49 +1,123 @@
-# Study Article Collection Doc Generator Pipeline
+# Study Article Collection Generator
 
-Given a topic (film, book, author, etc.), a source language, a translation
-language, and your CEFR level, this pipeline searches the web for
-native-language review articles, extracts vocabulary and expressions above
-your level (with translations), and compiles everything into a printable PDF for language study.
+Authentic review articles are excellent language input — but finding the right
+ones, pulling phrases *above* your level, and turning them into a clean study
+pack is tedious and easy to get wrong with a naive LLM wrapper.
 
-## How it works
+This project is a **guarded multi-agent pipeline**: it searches the web for
+native-language reviews of a film, book, series, play, or album; extracts
+vocabulary and expressions at or above your CEFR level (with translations);
+audits phrase quality; and compiles a printable PDF. Typed contracts, client-side
+validation tools, trust boundaries, evals, and Azure deployment are first-class
+parts of the design — not afterthoughts.
 
-Five agents run in sequence, each owning one stage of the pipeline:
+## Highlights
 
-| Stage | Agent | File | Responsibility |
-|-------|-------|------|-----------------|
-| 1 | Search | `src/agents/search_agent.py` | Find candidate article URLs; preserve topic + content-type + optional year for disambiguation; validate reachability before returning |
-| 2 | Filter | `src/agents/filter_agent.py` | Confirm each URL is a genuine review, fetch full text + author |
-| 3 | Extract | `src/agents/extract_agent.py` | Pull vocabulary/constructions/idioms at or above your CEFR level; verify quotes and translations |
-| 4 | Review | `src/agents/review_agent.py` | Independently audit extracted phrases for quality, drop low-quality items |
-| 5 | Compile | `src/agents/compile_agent.py` | Produce the final `.pdf` |
+- Five sequenced agents (search → filter → extract → review → compile) with
+  Pydantic schemas between stages
+- Client-side tool loops that drop unreachable URLs, invented quotes, and lazy
+  translations
+- Topic + content-type + optional release-year disambiguation (e.g. `Madre (2017)`
+  vs *madre!*)
+- Offline and live eval suites for faithfulness, classification, recall, and
+  translation quality
+- Streamlit UI, PDF preview/download, Docker/Podman image, Azure Container Apps
+  with Easy Auth (Microsoft + Google) and daily quotas
+- CI (Ruff, Pyright, pytest, offline evals) and CD to ACA on `main`
 
-`src/orchestrator.py` wires these together, handles CLI input, and enforces
-the fallback rule: if fewer than 3 articles pass the filter stage, the
-pipeline stops with a warning instead of padding the document with
-low-quality matches.
+## Architecture
 
-All data passed between agents is validated through Pydantic models in
-`src/schemas/article.py` (`Article`, `ExtractedPhrase`, `PipelineOutput`).
+```mermaid
+flowchart LR
+  Topic[Topic + languages + CEFR] --> Search
+  Search --> Filter
+  Filter --> Extract
+  Extract --> Review
+  Review --> Compile
+  Compile --> PDF[Study PDF]
+```
 
-Several agents load evaluation criteria from skill files in
-`.claude/skills/` at runtime (e.g. the review agent uses
-`phrase-quality-reviewer.md` to flag proper nouns, topic derivatives, and
-near-duplicates before phrases reach the final document).
+| Stage | Agent | Responsibility |
+|-------|-------|----------------|
+| 1 | Search | Find candidate article URLs; preserve topic + content-type + optional year; validate reachability |
+| 2 | Filter | Confirm each URL is a genuine review; fetch full text + author |
+| 3 | Extract | Pull vocab/constructions/idioms at or above CEFR; verify quotes and translations |
+| 4 | Review | Independently audit phrases; drop proper nouns, near-duplicates, and low-value items |
+| 5 | Compile | Produce the final `.pdf` |
+
+`src/orchestrator.py` sequences the agents and enforces the fallback rule: if
+fewer than 3 articles pass filter, the run **stops** instead of padding with
+weak matches. Agent contracts and trust boundaries are documented in
+[`CLAUDE.md`](CLAUDE.md).
 
 ### Validation tools
 
-Some agents expose **client-side validation tools** — local Python functions
-Claude can call during extraction. The agent runs a tool-use loop and only
-keeps items that passed validation:
+Agents call **client-side** Python tools in a tool-use loop and keep only items
+that pass:
 
 | Tool | Agent | What it checks |
 |------|-------|----------------|
-| `validate_url_reachable` | Search | URL passes SSRF checks; responds to HTTP HEAD (2xx/3xx) |
-| `verify_quote` | Extract | `sentence_context` is a verbatim quote from the article |
-| `validate_translation` | Extract | Translation is non-empty and not a lazy copy of the source phrase |
+| `validate_url_reachable` | Search | SSRF-safe URL; HTTP HEAD 2xx/3xx |
+| `verify_quote` | Extract | `sentence_context` is verbatim in the article |
+| `validate_translation` | Extract | Translation non-empty and not a lazy copy of the source |
 
-Search and filter agents also use Anthropic's server-executed `web_search`
-tool. Tool implementations live in `src/tools/`.
+Search and filter also use Anthropic's server-executed `web_search` tool.
+Implementations live in `src/tools/`.
+
+## Try it
+
+**Quick start** (local — no live demo link in this repo):
+
+```bash
+uv sync
+# create .env with ANTHROPIC_API_KEY=sk-ant-...
+uv run pre-commit install   # optional
+uv run streamlit run app.py
+```
+
+Fill in topic, languages, and CEFR level, then **Generate study document**.
+For ambiguous titles, add a year (e.g. `Madre (2017)`). Preview and download the
+PDF when the run finishes.
+
+![Streamlit generate flow](docs/samples/demo-2026-09-03.gif)
+
+**Sample output:** [Cartas para minha avó — Portuguese → English, B2](docs/samples/Cartas_para_minha_avo_portuguese_english_B2.pdf)
+(10-page study pack from a real pipeline run).
+
+CLI:
+
+```bash
+uv run python -m src.orchestrator "Entroncamento" portuguese german C1 5
+```
+
+Generated files land in `output/` as
+`{topic}_{source_language}_{translation_language}_{cefr_level}.pdf`.
+
+## Quality and failure modes
+
+The pipeline is designed to **fail closed** and to be **measurable**:
+
+- **Fail closed:** fewer than 3 filtered articles → no document; quote and
+  translation tools drop bad extract items; review removes low-value phrases.
+- **Deterministic guards:** offline suites for quote faithfulness, filter
+  classification, review actions, extract recall, search URL recall, and
+  composite pipeline quality (no API key in CI).
+- **LLM-as-judge:** translation adequacy (and related judge suites) for cases
+  tools cannot score alone.
+- **Concrete regression:** `Madre (2017)` search eval forbids *mother!* /
+  `madre!` alternate-work hits so year disambiguation stays honest.
+
+See [Testing](#testing) for suite commands. Agent prompts live in
+`src/prompts/`; criteria skills in `.claude/skills/`.
+
+## Further reading
+
+| Topic | Where |
+|-------|--------|
+| Full setup, CLI args, container, Azure, auth/quotas | Sections below |
+| Agent contracts, trust boundaries, eval registration | [`CLAUDE.md`](CLAUDE.md) |
+| Quality gates before PRs | [`AGENTS.md`](AGENTS.md) |
+| Full PR build history | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
 
 ## Requirements
 
@@ -399,6 +473,9 @@ DAILY_QUOTA=3
 
 ## Testing
 
+Quality story (fail-closed behavior, offline suites, Madre regression) is
+summarized under [Quality and failure modes](#quality-and-failure-modes).
+
 Run the full test suite:
 
 ```bash
@@ -525,7 +602,8 @@ Results are saved under `evals/results/` (gitignored).
 ```
 app.py                        # Streamlit web UI entry point
 docs/
-└── ROADMAP.md                # full PR build history (README Status links here)
+├── ROADMAP.md                # full PR build history (README Status links here)
+└── samples/                  # portfolio demo assets (sample PDF + UI GIF)
 .github/
 ├── workflows/
 │   ├── ci.yml                # Ruff, Pyright, pytest, offline evals
@@ -610,15 +688,11 @@ output/                        # generated PDF files land here
 ## Status
 
 Core pipeline, Streamlit UI, evals, containerization, Azure deployment, and
-authentication are in place through **PR 41**.
-
-**In progress (PR 43):** portfolio-facing README presentation (this change moves
-build history out of the README).
+authentication are in place through **PR 41**. README presentation and sample
+demo assets landed in **PR 43**.
 
 **What's next**
 
-- README front matter: why / architecture / demo path / evals narrative
-- Sample PDF (and optional GIF) under `docs/`
 - Further product work continues from **PR 44** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
