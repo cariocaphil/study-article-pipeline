@@ -22,7 +22,7 @@ jobs:
         run: uv python install 3.11
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --frozen --dev
 
       - name: Ruff
         run: |
@@ -47,7 +47,7 @@ jobs:
         run: uv python install 3.11
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --frozen --dev
 
       - name: Pytest
         run: uv run pytest -m "not slow" --cov=src --cov=evals --cov-report=xml
@@ -74,7 +74,7 @@ jobs:
         run: uv python install 3.11
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --frozen --dev
 
       - name: Run offline eval suites
         run: |

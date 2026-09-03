@@ -132,11 +132,14 @@ See [Testing](#testing) for suite commands. Agent prompts live in
 
 ## Setup
 
-1. Install dependencies:
+1. Install dependencies (uses the committed `uv.lock` for reproducible installs):
 
    ```bash
    uv sync
    ```
+
+   After changing dependencies in `pyproject.toml`, run `uv lock` and commit
+   the updated `uv.lock`. CI and the container image use `uv sync --frozen`.
 
 2. Create a `.env` file in the project root with your API key:
 
@@ -712,11 +715,12 @@ output/                        # generated PDF files land here
 Core pipeline, Streamlit UI, evals, containerization, Azure deployment, and
 authentication are in place. README presentation and sample demo assets
 landed in **PR 42**. Document-level LLM-as-judge eval added in **PR 43**.
-Pytest coverage and Codecov badges added in **PR 44**.
+Pytest coverage and Codecov badges added in **PR 44**. Committed `uv.lock`
+with frozen sync in CI and container builds in **PR 45**.
 
 **What's next**
 
-- Further product work continues from **PR 45** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 46** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 
