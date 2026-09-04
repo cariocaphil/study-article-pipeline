@@ -44,7 +44,7 @@ flowchart LR
 | Stage | Agent | Responsibility |
 |-------|-------|----------------|
 | 1 | Search | Find candidate article URLs; preserve topic + content-type + optional year; validate reachability |
-| 2 | Filter | Confirm each URL is a genuine review; fetch full text + author |
+| 2 | Filter | Confirm each URL is a genuine review; fetch full text + author (bounded concurrent checks) |
 | 3 | Extract | Pull vocab/constructions/idioms at or above CEFR; verify quotes and translations |
 | 4 | Review | Independently audit phrases; drop proper nouns, near-duplicates, and low-value items |
 | 5 | Compile | Produce the final `.pdf` |
@@ -739,11 +739,11 @@ pin fixed to `@v0.36.0` in **PR 48**. Incremental Pyright strict-mode rules
 under `standard` landed in **PR 49**. Unknown-variable/argument Pyright rules
 under `standard` landed in **PR 50**. The same unknown/parameter Pyright rules
 were enabled under `tests/` in **PR 51**. Full Pyright `strict` mode landed in
-**PR 52**.
+**PR 52**. Bounded concurrent filter-stage URL checks landed in **PR 53**.
 
 **What's next**
 
-- Further product work continues from **PR 53** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 54** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 

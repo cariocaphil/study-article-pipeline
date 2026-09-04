@@ -19,7 +19,7 @@ and compiles everything into a printable PDF for language study.
 |-------------|-----------------------------|------|
 | Orchestrator | src/orchestrator.py        | Input parsing, agent sequencing, fallback handling |
 | Search      | src/agents/search_agent.py  | Find candidate article URLs in the source language; optional year disambiguation via `src/utils/topic_disambiguation.py` |
-| Filter      | src/agents/filter_agent.py  | Confirm each URL is a real review, fetch full text + author |
+| Filter      | src/agents/filter_agent.py  | Confirm each URL is a real review, fetch full text + author; concurrent checks with a bounded thread pool |
 | Extract     | src/agents/extract_agent.py | Pull phrases above user's CEFR level, with translations |
 | Review      | src/agents/review_agent.py  | Independently audit extracted phrases for quality, drop low-quality items |
 | Compile     | src/agents/compile_agent.py | Produce the final PDF |

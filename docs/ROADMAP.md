@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 53**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 54**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -378,3 +378,10 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Fix remaining strict-only issues (unknown lambdas, ReportLab/Azure member stubs, font registration flag)
 - [x] Allow `reportPrivateUsage` under `tests/` so unit tests can call private helpers
 - [x] Document completion of the option-C path toward stricter typing
+
+### PR 53 — Parallel filter stage ✅
+
+- [x] Run filter URL checks concurrently with a bounded `ThreadPoolExecutor` (default 3 workers)
+- [x] Preserve input URL order among accepted articles
+- [x] Make `UsageTracker.add` thread-safe for concurrent filter workers
+- [x] Add unit tests for ordering, worker cap, and concurrent usage accumulation
