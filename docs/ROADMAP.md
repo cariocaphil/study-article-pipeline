@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 51**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 52**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -364,3 +364,10 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Keep the new unknown-type rules off under `tests/` for this step
 - [x] Annotate JSON/list/dict accumulators in agents, utils, and evals
 - [x] Document the second incremental step toward stricter typing
+
+### PR 51 — Pyright unknown types in tests ✅
+
+- [x] Enable `reportMissingParameterType`, `reportUnknownParameterType`, `reportUnknownVariableType`, and `reportUnknownArgumentType` under `tests/`
+- [x] Annotate pytest fixtures, `@patch` mocks, and parametrize args across the test suite
+- [x] Keep `typeCheckingMode = "standard"` (full `strict` deferred)
+- [x] Document the third incremental step toward stricter typing

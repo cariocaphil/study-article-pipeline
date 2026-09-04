@@ -156,7 +156,7 @@ class TestQuoteFaithfulnessEvaluator:
 
 
 class TestEvalReport:
-    def test_save_writes_report_scores_and_failures(self, tmp_path):
+    def test_save_writes_report_scores_and_failures(self, tmp_path: Path):
         report = EvalReport(
             run_id="test-run",
             timestamp="2026-08-30T12:00:00Z",
@@ -333,7 +333,7 @@ class TestTranslationQualityEvaluator:
         assert result.passed is True
         assert result.failures == []
 
-    def test_judge_translation_parses_verdict(self, monkeypatch):
+    def test_judge_translation_parses_verdict(self, monkeypatch: pytest.MonkeyPatch):
         from evals.evaluators.translation_quality import TranslationCase, judge_translation
         from tests.anthropic_mocks import mock_message
 
@@ -349,9 +349,16 @@ class TestTranslationQualityEvaluator:
         client = MagicMock()
         monkeypatch.setattr(
             "evals.evaluators.translation_quality.create_message_with_retry",
-            lambda *_a, **_k: mock_message(
-                [SimpleNamespace(type="text", text='{"adequate": true, "reason": "ok"}')],
-                "end_turn",
+            MagicMock(
+                return_value=mock_message(
+                    [
+                        SimpleNamespace(
+                            type="text",
+                            text='{"adequate": true, "reason": "ok"}',
+                        )
+                    ],
+                    "end_turn",
+                )
             ),
         )
 
@@ -532,7 +539,7 @@ class TestDocumentQualityEvaluator:
         assert cases[1].expected_overall_min is None
 
     def test_parse_judgment_requires_all_dimensions_and_valid_scores(self):
-        base = {
+        base: dict[str, object] = {
             "overall": 4,
             "dimensions": {name: 4 for name in DOCUMENT_QUALITY_DIMENSIONS},
             "summary": "Good pack",
@@ -566,7 +573,7 @@ class TestDocumentQualityEvaluator:
         )
         assert judgment_with_defects.defects == ["gap", "12"]
 
-    def test_judge_document_quality_parses_verdict(self, monkeypatch):
+    def test_judge_document_quality_parses_verdict(self, monkeypatch: pytest.MonkeyPatch):
         from evals.evaluators.document_quality import (
             DocumentQualityCase,
             judge_document_quality,
@@ -577,7 +584,7 @@ class TestDocumentQualityEvaluator:
             id="doc-judge-1",
             document=load_pipeline_output(GOOD_PIPELINE_FIXTURE_PATH),
         )
-        verdict = {
+        verdict: dict[str, object] = {
             "overall": 4,
             "dimensions": {name: 4 for name in DOCUMENT_QUALITY_DIMENSIONS},
             "summary": "Solid study pack",
@@ -585,9 +592,11 @@ class TestDocumentQualityEvaluator:
         }
         monkeypatch.setattr(
             "evals.evaluators.document_quality.create_message_with_retry",
-            lambda *_a, **_k: mock_message(
-                [SimpleNamespace(type="text", text=json.dumps(verdict))],
-                "end_turn",
+            MagicMock(
+                return_value=mock_message(
+                    [SimpleNamespace(type="text", text=json.dumps(verdict))],
+                    "end_turn",
+                )
             ),
         )
 
@@ -655,7 +664,7 @@ class TestDocumentQualityEvaluator:
 
 
 class TestCompareRuns:
-    def test_detects_regression_and_improvement(self, tmp_path):
+    def test_detects_regression_and_improvement(self, tmp_path: Path):
         baseline_dir = tmp_path / "baseline"
         candidate_dir = tmp_path / "candidate"
         baseline_dir.mkdir()

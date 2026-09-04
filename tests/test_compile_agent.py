@@ -87,13 +87,13 @@ def _multi_page_pipeline_output() -> PipelineOutput:
 
 
 @pytest.fixture
-def compiled_pdf(temp_output_dir):
+def compiled_pdf(temp_output_dir: str) -> tuple[str, PipelineOutput]:
     output_path = os.path.join(temp_output_dir, "test_output.pdf")
     compile_document(_sample_pipeline_output(), output_path)
     return output_path, _sample_pipeline_output()
 
 
-def test_compile_creates_pdf(compiled_pdf):
+def test_compile_creates_pdf(compiled_pdf: tuple[str, PipelineOutput]):
     output_path, _ = compiled_pdf
 
     assert os.path.exists(output_path)
@@ -102,7 +102,7 @@ def test_compile_creates_pdf(compiled_pdf):
         assert pdf_file.read(4) == b"%PDF"
 
 
-def test_compile_contains_article_text(compiled_pdf):
+def test_compile_contains_article_text(compiled_pdf: tuple[str, PipelineOutput]):
     output_path, pipeline_output = compiled_pdf
     full_text = " ".join(_pdf_text(output_path).split())
 
@@ -113,7 +113,7 @@ def test_compile_contains_article_text(compiled_pdf):
     assert article.phrases[0].translation in full_text
 
 
-def test_compile_footer_shows_document_title_on_each_page(compiled_pdf):
+def test_compile_footer_shows_document_title_on_each_page(compiled_pdf: tuple[str, PipelineOutput]):
     output_path, pipeline_output = compiled_pdf
     expected_title = _document_title(pipeline_output.topic)
 
@@ -121,7 +121,7 @@ def test_compile_footer_shows_document_title_on_each_page(compiled_pdf):
         assert expected_title in page_text
 
 
-def test_compile_footer_shows_page_number_on_each_page(temp_output_dir):
+def test_compile_footer_shows_page_number_on_each_page(temp_output_dir: str):
     output_path = os.path.join(temp_output_dir, "multi_page.pdf")
     compile_document(_multi_page_pipeline_output(), output_path)
 
@@ -133,7 +133,7 @@ def test_compile_footer_shows_page_number_on_each_page(temp_output_dir):
         assert str(page_number) in page_text
 
 
-def test_compile_footer_truncates_very_long_topic(temp_output_dir):
+def test_compile_footer_truncates_very_long_topic(temp_output_dir: str):
     long_topic = "A" * 200
     pipeline = PipelineOutput(
         topic=long_topic,

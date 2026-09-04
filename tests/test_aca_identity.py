@@ -2,6 +2,9 @@
 
 import base64
 import json
+from typing import Any
+
+import pytest
 
 from src.utils.aca_identity import (
     AuthenticatedUser,
@@ -17,7 +20,7 @@ _NAME_IDENTIFIER_CLAIM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/
 
 
 def _encode_principal(*claims: tuple[str, str], auth_typ: str = "aad") -> str:
-    payload = {
+    payload: dict[str, Any] = {
         "auth_typ": auth_typ,
         "claims": [{"typ": typ, "val": val} for typ, val in claims],
     }
@@ -76,8 +79,8 @@ def test_parse_client_principal_returns_none_for_invalid_header():
     assert parse_client_principal("not-base64") is None
 
 
-def test_parse_client_principal_skips_non_string_claim_entries():
-    payload = {
+def test_parse_client_principal_skips_non_string_claim_entries() -> None:
+    payload: dict[str, Any] = {
         "auth_typ": "aad",
         "claims": [
             "not-a-dict",
@@ -97,7 +100,9 @@ def test_parse_client_principal_skips_non_string_claim_entries():
     )
 
 
-def test_get_authenticated_user_uses_dev_bypass(monkeypatch):
+def test_get_authenticated_user_uses_dev_bypass(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("QUOTA_DEV_MODE", "1")
     monkeypatch.setenv("QUOTA_DEV_USER", "local-dev")
 
@@ -181,14 +186,18 @@ def test_logout_url_includes_post_logout_redirect():
     assert logout_url() == "/.auth/logout?post_logout_redirect_uri=/"
 
 
-def test_identity_required_false_in_dev_mode(monkeypatch):
+def test_identity_required_false_in_dev_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("QUOTA_DEV_MODE", "1")
     monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "prodaccount")
 
     assert identity_required() is False
 
 
-def test_identity_required_true_when_storage_configured(monkeypatch):
+def test_identity_required_true_when_storage_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("QUOTA_DEV_MODE", raising=False)
     monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "prodaccount")
 

@@ -5,6 +5,7 @@ Shared fixtures for the agent test suite.
 import os
 import shutil
 import tempfile
+from collections.abc import Iterator
 
 import anthropic
 import pytest
@@ -108,7 +109,7 @@ def sample_phrases() -> list[ExtractedPhrase]:
 
 
 @pytest.fixture
-def temp_output_dir():
+def temp_output_dir() -> Iterator[str]:
     path = tempfile.mkdtemp(prefix="study_pipeline_test_")
     try:
         yield path

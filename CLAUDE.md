@@ -12,7 +12,8 @@ and compiles everything into a printable PDF for language study.
 - ReportLab (PDF document generation)
 - Pydantic (schema validation between agents)
 - Pyright (`standard` type checking with selected strict-mode rules including
-  unknown variable/argument checks — config in `pyproject.toml`)
+  unknown variable/argument/parameter checks in `src`, `evals`, and `tests` —
+  config in `pyproject.toml`)
 - stdlib `logging` (no `print()` in pipeline code)
 
 ## Agents and responsibilities

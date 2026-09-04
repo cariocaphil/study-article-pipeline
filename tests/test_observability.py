@@ -4,6 +4,8 @@ Tests for src/utils/observability.py.
 
 import logging
 
+import pytest
+
 from src.utils.observability import (
     StageTimer,
     UsageTracker,
@@ -64,7 +66,9 @@ def test_user_facing_pipeline_error_for_transient_api_status():
     assert message == ("The language service encountered a temporary error. Please try again.")
 
 
-def test_record_api_usage_logs_and_accumulates(caplog):
+def test_record_api_usage_logs_and_accumulates(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     from anthropic.types import Message, Usage
 
     from src.utils.observability import record_api_usage

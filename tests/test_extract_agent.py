@@ -9,6 +9,7 @@ import json
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import anthropic
 import pytest
 
 from src.agents.extract_agent import extract_phrases
@@ -62,7 +63,9 @@ def _phrase_item(
 @patch("src.agents.extract_agent.validate_translation")
 @patch("src.agents.extract_agent.verify_quote")
 class TestExtractPhrasesToolLoop:
-    def test_returns_only_verified_quotes_and_translations(self, mock_verify, mock_validate):
+    def test_returns_only_verified_quotes_and_translations(
+        self, mock_verify: MagicMock, mock_validate: MagicMock
+    ):
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
         unverified_sentence = "Laura foge de um passado calmo."
@@ -108,7 +111,9 @@ class TestExtractPhrasesToolLoop:
         assert phrases[0].sentence_context == verified_sentence
         assert phrases[0].translation == "turbulent"
 
-    def test_prompt_wraps_article_as_untrusted_content(self, mock_verify, mock_validate):
+    def test_prompt_wraps_article_as_untrusted_content(
+        self, mock_verify: MagicMock, mock_validate: MagicMock
+    ):
         article = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
         mock_validate.return_value = True
@@ -133,7 +138,9 @@ class TestExtractPhrasesToolLoop:
         assert article in prompt
         assert "---\nLaura" not in prompt
 
-    def test_drops_items_not_verified_by_quote_tool(self, mock_verify, mock_validate):
+    def test_drops_items_not_verified_by_quote_tool(
+        self, mock_verify: MagicMock, mock_validate: MagicMock
+    ):
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
@@ -176,7 +183,9 @@ class TestExtractPhrasesToolLoop:
         assert len(phrases) == 1
         assert phrases[0].sentence_context == verified_sentence
 
-    def test_drops_items_not_validated_by_translation_tool(self, mock_verify, mock_validate):
+    def test_drops_items_not_validated_by_translation_tool(
+        self, mock_verify: MagicMock, mock_validate: MagicMock
+    ):
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
@@ -223,7 +232,9 @@ class TestExtractPhrasesToolLoop:
         assert len(phrases) == 1
         assert phrases[0].phrase == "turbulento"
 
-    def test_skips_items_below_user_level_after_validation(self, mock_verify, mock_validate):
+    def test_skips_items_below_user_level_after_validation(
+        self, mock_verify: MagicMock, mock_validate: MagicMock
+    ):
         article = "Laura foge de um passado turbulento."
         sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
@@ -263,7 +274,7 @@ class TestExtractPhrasesToolLoop:
         assert phrases == []
 
     def test_continues_when_model_returns_planning_text_before_json(
-        self, mock_verify, mock_validate
+        self, mock_verify: MagicMock, mock_validate: MagicMock
     ):
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
@@ -310,7 +321,9 @@ class TestExtractPhrasesToolLoop:
         assert len(phrases) == 1
         assert client.messages.create.call_count == 3
 
-    def test_retries_when_json_array_is_truncated(self, mock_verify, mock_validate):
+    def test_retries_when_json_array_is_truncated(
+        self, mock_verify: MagicMock, mock_validate: MagicMock
+    ):
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
@@ -363,7 +376,9 @@ class TestExtractPhrasesToolLoop:
         ]
         assert any("cut off" in prompt for prompt in retry_prompts)
 
-    def test_raises_when_final_response_is_not_parseable_json(self, mock_verify, mock_validate):
+    def test_raises_when_final_response_is_not_parseable_json(
+        self, mock_verify: MagicMock, mock_validate: MagicMock
+    ):
         article = "Laura foge de um passado turbulento."
         sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
@@ -392,7 +407,9 @@ class TestExtractPhrasesToolLoop:
                 client=client,
             )
 
-    def test_skips_non_object_items_and_invalid_category_types(self, mock_verify, mock_validate):
+    def test_skips_non_object_items_and_invalid_category_types(
+        self, mock_verify: MagicMock, mock_validate: MagicMock
+    ):
         article = "Laura foge de um passado turbulento."
         sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
@@ -455,7 +472,9 @@ class TestExtractPhrasesToolLoop:
 
 
 @pytest.mark.slow
-def test_extract_phrases_returns_list(anthropic_client, sample_portuguese_text):
+def test_extract_phrases_returns_list(
+    anthropic_client: anthropic.Anthropic, sample_portuguese_text: str
+):
     phrases = extract_phrases(
         full_text=sample_portuguese_text,
         source_language="portuguese",
@@ -470,7 +489,9 @@ def test_extract_phrases_returns_list(anthropic_client, sample_portuguese_text):
 
 
 @pytest.mark.slow
-def test_extract_phrases_respects_level_floor(anthropic_client, sample_portuguese_text):
+def test_extract_phrases_respects_level_floor(
+    anthropic_client: anthropic.Anthropic, sample_portuguese_text: str
+):
     phrases = extract_phrases(
         full_text=sample_portuguese_text,
         source_language="portuguese",
@@ -485,7 +506,9 @@ def test_extract_phrases_respects_level_floor(anthropic_client, sample_portugues
 
 
 @pytest.mark.slow
-def test_extract_phrases_validates_schema(anthropic_client, sample_portuguese_text):
+def test_extract_phrases_validates_schema(
+    anthropic_client: anthropic.Anthropic, sample_portuguese_text: str
+):
     phrases = extract_phrases(
         full_text=sample_portuguese_text,
         source_language="portuguese",
