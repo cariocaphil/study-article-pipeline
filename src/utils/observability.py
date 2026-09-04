@@ -9,6 +9,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from types import TracebackType
 
 from anthropic import APIConnectionError, APIStatusError, RateLimitError
 from anthropic.types import Message
@@ -73,7 +74,12 @@ class _StageContext:
             self._callback(self._stage)
         self._start = time.perf_counter()
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         elapsed = time.perf_counter() - self._start
         self._timer.seconds[self._stage] = self._timer.seconds.get(self._stage, 0.0) + elapsed
 

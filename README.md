@@ -735,11 +735,12 @@ Pytest coverage and Codecov badges added in **PR 44**. Committed `uv.lock`
 with frozen sync in CI and container builds in **PR 45**. Dependabot weekly
 updates for uv and GitHub Actions added in **PR 46**. Warn-only `uv audit` in
 CI and Trivy image scanning on deploy added in **PR 47**. Deploy Trivy Action
-pin fixed to `@v0.36.0` in **PR 48**.
+pin fixed to `@v0.36.0` in **PR 48**. Incremental Pyright strict-mode rules
+under `standard` landed in **PR 49**.
 
 **What's next**
 
-- Further product work continues from **PR 49** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 50** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 

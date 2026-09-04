@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 49**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 50**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -350,3 +350,10 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 
 - [x] Replace invalid `aquasecurity/trivy-action@0.28.0` with `@v0.36.0` in deploy workflow
 - [x] Keep scan severity, exit-code, and warn-only behaviour unchanged
+
+### PR 49 — Pyright toward strict ✅
+
+- [x] Enable `reportMissingTypeArgument`, `reportMissingParameterType`, and `reportUnknownParameterType` under `standard`
+- [x] Keep the new parameter rules off under `tests/` (via execution environment) for this step
+- [x] Fix resulting typing issues in schemas, observability, filter eval, and extract tests
+- [x] Document the incremental path toward stricter typing
