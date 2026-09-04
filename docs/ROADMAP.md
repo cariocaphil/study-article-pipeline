@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 56**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 57**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -398,3 +398,11 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Manually follow HEAD redirects with a max hop count; validate every target with the same checks
 - [x] Add tests for public/private/mixed DNS, metadata, IPv6, redirect-to-private, and resolution failures
 - [x] Document DNS rebinding / TOCTOU as a residual trust-boundary risk
+
+### PR 56 — OpenTelemetry Application Insights
+
+- [x] Add optional `azure-monitor-opentelemetry` bootstrap gated on `APPLICATIONINSIGHTS_CONNECTION_STRING`
+- [x] Emit `pipeline.run` and `pipeline.stage.*` spans (reuse `run_id` / `StageTimer`; omit raw topic)
+- [x] Instrument `create_message_with_retry` with call/retry/error spans, tokens, and estimated cost
+- [x] Document ACA App Insights secret/env setup, verification queries, and a privacy note in README/CLAUDE
+- [ ] Follow-up: investigate Azure Monitor export gap for some INTERNAL spans (`pipeline.run`, `pipeline.stage.search`)

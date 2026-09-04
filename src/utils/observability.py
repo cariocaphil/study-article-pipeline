@@ -5,15 +5,19 @@ Logging, timing, token usage, and user-facing error helpers for pipeline runs.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
 from types import TracebackType
 
 from anthropic import APIConnectionError, APIStatusError, RateLimitError
 from anthropic.types import Message
+from opentelemetry import trace
+from opentelemetry.trace import Span, Status, StatusCode, Tracer
 
 StageCallback = Callable[[str], None]
 
@@ -23,6 +27,74 @@ STAGE_LABELS = {
     "extract": "Extracting vocabulary and reviewing phrases…",
     "compile": "Compiling document…",
 }
+
+APPLICATIONINSIGHTS_CONNECTION_STRING_ENV = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+TRACER_NAME = "study_article_pipeline"
+PIPELINE_RUN_SPAN = "pipeline.run"
+PIPELINE_STAGE_SPAN_PREFIX = "pipeline.stage"
+ANTHROPIC_CALL_SPAN = "anthropic.messages.create"
+
+# Approximate USD per 1M tokens (input, output). Rates go stale — estimates only.
+_ANTHROPIC_USD_PER_MTOK: dict[str, tuple[float, float]] = {
+    "claude-sonnet-4-6": (3.0, 15.0),
+}
+
+logger = logging.getLogger(__name__)
+
+_telemetry_configured = False
+
+
+def get_tracer() -> Tracer:
+    """Return the process tracer (no-op until a real TracerProvider is configured)."""
+    return trace.get_tracer(TRACER_NAME)
+
+
+def estimate_anthropic_cost_usd(
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+) -> float | None:
+    """
+    Rough USD cost from a static price table, or None when the model is unknown.
+
+    Prices are intentionally approximate and must be updated when Anthropic rates change.
+    """
+    rates = _ANTHROPIC_USD_PER_MTOK.get(model)
+    if rates is None:
+        return None
+    input_rate, output_rate = rates
+    return (input_tokens * input_rate + output_tokens * output_rate) / 1_000_000.0
+
+
+@contextmanager
+def pipeline_run_span(
+    run_id: str,
+    *,
+    source_language: str,
+    translation_language: str,
+    user_level: str,
+    n_articles: int,
+    topic_type: str,
+) -> Generator[Span, None, None]:
+    """
+    Parent span for one pipeline execution.
+
+    Omits the raw topic string from attributes (privacy); callers may set
+    aggregate outcome attributes on the yielded span before exit.
+    """
+    with get_tracer().start_as_current_span(PIPELINE_RUN_SPAN) as span:
+        span.set_attribute("pipeline.run_id", run_id)
+        span.set_attribute("pipeline.source_language", source_language)
+        span.set_attribute("pipeline.translation_language", translation_language)
+        span.set_attribute("pipeline.user_level", user_level)
+        span.set_attribute("pipeline.n_articles", n_articles)
+        span.set_attribute("pipeline.topic_type", topic_type)
+        try:
+            yield span
+        except Exception as exc:
+            span.set_status(Status(StatusCode.ERROR, type(exc).__name__))
+            span.record_exception(exc)
+            raise
 
 
 def configure_logging() -> None:
@@ -34,6 +106,45 @@ def configure_logging() -> None:
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
         datefmt="%H:%M:%S",
     )
+
+
+def _configure_azure_monitor(connection_string: str) -> None:
+    import importlib
+
+    module = importlib.import_module("azure.monitor.opentelemetry")
+    configure = getattr(module, "configure_azure_monitor")
+    configure(connection_string=connection_string)
+
+
+def configure_observability() -> bool:
+    """
+    Enable Azure Monitor OpenTelemetry when a connection string is configured.
+
+    Returns True when Azure Monitor was configured for this process, False when
+    telemetry stays a no-op (missing/blank env var, or already configured).
+    """
+    global _telemetry_configured
+    if _telemetry_configured:
+        return False
+
+    connection_string = os.getenv(APPLICATIONINSIGHTS_CONNECTION_STRING_ENV, "").strip()
+    if not connection_string:
+        logger.debug(
+            "%s not set; Azure Monitor telemetry disabled",
+            APPLICATIONINSIGHTS_CONNECTION_STRING_ENV,
+        )
+        return False
+
+    _configure_azure_monitor(connection_string)
+    _telemetry_configured = True
+    logger.info("Azure Monitor OpenTelemetry configured")
+    return True
+
+
+def reset_observability_for_tests() -> None:
+    """Reset process-level telemetry configuration state (tests only)."""
+    global _telemetry_configured
+    _telemetry_configured = False
 
 
 def new_run_id() -> str:
@@ -59,6 +170,7 @@ class StageTimer:
     seconds: dict[str, float] = field(default_factory=dict[str, float])
 
     def track(self, stage: str, callback: StageCallback | None = None):
+        """Time a stage and emit a child OpenTelemetry span when a provider is set."""
         return _StageContext(self, stage, callback)
 
 
@@ -73,11 +185,18 @@ class _StageContext:
         self._stage = stage
         self._callback = callback
         self._start = 0.0
+        self._span_cm: AbstractContextManager[Span] | None = None
 
     def __enter__(self) -> None:
         if self._callback:
             self._callback(self._stage)
         self._start = time.perf_counter()
+        span_cm = get_tracer().start_as_current_span(
+            f"{PIPELINE_STAGE_SPAN_PREFIX}.{self._stage}",
+            attributes={"pipeline.stage": self._stage},
+        )
+        self._span_cm = span_cm
+        span_cm.__enter__()
 
     def __exit__(
         self,
@@ -87,6 +206,10 @@ class _StageContext:
     ) -> None:
         elapsed = time.perf_counter() - self._start
         self._timer.seconds[self._stage] = self._timer.seconds.get(self._stage, 0.0) + elapsed
+        span_cm = self._span_cm
+        self._span_cm = None
+        if span_cm is not None:
+            span_cm.__exit__(exc_type, exc, tb)
 
 
 def record_api_usage(

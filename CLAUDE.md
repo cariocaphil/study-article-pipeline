@@ -94,15 +94,25 @@ Never pass unstructured strings between agents when a schema exists.
 
 ## Observability
 
-`src/utils/observability.py` provides pipeline-wide logging and run metrics:
+`src/utils/observability.py` provides pipeline-wide logging, run metrics, and
+optional Azure Monitor OpenTelemetry:
 
 - `configure_logging()` — called once at pipeline start
+- `configure_observability()` — enables Azure Monitor when
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` is set (no-op otherwise)
 - `new_run_id()`, `StageTimer`, `UsageTracker` — per-run ID, stage timing, token totals
+- `pipeline_run_span` / stage spans from `StageTimer.track` — `pipeline.run` and
+  `pipeline.stage.*`
+- Anthropic call spans from `create_message_with_retry()` — retries, tokens,
+  optional estimated cost
 - `record_api_usage()` — log Anthropic `Message.usage` after each API call
 - `user_facing_pipeline_error()` — map internal exceptions to Streamlit-safe messages
 
 `run_pipeline()` returns `PipelineRunResult` (not a bare path string). The
 orchestrator accepts an optional `on_stage` callback for UI progress updates.
+
+Custom spans intentionally omit the raw topic and article content. See README
+**Application Insights (OpenTelemetry)** for Azure setup and the privacy note.
 
 Use `logging.getLogger(__name__)` in agents and tools. Validation tools support
 `quiet=True` to suppress info logs when called from evals or bulk tests.
@@ -123,13 +133,16 @@ Do not pad the document with low-quality matches.
 ANTHROPIC_API_KEY in `.env` locally, `-e ANTHROPIC_API_KEY=...` when running a
 container, or a Container Apps secret in Azure — never commit this value.
 
+Optional: `APPLICATIONINSIGHTS_CONNECTION_STRING` enables Azure Monitor
+OpenTelemetry (secret-backed on ACA). Omit locally to keep telemetry disabled.
+
 Production Azure deployments use ACA Easy Auth (Microsoft and Google via
 `X-MS-CLIENT-PRINCIPAL` and related ACA headers) with **Allow unauthenticated
 access** at the platform layer; the Streamlit app renders the multi-provider
 login landing and enforces identity before pipeline runs. Quota env vars:
 `AZURE_STORAGE_ACCOUNT`, `QUOTA_TABLE_NAME`, `DAILY_QUOTA`. Local quota testing:
 `QUOTA_DEV_MODE=1` and `QUOTA_DEV_USER`. See README **Container**, **Azure Container
-Apps**, and **Authentication and quotas**.
+Apps**, **Authentication and quotas**, and **Application Insights (OpenTelemetry)**.
 
 ## Trust boundaries
 

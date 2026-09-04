@@ -24,7 +24,9 @@ from src.utils.observability import (
     StageTimer,
     UsageTracker,
     configure_logging,
+    configure_observability,
     new_run_id,
+    pipeline_run_span,
 )
 
 load_dotenv()
@@ -49,6 +51,7 @@ def run_pipeline(
     """
 
     configure_logging()
+    configure_observability()
 
     validation_error = topic_validation_error(topic)
     if validation_error:
@@ -74,98 +77,114 @@ def run_pipeline(
         n_articles,
     )
 
-    # ── Step 1: Search ────────────────────────────────────────────────────────
-    with stage_timer.track("search", on_stage):
-        urls = search_articles(
-            topic,
-            source_language,
-            n_articles,
-            client,
-            topic_type=topic_type,
-            usage=usage,
-        )
-
-    # ── Step 2: Filter ────────────────────────────────────────────────────────
-    with stage_timer.track("filter", on_stage):
-        raw_articles = filter_articles(urls, source_language, client, usage=usage)
-
-    if len(raw_articles) < MIN_ARTICLES:
-        raise ValueError(
-            f"Pipeline stopped: only {len(raw_articles)} article(s) passed the filter "
-            f"(minimum is {MIN_ARTICLES}). Try a different topic or broaden the search."
-        )
-
-    # ── Step 3: Extract + review ──────────────────────────────────────────────
-    articles: list[Article] = []
-    with stage_timer.track("extract", on_stage):
-        for raw in raw_articles:
-            phrases = extract_phrases(
-                full_text=raw["full_text"],
-                source_language=source_language,
-                translation_language=translation_language,
-                user_level=level,
-                client=client,
-                usage=usage,
-            )
-            phrases = review_phrases(phrases, topic, client, usage=usage)
-            articles.append(
-                Article(
-                    title=raw["title"],
-                    author=raw["author"],
-                    url=raw["url"],
-                    source_name=raw["source_name"],
-                    full_text=raw["full_text"],
-                    phrases=phrases,
-                )
-            )
-
-    # ── Step 4: Compile ───────────────────────────────────────────────────────
-    pipeline_output = PipelineOutput(
-        topic=topic,
-        topic_type=topic_type,
+    with pipeline_run_span(
+        run_id,
         source_language=source_language,
         translation_language=translation_language,
-        user_level=level,
-        articles=articles,
-    )
+        user_level=level.value,
+        n_articles=n_articles,
+        topic_type=topic_type.value,
+    ) as run_span:
+        # ── Step 1: Search ────────────────────────────────────────────────────
+        with stage_timer.track("search", on_stage):
+            urls = search_articles(
+                topic,
+                source_language,
+                n_articles,
+                client,
+                topic_type=topic_type,
+                usage=usage,
+            )
 
-    filename = (
-        f"{filename_safe_topic(topic)}_{source_language}_{translation_language}_{level.value}.pdf"
-    )
-    output_path = os.path.join("output", filename)
-    os.makedirs("output", exist_ok=True)
+        # ── Step 2: Filter ────────────────────────────────────────────────────
+        with stage_timer.track("filter", on_stage):
+            raw_articles = filter_articles(urls, source_language, client, usage=usage)
 
-    with stage_timer.track("compile", on_stage):
-        compile_document(pipeline_output, output_path)
+        if len(raw_articles) < MIN_ARTICLES:
+            raise ValueError(
+                f"Pipeline stopped: only {len(raw_articles)} article(s) passed the filter "
+                f"(minimum is {MIN_ARTICLES}). Try a different topic or broaden the search."
+            )
 
-    phrase_count = sum(len(article.phrases) for article in articles)
-    elapsed_seconds = time.perf_counter() - started_at
+        # ── Step 3: Extract + review ──────────────────────────────────────────
+        articles: list[Article] = []
+        with stage_timer.track("extract", on_stage):
+            for raw in raw_articles:
+                phrases = extract_phrases(
+                    full_text=raw["full_text"],
+                    source_language=source_language,
+                    translation_language=translation_language,
+                    user_level=level,
+                    client=client,
+                    usage=usage,
+                )
+                phrases = review_phrases(phrases, topic, client, usage=usage)
+                articles.append(
+                    Article(
+                        title=raw["title"],
+                        author=raw["author"],
+                        url=raw["url"],
+                        source_name=raw["source_name"],
+                        full_text=raw["full_text"],
+                        phrases=phrases,
+                    )
+                )
 
-    logger.info(
-        "run_id=%s stage=complete output=%s urls=%d articles=%d phrases=%d elapsed=%.1fs "
-        "tokens_in=%d tokens_out=%d stages=%s",
-        run_id,
-        output_path,
-        len(urls),
-        len(articles),
-        phrase_count,
-        elapsed_seconds,
-        usage.input_tokens,
-        usage.output_tokens,
-        stage_timer.seconds,
-    )
+        # ── Step 4: Compile ───────────────────────────────────────────────────
+        pipeline_output = PipelineOutput(
+            topic=topic,
+            topic_type=topic_type,
+            source_language=source_language,
+            translation_language=translation_language,
+            user_level=level,
+            articles=articles,
+        )
 
-    return PipelineRunResult(
-        output_path=output_path,
-        run_id=run_id,
-        elapsed_seconds=elapsed_seconds,
-        stage_seconds=dict(stage_timer.seconds),
-        urls_found=len(urls),
-        articles_kept=len(articles),
-        phrase_count=phrase_count,
-        token_input=usage.input_tokens,
-        token_output=usage.output_tokens,
-    )
+        filename = (
+            f"{filename_safe_topic(topic)}_{source_language}_"
+            f"{translation_language}_{level.value}.pdf"
+        )
+        output_path = os.path.join("output", filename)
+        os.makedirs("output", exist_ok=True)
+
+        with stage_timer.track("compile", on_stage):
+            compile_document(pipeline_output, output_path)
+
+        phrase_count = sum(len(article.phrases) for article in articles)
+        elapsed_seconds = time.perf_counter() - started_at
+
+        run_span.set_attribute("pipeline.urls_found", len(urls))
+        run_span.set_attribute("pipeline.articles_kept", len(articles))
+        run_span.set_attribute("pipeline.phrase_count", phrase_count)
+        run_span.set_attribute("pipeline.elapsed_seconds", elapsed_seconds)
+        run_span.set_attribute("pipeline.token_input", usage.input_tokens)
+        run_span.set_attribute("pipeline.token_output", usage.output_tokens)
+
+        logger.info(
+            "run_id=%s stage=complete output=%s urls=%d articles=%d phrases=%d elapsed=%.1fs "
+            "tokens_in=%d tokens_out=%d stages=%s",
+            run_id,
+            output_path,
+            len(urls),
+            len(articles),
+            phrase_count,
+            elapsed_seconds,
+            usage.input_tokens,
+            usage.output_tokens,
+            stage_timer.seconds,
+        )
+
+        return PipelineRunResult(
+            output_path=output_path,
+            run_id=run_id,
+            elapsed_seconds=elapsed_seconds,
+            stage_seconds=dict(stage_timer.seconds),
+            urls_found=len(urls),
+            articles_kept=len(articles),
+            phrase_count=phrase_count,
+            token_input=usage.input_tokens,
+            token_output=usage.output_tokens,
+        )
 
 
 # ── Manual test ───────────────────────────────────────────────────────────────
