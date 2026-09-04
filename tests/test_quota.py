@@ -107,7 +107,11 @@ def test_consume_generation_uses_as_int_for_table_entity(
     monkeypatch.setenv("DAILY_QUOTA", "5")
 
     entity = MagicMock()
-    entity.get.side_effect = lambda key, default=0: True if key == "count" else default
+
+    def entity_get(key: object, default: object = 0) -> object:
+        return True if key == "count" else default
+
+    entity.get.side_effect = entity_get
     entity.metadata = {"etag": "etag-1"}
     table = MagicMock()
     table.get_entity.return_value = entity

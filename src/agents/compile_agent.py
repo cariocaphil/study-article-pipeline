@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any, cast
 from xml.sax.saxutils import escape
 
 from reportlab.lib.enums import TA_CENTER
@@ -24,14 +25,14 @@ from src.schemas.article import PipelineOutput
 logger = logging.getLogger(__name__)
 
 _FONT_NAME = "StudyDocUnicode"
-_FONT_REGISTERED = False
+_font_registered = False
 _FOOTER_FONT_SIZE = 9
 _FOOTER_Y_OFFSET = 1.2 * cm
 
 
 def _register_unicode_font() -> None:
-    global _FONT_REGISTERED
-    if _FONT_REGISTERED:
+    global _font_registered
+    if _font_registered:
         return
 
     project_root = Path(__file__).resolve().parents[2]
@@ -44,8 +45,8 @@ def _register_unicode_font() -> None:
     ]
     for font_path in candidates:
         if font_path.is_file():
-            pdfmetrics.registerFont(TTFont(_FONT_NAME, str(font_path)))
-            _FONT_REGISTERED = True
+            cast(Any, pdfmetrics).registerFont(TTFont(_FONT_NAME, str(font_path)))
+            _font_registered = True
             return
 
     raise RuntimeError(

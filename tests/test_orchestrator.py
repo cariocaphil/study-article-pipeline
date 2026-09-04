@@ -10,6 +10,10 @@ from src.orchestrator import run_pipeline
 from src.schemas.article import TopicType
 
 
+def _passthrough_phrases(phrases: object, *_a: object, **_k: object) -> object:
+    return phrases
+
+
 def test_run_pipeline_rejects_empty_topic_before_search():
     with patch("src.orchestrator.search_articles") as mock_search:
         with pytest.raises(ValueError, match="Please enter a topic."):
@@ -70,7 +74,7 @@ def test_run_pipeline_builds_articles_after_filter_passes():
         patch("src.orchestrator.search_articles", return_value=["https://example.com/1"]),
         patch("src.orchestrator.filter_articles", return_value=filtered),
         patch("src.orchestrator.extract_phrases", return_value=[]),
-        patch("src.orchestrator.review_phrases", side_effect=lambda phrases, *_a, **_k: phrases),
+        patch("src.orchestrator.review_phrases", side_effect=_passthrough_phrases),
         patch("src.orchestrator.compile_document") as mock_compile,
         patch("src.orchestrator.anthropic.Anthropic"),
     ):
