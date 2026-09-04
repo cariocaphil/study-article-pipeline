@@ -327,4 +327,4 @@ def test_no_redirect_handler_raises_http_error_for_redirects():
         )
 
     assert exc_info.value.code == 302
-    assert exc_info.value.geturl() == "https://example.com/start"
+    assert exc_info.value.url == "https://example.com/start"
