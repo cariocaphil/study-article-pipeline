@@ -7,6 +7,8 @@ translation validity, and CEFR level-floor compliance.
 
 from __future__ import annotations
 
+from typing import Any
+
 from evals.evaluators.base import EvalFailure, EvalResult
 from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.utils import safe_divide
@@ -136,7 +138,7 @@ class PipelineQualityEvaluator:
 
         score = sum(subscores.values()) / len(subscores)
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "article_count": article_count,
             "min_articles": self.min_articles,
             "min_phrases_per_article": self.min_phrases_per_article,

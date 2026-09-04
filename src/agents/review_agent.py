@@ -8,6 +8,7 @@ sentence_context quotes from the article — those are wrapped as untrusted data
 
 import json
 import logging
+from typing import cast
 
 import anthropic
 
@@ -64,15 +65,28 @@ def review_phrases(
     except ValueError as e:
         raise ValueError(f"Review agent could not parse review verdicts.\n{e}")
 
-    verdicts_by_phrase = {}
-    for item in raw_verdicts:
+    if not isinstance(raw_verdicts, list):
+        raise ValueError("Review agent could not parse review verdicts: expected JSON array.")
+
+    verdicts_by_phrase: dict[str, tuple[str, str]] = {}
+    for raw_item in cast(list[object], raw_verdicts):
+        if not isinstance(raw_item, dict):
+            logger.warning("Skipping malformed verdict: %r", raw_item)
+            continue
+        item = cast(dict[str, object], raw_item)
         try:
-            verdicts_by_phrase[item["phrase"]] = (item["action"], item.get("reason", ""))
+            phrase_raw = item["phrase"]
+            action_raw = item["action"]
+            if not isinstance(phrase_raw, str) or not isinstance(action_raw, str):
+                raise TypeError("phrase and action must be strings")
+            reason_raw = item.get("reason", "")
+            reason = reason_raw if isinstance(reason_raw, str) else ""
+            verdicts_by_phrase[phrase_raw] = (action_raw, reason)
         except (KeyError, TypeError) as e:
-            logger.warning("Skipping malformed verdict: %s — %s", item, e)
+            logger.warning("Skipping malformed verdict: %r — %s", item, e)
             continue
 
-    kept = []
+    kept: list[ExtractedPhrase] = []
     n_flagged = 0
     n_removed = 0
     for phrase in phrases:

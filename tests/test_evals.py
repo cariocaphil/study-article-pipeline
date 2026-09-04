@@ -4,6 +4,8 @@ Tests for the evaluation harness (deterministic, no API calls).
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -36,7 +38,7 @@ from evals.evaluators.quote_faithfulness import QuoteFaithfulnessEvaluator
 from evals.evaluators.review_actions import ReviewActionsEvaluator
 from evals.evaluators.search_url_recall import SearchUrlRecallEvaluator
 from evals.evaluators.translation_quality import TranslationQualityEvaluator
-from evals.runners.compare_runs import compare_runs
+from evals.runners.compare_runs import compare_runs, main
 from evals.runners.run_evals import run_suite
 
 FIXTURE_PATH = (
@@ -331,6 +333,33 @@ class TestTranslationQualityEvaluator:
         assert result.passed is True
         assert result.failures == []
 
+    def test_judge_translation_parses_verdict(self, monkeypatch):
+        from evals.evaluators.translation_quality import TranslationCase, judge_translation
+        from tests.anthropic_mocks import mock_message
+
+        case = TranslationCase(
+            id="translation-judge-1",
+            phrase="turbulento",
+            sentence_context="um passado turbulento",
+            translation="turbulent",
+            source_language="portuguese",
+            translation_language="german",
+            expected_adequate=True,
+        )
+        client = MagicMock()
+        monkeypatch.setattr(
+            "evals.evaluators.translation_quality.create_message_with_retry",
+            lambda *_a, **_k: mock_message(
+                [SimpleNamespace(type="text", text='{"adequate": true, "reason": "ok"}')],
+                "end_turn",
+            ),
+        )
+
+        judgment = judge_translation(case, client)
+
+        assert judgment.adequate is True
+        assert judgment.reason == "ok"
+
     def test_run_suite_offline_translation_quality(self):
         result = run_suite(
             "translation_quality",
@@ -529,6 +558,44 @@ class TestDocumentQualityEvaluator:
         with pytest.raises(ValueError, match="summary"):
             parse_document_quality_judgment({**base, "summary": "  "})
 
+        with pytest.raises(ValueError, match="dimensions must be an object"):
+            parse_document_quality_judgment({**base, "dimensions": ["not", "a", "dict"]})
+
+        judgment_with_defects = parse_document_quality_judgment(
+            {**base, "defects": ["  gap  ", "", 12, "   "]}
+        )
+        assert judgment_with_defects.defects == ["gap", "12"]
+
+    def test_judge_document_quality_parses_verdict(self, monkeypatch):
+        from evals.evaluators.document_quality import (
+            DocumentQualityCase,
+            judge_document_quality,
+        )
+        from tests.anthropic_mocks import mock_message
+
+        case = DocumentQualityCase(
+            id="doc-judge-1",
+            document=load_pipeline_output(GOOD_PIPELINE_FIXTURE_PATH),
+        )
+        verdict = {
+            "overall": 4,
+            "dimensions": {name: 4 for name in DOCUMENT_QUALITY_DIMENSIONS},
+            "summary": "Solid study pack",
+            "defects": [],
+        }
+        monkeypatch.setattr(
+            "evals.evaluators.document_quality.create_message_with_retry",
+            lambda *_a, **_k: mock_message(
+                [SimpleNamespace(type="text", text=json.dumps(verdict))],
+                "end_turn",
+            ),
+        )
+
+        judgment = judge_document_quality(case, MagicMock())
+
+        assert judgment.overall == 4
+        assert judgment.summary == "Solid study pack"
+
     def test_scores_cached_predictions(self):
         cases = load_document_quality_dataset(DOCUMENT_QUALITY_DATASET_PATH)
         predictions = load_document_quality_predictions(DOCUMENT_QUALITY_PREDICTIONS_PATH)
@@ -643,3 +710,20 @@ class TestCompareRuns:
         assert by_evaluator["filter_classification"].status == "regressed"
         assert by_evaluator["filter_classification"].delta == pytest.approx(-0.1)
         assert by_evaluator["translation_quality"].status == "unchanged"
+
+        output_path = tmp_path / "comparison.json"
+        exit_code = main(
+            [
+                "--baseline",
+                str(baseline_dir),
+                "--candidate",
+                str(candidate_dir),
+                "--output",
+                str(output_path),
+            ]
+        )
+        assert exit_code == 1
+        summary = json.loads(output_path.read_text(encoding="utf-8"))
+        assert summary["baseline_run_id"] == "baseline-run"
+        assert summary["candidate_run_id"] == "candidate-run"
+        assert len(summary["comparisons"]) == 2

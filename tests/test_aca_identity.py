@@ -76,6 +76,27 @@ def test_parse_client_principal_returns_none_for_invalid_header():
     assert parse_client_principal("not-base64") is None
 
 
+def test_parse_client_principal_skips_non_string_claim_entries():
+    payload = {
+        "auth_typ": "aad",
+        "claims": [
+            "not-a-dict",
+            {"typ": "oid", "val": 123},
+            {"typ": "oid", "val": "user-999"},
+            {"typ": "name", "val": "Ada"},
+        ],
+    }
+    header = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
+
+    user = parse_client_principal(header)
+
+    assert user == AuthenticatedUser(
+        user_id="user-999",
+        display_name="Ada",
+        identity_provider="aad",
+    )
+
+
 def test_get_authenticated_user_uses_dev_bypass(monkeypatch):
     monkeypatch.setenv("QUOTA_DEV_MODE", "1")
     monkeypatch.setenv("QUOTA_DEV_USER", "local-dev")

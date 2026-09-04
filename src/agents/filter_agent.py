@@ -40,7 +40,7 @@ def filter_articles(
 
     filter_criteria = load_skill("article-filter-criteria")
 
-    results = []
+    results: list[FilteredArticle] = []
 
     for url in urls:
         logger.info("Checking URL: %s", url)
@@ -70,20 +70,32 @@ def filter_articles(
             logger.warning("Could not parse response for %s: %s", url, e)
             continue
 
-        if not data.get("is_review") or not data.get("is_correct_language"):
+        if not isinstance(data, dict):
+            logger.warning("Could not parse response for %s: expected JSON object", url)
+            continue
+
+        parsed = cast(dict[str, object], data)
+
+        if not parsed.get("is_review") or not parsed.get("is_correct_language"):
             logger.info("Rejected URL: %s", url)
             continue
 
+        title = parsed.get("title", "")
+        author = parsed.get("author")
+        source_name = parsed.get("source_name", "")
+        article_text = parsed.get("full_text", "")
+
         results.append(
             {
-                "title": data.get("title", ""),
-                "author": data.get("author"),
+                "title": title if isinstance(title, str) else "",
+                "author": author if isinstance(author, str) else None,
                 "url": url,
-                "source_name": data.get("source_name", ""),
-                "full_text": data.get("full_text", ""),
+                "source_name": source_name if isinstance(source_name, str) else "",
+                "full_text": article_text if isinstance(article_text, str) else "",
             }
         )
-        logger.info("Accepted article: %s", data.get("title", url))
+        accepted_title = title if isinstance(title, str) else url
+        logger.info("Accepted article: %s", accepted_title)
 
     return results
 

@@ -392,6 +392,67 @@ class TestExtractPhrasesToolLoop:
                 client=client,
             )
 
+    def test_skips_non_object_items_and_invalid_category_types(self, mock_verify, mock_validate):
+        article = "Laura foge de um passado turbulento."
+        sentence = "Laura foge de um passado turbulento."
+        mock_verify.return_value = True
+        mock_validate.return_value = True
+
+        client = MagicMock()
+        client.messages.create.side_effect = [
+            mock_message(
+                [
+                    _verify_quote_tool_use("tool-1", sentence),
+                    _validate_translation_tool_use("tool-2", "turbulento", "turbulent"),
+                    _validate_translation_tool_use("tool-3", "passado", "Vergangenheit"),
+                ],
+                "tool_use",
+            ),
+            mock_message(
+                [
+                    _text_block(
+                        json.dumps(
+                            [
+                                "not-an-object",
+                                {
+                                    "phrase": 99,
+                                    "sentence_context": sentence,
+                                    "translation": "ignored",
+                                    "category": "vocab",
+                                    "estimated_level": "C1",
+                                },
+                                {
+                                    "phrase": "turbulento",
+                                    "sentence_context": sentence,
+                                    "translation": "turbulent",
+                                    "category": 12,
+                                    "estimated_level": "C1",
+                                },
+                                {
+                                    "phrase": "passado",
+                                    "sentence_context": sentence,
+                                    "translation": "Vergangenheit",
+                                    "category": "vocab",
+                                    "estimated_level": "C1",
+                                },
+                            ]
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+        ]
+
+        phrases = extract_phrases(
+            full_text=article,
+            source_language="portuguese",
+            translation_language="german",
+            user_level=CEFRLevel.C1,
+            client=client,
+        )
+
+        assert [phrase.phrase for phrase in phrases] == ["passado"]
+
 
 @pytest.mark.slow
 def test_extract_phrases_returns_list(anthropic_client, sample_portuguese_text):

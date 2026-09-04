@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import anthropic
 
@@ -52,7 +52,7 @@ class DocumentQualityJudgment:
     overall: float
     dimensions: dict[str, float]
     summary: str = ""
-    defects: list[str] = field(default_factory=list)
+    defects: list[str] = field(default_factory=list[str])
 
 
 def _validate_score(value: object, *, field_name: str) -> float:
@@ -69,14 +69,15 @@ def parse_document_quality_judgment(data: Mapping[str, Any]) -> DocumentQualityJ
         raise ValueError("Judgment must include overall and dimensions")
 
     raw_dimensions = data["dimensions"]
-    if not isinstance(raw_dimensions, Mapping):
+    if not isinstance(raw_dimensions, dict):
         raise ValueError("dimensions must be an object")
 
+    dimensions_data = cast(dict[str, object], raw_dimensions)
     dimensions: dict[str, float] = {}
     for name in DOCUMENT_QUALITY_DIMENSIONS:
-        if name not in raw_dimensions:
+        if name not in dimensions_data:
             raise ValueError(f"Missing dimension score: {name}")
-        dimensions[name] = _validate_score(raw_dimensions[name], field_name=name)
+        dimensions[name] = _validate_score(dimensions_data[name], field_name=name)
 
     overall = _validate_score(data["overall"], field_name="overall")
 
@@ -87,7 +88,9 @@ def parse_document_quality_judgment(data: Mapping[str, Any]) -> DocumentQualityJ
     raw_defects = data.get("defects", [])
     if not isinstance(raw_defects, list):
         raise ValueError("defects must be an array of strings")
-    defects = [str(item).strip() for item in raw_defects if str(item).strip()]
+    defects = [
+        stripped for item in cast(list[object], raw_defects) if (stripped := str(item).strip())
+    ]
 
     return DocumentQualityJudgment(
         overall=overall,
@@ -186,7 +189,7 @@ class DocumentQualityEvaluator:
             for name in DOCUMENT_QUALITY_DIMENSIONS
         }
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "total_cases": len(cases),
             "judged_cases": judged_cases,
             "mean_overall": mean_overall,
@@ -242,7 +245,7 @@ def judge_document_quality(
         )
 
     try:
-        return parse_document_quality_judgment(parsed)
+        return parse_document_quality_judgment(cast(dict[str, Any], parsed))
     except ValueError as exc:
         raise ValueError(
             f"Document quality judge returned invalid verdict for {case.id}: {exc}"

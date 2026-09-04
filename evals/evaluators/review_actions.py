@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 import anthropic
 
@@ -27,7 +27,7 @@ class ReviewCase:
     id: str
     topic: str
     phrases: list[ExtractedPhrase]
-    expected_actions: dict[str, ReviewAction] = field(default_factory=dict)
+    expected_actions: dict[str, ReviewAction] = field(default_factory=dict[str, ReviewAction])
 
 
 def _is_removed(action: ReviewAction) -> bool:
@@ -140,7 +140,7 @@ class ReviewActionsEvaluator:
         )
         action_accuracy = safe_divide(action_correct, action_total)
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "total_phrases": action_total,
             "action_correct": action_correct,
             "action_accuracy": action_accuracy,

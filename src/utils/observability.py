@@ -51,7 +51,7 @@ class UsageTracker:
 
 @dataclass
 class StageTimer:
-    seconds: dict[str, float] = field(default_factory=dict)
+    seconds: dict[str, float] = field(default_factory=dict[str, float])
 
     def track(self, stage: str, callback: StageCallback | None = None):
         return _StageContext(self, stage, callback)

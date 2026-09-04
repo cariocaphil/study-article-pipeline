@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import unquote, urlparse, urlunparse
 
 import anthropic
@@ -151,7 +152,7 @@ class SearchUrlRecallEvaluator:
         recall = safe_divide(matched_gold, total_gold)
         forbidden_hits = sum(1 for failure in failures if failure.category == "forbidden_url")
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "total_gold_urls": total_gold,
             "matched_gold_urls": matched_gold,
             "forbidden_hits": forbidden_hits,

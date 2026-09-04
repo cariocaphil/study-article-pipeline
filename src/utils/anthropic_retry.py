@@ -8,7 +8,7 @@ import logging
 import random
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import anthropic
 from anthropic import APIConnectionError, APIStatusError, RateLimitError
@@ -56,7 +56,7 @@ def create_message_with_retry(
 
     for attempt in range(1, max_attempts + 1):
         try:
-            return client.messages.create(**create_kwargs)
+            return cast(Message, client.messages.create(**create_kwargs))
         except Exception as exc:
             last_error = exc
             if attempt >= max_attempts or not is_retryable_api_error(exc):

@@ -153,9 +153,10 @@ def search_articles(
     if not isinstance(urls, list):
         raise ValueError(f"Search agent returned no URLs for topic '{topic}'.")
 
-    reachable_urls = [
-        url for url in urls if isinstance(url, str) and validation_results.get(url) is True
-    ]
+    reachable_urls: list[str] = []
+    for candidate in cast(list[object], urls):
+        if isinstance(candidate, str) and validation_results.get(candidate) is True:
+            reachable_urls.append(candidate)
 
     if not reachable_urls:
         raise ValueError(f"Search agent returned no reachable URLs for topic '{topic}'.")

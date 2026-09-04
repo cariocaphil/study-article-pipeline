@@ -144,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
         regression_threshold=args.regression_threshold,
     )
 
-    summary = {
+    summary: dict[str, Any] = {
         "baseline_run_id": baseline.get("run_id"),
         "candidate_run_id": candidate.get("run_id"),
         "regression_threshold": args.regression_threshold,

@@ -11,7 +11,8 @@ and compiles everything into a printable PDF for language study.
 - Anthropic Python SDK (claude-sonnet-4-6, web search tool enabled)
 - ReportLab (PDF document generation)
 - Pydantic (schema validation between agents)
-- Pyright (`standard` type checking with selected strict-mode rules — config in `pyproject.toml`)
+- Pyright (`standard` type checking with selected strict-mode rules including
+  unknown variable/argument checks — config in `pyproject.toml`)
 - stdlib `logging` (no `print()` in pipeline code)
 
 ## Agents and responsibilities

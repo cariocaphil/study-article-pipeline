@@ -20,7 +20,7 @@ class EvalFailure:
     case_id: str
     category: str
     message: str
-    details: dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict[str, Any])
 
 
 @dataclass
@@ -29,7 +29,7 @@ class EvalResult:
     passed: bool
     score: float
     metrics: dict[str, Any]
-    failures: list[EvalFailure] = field(default_factory=list)
+    failures: list[EvalFailure] = field(default_factory=list[EvalFailure])
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -99,7 +99,7 @@ class EvalReport:
         with failures_path.open("w", encoding="utf-8") as handle:
             for result in self.results:
                 for failure in result.failures:
-                    record = {
+                    record: dict[str, Any] = {
                         "evaluator": result.evaluator,
                         **asdict(failure),
                     }
