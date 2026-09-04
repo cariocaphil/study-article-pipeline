@@ -3,6 +3,7 @@ Tests for src/utils/observability.py.
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -20,6 +21,20 @@ def test_usage_tracker_accumulates_tokens():
 
     assert usage.input_tokens == 125
     assert usage.output_tokens == 60
+
+
+def test_usage_tracker_add_is_safe_under_concurrent_updates():
+    usage = UsageTracker()
+
+    def bump(_: int) -> None:
+        for _ in range(200):
+            usage.add(1, 2)
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(executor.map(bump, range(8)))
+
+    assert usage.input_tokens == 1600
+    assert usage.output_tokens == 3200
 
 
 def test_stage_timer_records_elapsed_seconds():

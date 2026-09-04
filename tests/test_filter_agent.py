@@ -9,14 +9,16 @@ goes offline or is redesigned, these tests may need a replacement URL.
 """
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import anthropic
 import pytest
 
 from src.agents.filter_agent import filter_articles
+from src.utils.observability import UsageTracker
 from tests.anthropic_mocks import mock_message
 
 GOOD_REVIEW_URL = (
@@ -111,6 +113,93 @@ class TestFilterArticlesParsing:
         results = filter_articles(["https://example.com/broken"], "english", MagicMock())
 
         assert results == []
+
+
+@patch("src.agents.filter_agent.create_message_with_retry")
+class TestFilterArticlesConcurrency:
+    def test_preserves_input_order_among_accepted_urls(self, mock_create: MagicMock):
+        responses = {
+            "https://example.com/a": mock_message(
+                [_text_block(_filter_json(title="First"))], "end_turn"
+            ),
+            "https://example.com/b": mock_message(
+                [_text_block(_filter_json(is_review=False))], "end_turn"
+            ),
+            "https://example.com/c": mock_message(
+                [_text_block(_filter_json(title="Third"))], "end_turn"
+            ),
+        }
+
+        def create_for_url(*_args: object, **kwargs: object) -> SimpleNamespace:
+            messages = kwargs["messages"]
+            assert isinstance(messages, list) and messages
+            first_message = cast(dict[str, object], messages[0])
+            prompt = first_message["content"]
+            assert isinstance(prompt, str)
+            for url, response in responses.items():
+                if url in prompt:
+                    return response
+            raise AssertionError(f"Unexpected prompt: {prompt!r}")
+
+        mock_create.side_effect = create_for_url
+
+        results = filter_articles(
+            [
+                "https://example.com/a",
+                "https://example.com/b",
+                "https://example.com/c",
+            ],
+            "english",
+            MagicMock(),
+            max_workers=3,
+        )
+
+        assert [article["url"] for article in results] == [
+            "https://example.com/a",
+            "https://example.com/c",
+        ]
+        assert [article["title"] for article in results] == ["First", "Third"]
+
+    def test_returns_empty_for_no_urls(self, mock_create: MagicMock):
+        assert filter_articles([], "english", MagicMock()) == []
+        mock_create.assert_not_called()
+
+    def test_caps_thread_pool_to_max_workers(self, mock_create: MagicMock):
+        mock_create.return_value = mock_message(
+            [_text_block(_filter_json(title="Ok"))],
+            "end_turn",
+        )
+        urls = [f"https://example.com/{i}" for i in range(5)]
+
+        with patch(
+            "src.agents.filter_agent.ThreadPoolExecutor",
+            wraps=ThreadPoolExecutor,
+        ) as mock_pool:
+            results = filter_articles(urls, "english", MagicMock(), max_workers=2)
+
+        assert len(results) == 5
+        mock_pool.assert_called_once_with(max_workers=2)
+
+    def test_records_usage_across_concurrent_calls(self, mock_create: MagicMock):
+        mock_create.return_value = mock_message(
+            [_text_block(_filter_json(title="Ok"))],
+            "end_turn",
+            input_tokens=10,
+            output_tokens=4,
+        )
+        usage = UsageTracker()
+
+        results = filter_articles(
+            ["https://example.com/1", "https://example.com/2", "https://example.com/3"],
+            "english",
+            MagicMock(),
+            usage=usage,
+            max_workers=3,
+        )
+
+        assert len(results) == 3
+        assert usage.input_tokens == 30
+        assert usage.output_tokens == 12
 
 
 @pytest.mark.slow
