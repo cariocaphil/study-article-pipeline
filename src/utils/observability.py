@@ -5,6 +5,7 @@ Logging, timing, token usage, and user-facing error helpers for pipeline runs.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -41,12 +42,16 @@ def new_run_id() -> str:
 
 @dataclass
 class UsageTracker:
+    """Accumulates Anthropic token usage; safe for concurrent filter workers."""
+
     input_tokens: int = 0
     output_tokens: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     def add(self, input_tokens: int, output_tokens: int) -> None:
-        self.input_tokens += input_tokens
-        self.output_tokens += output_tokens
+        with self._lock:
+            self.input_tokens += input_tokens
+            self.output_tokens += output_tokens
 
 
 @dataclass
