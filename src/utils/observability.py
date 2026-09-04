@@ -9,12 +9,15 @@ import os
 import threading
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
 from types import TracebackType
 
 from anthropic import APIConnectionError, APIStatusError, RateLimitError
 from anthropic.types import Message
+from opentelemetry import trace
+from opentelemetry.trace import Span, Status, StatusCode, Tracer
 
 StageCallback = Callable[[str], None]
 
@@ -26,10 +29,49 @@ STAGE_LABELS = {
 }
 
 APPLICATIONINSIGHTS_CONNECTION_STRING_ENV = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+TRACER_NAME = "study_article_pipeline"
+PIPELINE_RUN_SPAN = "pipeline.run"
+PIPELINE_STAGE_SPAN_PREFIX = "pipeline.stage"
 
 logger = logging.getLogger(__name__)
 
 _telemetry_configured = False
+
+
+def get_tracer() -> Tracer:
+    """Return the process tracer (no-op until a real TracerProvider is configured)."""
+    return trace.get_tracer(TRACER_NAME)
+
+
+@contextmanager
+def pipeline_run_span(
+    run_id: str,
+    *,
+    source_language: str,
+    translation_language: str,
+    user_level: str,
+    n_articles: int,
+    topic_type: str,
+) -> Generator[Span, None, None]:
+    """
+    Parent span for one pipeline execution.
+
+    Omits the raw topic string from attributes (privacy); callers may set
+    aggregate outcome attributes on the yielded span before exit.
+    """
+    with get_tracer().start_as_current_span(PIPELINE_RUN_SPAN) as span:
+        span.set_attribute("pipeline.run_id", run_id)
+        span.set_attribute("pipeline.source_language", source_language)
+        span.set_attribute("pipeline.translation_language", translation_language)
+        span.set_attribute("pipeline.user_level", user_level)
+        span.set_attribute("pipeline.n_articles", n_articles)
+        span.set_attribute("pipeline.topic_type", topic_type)
+        try:
+            yield span
+        except Exception as exc:
+            span.set_status(Status(StatusCode.ERROR, type(exc).__name__))
+            span.record_exception(exc)
+            raise
 
 
 def configure_logging() -> None:
@@ -105,6 +147,7 @@ class StageTimer:
     seconds: dict[str, float] = field(default_factory=dict[str, float])
 
     def track(self, stage: str, callback: StageCallback | None = None):
+        """Time a stage and emit a child OpenTelemetry span when a provider is set."""
         return _StageContext(self, stage, callback)
 
 
@@ -119,11 +162,18 @@ class _StageContext:
         self._stage = stage
         self._callback = callback
         self._start = 0.0
+        self._span_cm: AbstractContextManager[Span] | None = None
 
     def __enter__(self) -> None:
         if self._callback:
             self._callback(self._stage)
         self._start = time.perf_counter()
+        span_cm = get_tracer().start_as_current_span(
+            f"{PIPELINE_STAGE_SPAN_PREFIX}.{self._stage}",
+            attributes={"pipeline.stage": self._stage},
+        )
+        self._span_cm = span_cm
+        span_cm.__enter__()
 
     def __exit__(
         self,
@@ -133,6 +183,10 @@ class _StageContext:
     ) -> None:
         elapsed = time.perf_counter() - self._start
         self._timer.seconds[self._stage] = self._timer.seconds.get(self._stage, 0.0) + elapsed
+        span_cm = self._span_cm
+        self._span_cm = None
+        if span_cm is not None:
+            span_cm.__exit__(exc_type, exc, tb)
 
 
 def record_api_usage(
