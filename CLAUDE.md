@@ -32,7 +32,7 @@ that passed tool validation are kept.
 
 | Tool | File | Used by | What it checks |
 |------|------|---------|----------------|
-| `validate_url_reachable(url)` | `src/tools/validate_url_reachable.py` | `search_agent.py` | URL passes SSRF checks; HTTP HEAD responds 2xx/3xx |
+| `validate_url_reachable(url)` | `src/tools/validate_url_reachable.py` | `search_agent.py` | SSRF-safe URL (DNS + redirects); HTTP HEAD 2xx |
 | `verify_quote(sentence, article_text)` | `src/tools/verify_quote.py` | `extract_agent.py` | `sentence_context` is a verbatim quote from the article |
 | `validate_translation(phrase, translation)` | `src/tools/validate_translation.py` | `extract_agent.py` | Translation is non-empty and not a lazy copy of the source phrase |
 | `validate_topic(topic)` | `src/tools/validate_topic.py` | `orchestrator.py` | Topic is non-empty, within length limits, and safe for filenames/prompts |
@@ -139,7 +139,7 @@ External content is treated as untrusted data, not instructions:
 |----------|-----------|------|
 | User topic input | `validate_topic()` rejects empty, oversized, or unsafe strings | `src/tools/validate_topic.py` |
 | Search topic identity | Trailing release year + content type injected into search prompt so similar titles are not substituted | `src/utils/topic_disambiguation.py`, `src/agents/search_agent.py` |
-| Outbound URL fetch | `is_safe_fetch_url()` blocks private/local addresses before HTTP HEAD | `src/tools/url_safety.py` |
+| Outbound URL fetch | `is_safe_fetch_url()` blocks private/local literal IPs and hostnames whose DNS resolves to any non-public address; `validate_url_reachable` re-checks every redirect hop (max 5). Residual risk: DNS rebinding/TOCTOU between resolve and connect without peer-IP pinning | `src/tools/url_safety.py`, `src/tools/validate_url_reachable.py` |
 | Streamlit user topic | `escape_markdown_text()` before embedding topic in confirmation markdown | `src/utils/run_summary.py` |
 | Pipeline cost / abuse | ACA Easy Auth (Microsoft + Google) + app login landing + daily per-user quota before `run_pipeline()` | `src/utils/aca_identity.py`, `src/utils/quota.py`, `app.py` |
 | Retrieved article text | `wrap_untrusted_content()` + preamble in agent prompts | `src/utils/untrusted_content.py` |
