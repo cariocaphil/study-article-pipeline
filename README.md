@@ -25,7 +25,8 @@ parts of the design — not afterthoughts.
 - Offline and live eval suites for faithfulness, classification, recall, and
   translation quality
 - Streamlit UI, PDF preview/download, Docker/Podman image, Azure Container Apps
-  with Easy Auth (Microsoft + Google) and daily quotas
+  with Easy Auth (Microsoft + Google), daily quotas, and optional Application
+  Insights OpenTelemetry
 - CI (Ruff, Pyright, pytest, offline evals, `uv audit`) and CD to ACA on `main`
   (Trivy image scan on deploy)
 
@@ -482,6 +483,74 @@ QUOTA_DEV_USER=local-dev
 DAILY_QUOTA=3
 ```
 
+### Application Insights (OpenTelemetry)
+
+Optional. When `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, the app enables
+Azure Monitor OpenTelemetry (`configure_observability()` in
+`src/utils/observability.py`, wired from `app.py` and `run_pipeline()`). Without
+the env var, telemetry is a no-op so local/CI stays quiet.
+
+**What is emitted**
+
+| Span / signal | Purpose |
+|---------------|---------|
+| `pipeline.run` | One pipeline execution (`run_id`, languages, CEFR level, `topic_type`, counts) |
+| `pipeline.stage.*` | `search` / `filter` / `extract` / `compile` timing |
+| `anthropic.messages.create` | API call latency, retries, token usage, approximate USD cost |
+
+**Privacy**
+
+- **Collected:** opaque `run_id`, languages, CEFR level, `topic_type`, `n_articles`,
+  stage names, Anthropic model id, input/output token counts, estimated cost,
+  retry counts, HTTP status on API errors, durations, success/failure.
+- **Not collected in custom spans:** the raw topic string, article body, extracted
+  phrases, translations, prompt/message contents, or user display names.
+- Estimated cost uses a static price table in code and **will go stale** — treat
+  it as a rough signal, not billing.
+- Platform defaults from Azure Monitor / Easy Auth (e.g. request IPs, auth
+  headers) are separate from these custom attributes; review Azure retention and
+  access controls for the App Insights resource.
+
+**Azure setup (one-time)**
+
+1. Create an Application Insights resource (same region as the app is fine) and
+   link it to your Log Analytics workspace.
+2. Copy the connection string into a Container Apps secret, e.g.
+   `applicationinsights-connection-string`.
+3. Expose it on the app:
+
+```bash
+az containerapp secret set \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --secrets applicationinsights-connection-string="<connection-string>"
+
+az containerapp update \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --set-env-vars \
+    APPLICATIONINSIGHTS_CONNECTION_STRING=secretref:applicationinsights-connection-string
+```
+
+Keep separate OTLP ingestion disabled if you use the connection-string SDK path
+above (`azure-monitor-opentelemetry`).
+
+**Verify**
+
+After a pipeline run, in App Insights **Logs**:
+
+```kusto
+dependencies
+| where timestamp > ago(2h)
+| where name startswith "pipeline." or name startswith "anthropic."
+| summarize count() by name
+| order by name asc
+```
+
+Expect stage and Anthropic dependency rows. Root `pipeline.run` / early stage
+names may not always appear as `dependencies` with the current Azure Monitor
+exporter mapping — stage and Anthropic spans are the reliable smoke signal.
+
 ## Testing
 
 Quality story (fail-closed behavior, offline suites, Madre regression) is
@@ -742,10 +811,12 @@ were enabled under `tests/` in **PR 51**. Full Pyright `strict` mode landed in
 **PR 52**. Bounded concurrent filter-stage URL checks landed in **PR 53**.
 Controls stay locked for the full Confirm → pipeline run in **PR 54**.
 SSRF checks resolve DNS and validate each redirect hop in **PR 55**.
+Optional Application Insights OpenTelemetry (pipeline/stage/Anthropic spans,
+privacy-scoped attributes) landed in **PR 56**.
 
 **What's next**
 
-- Further product work continues from **PR 56** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 57** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 
