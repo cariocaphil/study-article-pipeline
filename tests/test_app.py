@@ -194,6 +194,29 @@ class TestGenerateButton:
         assert all(selectbox.disabled for selectbox in app.selectbox)
         assert app.slider[0].disabled is True
 
+    def test_controls_stay_locked_while_pipeline_runs(self, app: AppTest):
+        app.text_input[0].input("Entroncamento")
+
+        tmp_path = _sample_pdf_path()
+        try:
+
+            def _run_and_assert_locked(*_args: object, **_kwargs: object) -> PipelineRunResult:
+                assert app.session_state["pipeline_running"] is True
+                assert app.session_state["inputs_locked"] is True
+                return _pipeline_result(tmp_path)
+
+            with patch(
+                "src.orchestrator.run_pipeline",
+                side_effect=_run_and_assert_locked,
+            ) as mock_run:
+                app.button[0].click().run(timeout=30)
+                app.button[0].click().run(timeout=30)
+
+            mock_run.assert_called_once()
+            assert app.text_input[0].disabled is False
+        finally:
+            os.remove(tmp_path)
+
     def test_successful_run_shows_success_and_download_button(self, app: AppTest):
         app.text_input[0].input("Entroncamento")
 

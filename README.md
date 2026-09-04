@@ -740,10 +740,11 @@ under `standard` landed in **PR 49**. Unknown-variable/argument Pyright rules
 under `standard` landed in **PR 50**. The same unknown/parameter Pyright rules
 were enabled under `tests/` in **PR 51**. Full Pyright `strict` mode landed in
 **PR 52**. Bounded concurrent filter-stage URL checks landed in **PR 53**.
+Controls stay locked for the full Confirm → pipeline run in **PR 54**.
 
 **What's next**
 
-- Further product work continues from **PR 54** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 55** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 
