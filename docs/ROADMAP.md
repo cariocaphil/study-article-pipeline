@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 50**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 51**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -357,3 +357,10 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Keep the new parameter rules off under `tests/` (via execution environment) for this step
 - [x] Fix resulting typing issues in schemas, observability, filter eval, and extract tests
 - [x] Document the incremental path toward stricter typing
+
+### PR 50 — Pyright unknown-type rules ✅
+
+- [x] Enable `reportUnknownVariableType` and `reportUnknownArgumentType` under `standard`
+- [x] Keep the new unknown-type rules off under `tests/` for this step
+- [x] Annotate JSON/list/dict accumulators in agents, utils, and evals
+- [x] Document the second incremental step toward stricter typing

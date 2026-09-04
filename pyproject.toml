@@ -54,11 +54,15 @@ venv = ".venv"
 reportMissingTypeArgument = true
 reportMissingParameterType = true
 reportUnknownParameterType = true
+reportUnknownVariableType = true
+reportUnknownArgumentType = true
 
-# Keep parameter-unknown noise out of tests for this step; still require typed
-# generics project-wide via reportMissingTypeArgument.
+# Keep unknown-type / missing-parameter noise out of tests for this step; still
+# require typed generics project-wide via reportMissingTypeArgument.
 [[tool.pyright.executionEnvironments]]
 root = "tests"
 extraPaths = ["."]
 reportMissingParameterType = false
 reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false

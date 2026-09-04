@@ -7,6 +7,7 @@ Returns a list of ExtractedPhrase objects.
 
 import json
 import logging
+from typing import cast
 
 import anthropic
 from anthropic.types import MessageParam, ToolResultBlockParam
@@ -196,11 +197,19 @@ def extract_phrases(
             "Extract agent could not parse phrase list.\nExtract agent response was not a JSON array."
         )
 
-    phrases = []
-    for item in raw_phrases:
-        sentence_context = item.get("sentence_context", "")
-        phrase_text = item.get("phrase", "")
-        translation_text = item.get("translation", "")
+    phrases: list[ExtractedPhrase] = []
+    for raw_item in cast(list[object], raw_phrases):
+        if not isinstance(raw_item, dict):
+            logger.warning("Skipping non-object phrase item: %r", raw_item)
+            continue
+
+        item = cast(dict[str, object], raw_item)
+        sentence_raw = item.get("sentence_context", "")
+        phrase_raw = item.get("phrase", "")
+        translation_raw = item.get("translation", "")
+        sentence_context = sentence_raw if isinstance(sentence_raw, str) else ""
+        phrase_text = phrase_raw if isinstance(phrase_raw, str) else ""
+        translation_text = translation_raw if isinstance(translation_raw, str) else ""
 
         if verification_results.get(sentence_context) is not True:
             logger.debug("Skipping unverified quote: %s", sentence_context[:80])
@@ -211,12 +220,16 @@ def extract_phrases(
             continue
 
         try:
+            category_raw = item["category"]
+            level_raw = item["estimated_level"]
+            if not isinstance(category_raw, str) or not isinstance(level_raw, str):
+                raise ValueError("category and estimated_level must be strings")
             phrase = ExtractedPhrase(
                 phrase=phrase_text,
                 sentence_context=sentence_context,
                 translation=translation_text,
-                category=PhraseCategory(item["category"]),
-                estimated_level=CEFRLevel(item["estimated_level"]),
+                category=PhraseCategory(category_raw),
+                estimated_level=CEFRLevel(level_raw),
             )
             # Apply the floor filter — skip anything below user's level
             if phrase.estimated_level >= user_level:

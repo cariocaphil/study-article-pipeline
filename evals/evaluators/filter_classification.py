@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import anthropic
 
@@ -104,7 +105,7 @@ class FilterClassificationEvaluator:
         recall = safe_divide(true_positive, true_positive + false_negative)
         f1 = safe_divide(2 * precision * recall, precision + recall)
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "total_cases": total,
             "correct": correct,
             "accuracy": accuracy,

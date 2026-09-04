@@ -11,6 +11,7 @@ before parsing.
 
 import json
 import re
+from typing import Any
 
 # Matches the start of a JSON object key, e.g. `"full_text":` — used to tell
 # a real closing quote apart from an embedded one followed by a comma.
@@ -75,7 +76,7 @@ def _escape_stray_inner_quotes(json_str: str) -> str:
     (see `_is_real_closing_quote`); otherwise it's an embedded quote and
     gets escaped.
     """
-    result = []
+    result: list[str] = []
     in_string = False
     n = len(json_str)
     i = 0
@@ -101,7 +102,7 @@ def _escape_stray_inner_quotes(json_str: str) -> str:
     return "".join(result)
 
 
-def extract_json(text: str, open_char: str = "[", close_char: str = "]"):
+def extract_json(text: str, open_char: str = "[", close_char: str = "]") -> Any:
     """
     Extract and parse a JSON array/object embedded in an LLM text response.
 

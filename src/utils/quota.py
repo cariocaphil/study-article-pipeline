@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,20 @@ def _table_client():
     return TableClient(endpoint=endpoint, table_name=table_name, credential=credential)
 
 
+def _as_int(value: object) -> int:
+    """Coerce a table entity field to int; treat invalid values as 0."""
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
+
+
 def get_remaining(user_id: str) -> int:
     daily_quota = _daily_quota()
     row_key = _utc_date_key()
@@ -70,7 +85,7 @@ def get_remaining(user_id: str) -> int:
     table = _table_client()
     try:
         entity = table.get_entity(partition_key=user_id, row_key=row_key)
-        used = int(entity.get("count", 0))
+        used = _as_int(cast(object, entity.get("count", 0)))
     except ResourceNotFoundError:
         used = 0
 
@@ -107,7 +122,7 @@ def consume_generation(user_id: str, *, max_attempts: int = 5) -> None:
     for _ in range(max_attempts):
         try:
             entity = table.get_entity(partition_key=user_id, row_key=row_key)
-            used = int(entity.get("count", 0))
+            used = _as_int(cast(object, entity.get("count", 0)))
             if used >= daily_quota:
                 raise QuotaExceededError("Daily generation limit reached.")
 

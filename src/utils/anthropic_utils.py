@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import cast
 
 from anthropic.types import Message, ToolParam
@@ -16,7 +17,8 @@ def require_str_field(data: object, field: str) -> str:
     """Return a required string field from a tool-use input dict."""
     if not isinstance(data, dict):
         raise TypeError(f"Expected dict tool input, got {type(data).__name__}")
-    value = data.get(field)
+    mapping = cast(Mapping[str, object], data)
+    value = mapping.get(field)
     if not isinstance(value, str):
         raise TypeError(f"Expected string {field!r} in tool input")
     return value

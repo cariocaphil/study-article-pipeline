@@ -8,6 +8,7 @@ import logging
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import cast
 from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,15 @@ def parse_client_principal(header_value: str | None) -> AuthenticatedUser | None
     if not isinstance(claims, list):
         return None
 
-    typed_claims = [claim for claim in claims if isinstance(claim, dict)]
+    typed_claims: list[dict[str, str]] = []
+    for claim in cast(list[object], claims):
+        if not isinstance(claim, dict):
+            continue
+        typed_claim: dict[str, str] = {}
+        for key, value in cast(dict[object, object], claim).items():
+            if isinstance(key, str) and isinstance(value, str):
+                typed_claim[key] = value
+        typed_claims.append(typed_claim)
 
     identity_provider = payload.get("auth_typ")
     if not isinstance(identity_provider, str) or not identity_provider:

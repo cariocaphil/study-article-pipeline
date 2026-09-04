@@ -96,7 +96,7 @@ def run_pipeline(
         )
 
     # ── Step 3: Extract + review ──────────────────────────────────────────────
-    articles = []
+    articles: list[Article] = []
     with stage_timer.track("extract", on_stage):
         for raw in raw_articles:
             phrases = extract_phrases(

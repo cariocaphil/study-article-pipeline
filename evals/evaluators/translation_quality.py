@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any, cast
 
 import anthropic
 
@@ -116,7 +117,7 @@ class TranslationQualityEvaluator:
         recall = safe_divide(true_positive, true_positive + false_negative)
         f1 = safe_divide(2 * precision * recall, precision + recall)
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "total_cases": total,
             "correct": correct,
             "accuracy": accuracy,
@@ -167,9 +168,10 @@ def judge_translation(
     if not isinstance(parsed, dict) or "adequate" not in parsed:
         raise ValueError(f"Translation judge could not parse verdict for {case.id}: {raw_text}")
 
+    verdict = cast(dict[str, object], parsed)
     return TranslationJudgment(
-        adequate=bool(parsed["adequate"]),
-        reason=str(parsed.get("reason", "")),
+        adequate=bool(verdict["adequate"]),
+        reason=str(verdict.get("reason", "")),
     )
 
 

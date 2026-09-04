@@ -7,6 +7,8 @@ the article full_text it was attributed to.
 
 from __future__ import annotations
 
+from typing import Any
+
 from evals.evaluators.base import EvalFailure, EvalResult
 from src.schemas.article import PipelineOutput
 from src.tools.verify_quote import verify_quote
@@ -60,7 +62,7 @@ class QuoteFaithfulnessEvaluator:
         else:
             score = verified_phrases / total_phrases
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "total_phrases": total_phrases,
             "verified_phrases": verified_phrases,
             "unverified_phrases": total_phrases - verified_phrases,

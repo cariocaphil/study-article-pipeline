@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import anthropic
 
@@ -95,7 +96,7 @@ class ExtractPhraseRecallEvaluator:
 
         recall = safe_divide(matched_gold, total_gold)
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "total_gold_phrases": total_gold,
             "matched_gold_phrases": matched_gold,
             "recall": recall,
