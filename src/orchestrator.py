@@ -24,6 +24,7 @@ from src.utils.observability import (
     StageTimer,
     UsageTracker,
     configure_logging,
+    configure_observability,
     new_run_id,
 )
 
@@ -49,6 +50,7 @@ def run_pipeline(
     """
 
     configure_logging()
+    configure_observability()
 
     validation_error = topic_validation_error(topic)
     if validation_error:

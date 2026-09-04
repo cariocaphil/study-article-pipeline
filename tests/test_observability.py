@@ -3,15 +3,28 @@ Tests for src/utils/observability.py.
 """
 
 import logging
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import patch
 
 import pytest
 
 from src.utils.observability import (
+    APPLICATIONINSIGHTS_CONNECTION_STRING_ENV,
     StageTimer,
     UsageTracker,
+    configure_observability,
+    reset_observability_for_tests,
     user_facing_pipeline_error,
 )
+
+
+@pytest.fixture(autouse=True)
+def reset_telemetry_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    reset_observability_for_tests()
+    monkeypatch.delenv(APPLICATIONINSIGHTS_CONNECTION_STRING_ENV, raising=False)
+    yield
+    reset_observability_for_tests()
 
 
 def test_usage_tracker_accumulates_tokens():
@@ -21,6 +34,34 @@ def test_usage_tracker_accumulates_tokens():
 
     assert usage.input_tokens == 125
     assert usage.output_tokens == 60
+
+
+def test_configure_observability_is_noop_without_connection_string() -> None:
+    with patch("src.utils.observability._configure_azure_monitor") as mock_configure:
+        assert configure_observability() is False
+        mock_configure.assert_not_called()
+
+
+def test_configure_observability_is_noop_for_blank_connection_string(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(APPLICATIONINSIGHTS_CONNECTION_STRING_ENV, "   ")
+    with patch("src.utils.observability._configure_azure_monitor") as mock_configure:
+        assert configure_observability() is False
+        mock_configure.assert_not_called()
+
+
+def test_configure_observability_enables_azure_monitor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection_string = "InstrumentationKey=00000000-0000-0000-0000-000000000000"
+    monkeypatch.setenv(APPLICATIONINSIGHTS_CONNECTION_STRING_ENV, connection_string)
+
+    with patch("src.utils.observability._configure_azure_monitor") as mock_configure:
+        assert configure_observability() is True
+        mock_configure.assert_called_once_with(connection_string)
+        assert configure_observability() is False
+        mock_configure.assert_called_once()
 
 
 def test_usage_tracker_add_is_safe_under_concurrent_updates():

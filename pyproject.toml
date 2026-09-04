@@ -12,6 +12,7 @@ dependencies = [
     "reportlab>=4.4.0",
     "python-dotenv>=1.2.3",
     "streamlit[pdf]>=1.62.0",
+    "azure-monitor-opentelemetry>=1.8.9",
 ]
 
 [dependency-groups]

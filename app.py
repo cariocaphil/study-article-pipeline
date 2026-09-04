@@ -14,7 +14,12 @@ from src.utils.aca_identity import (
     login_url,
     logout_url,
 )
-from src.utils.observability import STAGE_LABELS, user_facing_pipeline_error
+from src.utils.observability import (
+    STAGE_LABELS,
+    configure_logging,
+    configure_observability,
+    user_facing_pipeline_error,
+)
 from src.utils.quota import (
     QuotaExceededError,
     QuotaUnavailableError,
@@ -43,6 +48,9 @@ st.set_page_config(
     page_icon="📚",
     layout="centered",
 )
+
+configure_logging()
+configure_observability()
 
 if "awaiting_confirmation" not in st.session_state:
     st.session_state.awaiting_confirmation = False

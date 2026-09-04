@@ -5,6 +5,7 @@ Logging, timing, token usage, and user-facing error helpers for pipeline runs.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 import uuid
@@ -24,6 +25,12 @@ STAGE_LABELS = {
     "compile": "Compiling document…",
 }
 
+APPLICATIONINSIGHTS_CONNECTION_STRING_ENV = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+
+logger = logging.getLogger(__name__)
+
+_telemetry_configured = False
+
 
 def configure_logging() -> None:
     """Configure root logging once for CLI and Streamlit server processes."""
@@ -34,6 +41,45 @@ def configure_logging() -> None:
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
         datefmt="%H:%M:%S",
     )
+
+
+def _configure_azure_monitor(connection_string: str) -> None:
+    import importlib
+
+    module = importlib.import_module("azure.monitor.opentelemetry")
+    configure = getattr(module, "configure_azure_monitor")
+    configure(connection_string=connection_string)
+
+
+def configure_observability() -> bool:
+    """
+    Enable Azure Monitor OpenTelemetry when a connection string is configured.
+
+    Returns True when Azure Monitor was configured for this process, False when
+    telemetry stays a no-op (missing/blank env var, or already configured).
+    """
+    global _telemetry_configured
+    if _telemetry_configured:
+        return False
+
+    connection_string = os.getenv(APPLICATIONINSIGHTS_CONNECTION_STRING_ENV, "").strip()
+    if not connection_string:
+        logger.debug(
+            "%s not set; Azure Monitor telemetry disabled",
+            APPLICATIONINSIGHTS_CONNECTION_STRING_ENV,
+        )
+        return False
+
+    _configure_azure_monitor(connection_string)
+    _telemetry_configured = True
+    logger.info("Azure Monitor OpenTelemetry configured")
+    return True
+
+
+def reset_observability_for_tests() -> None:
+    """Reset process-level telemetry configuration state (tests only)."""
+    global _telemetry_configured
+    _telemetry_configured = False
 
 
 def new_run_id() -> str:
