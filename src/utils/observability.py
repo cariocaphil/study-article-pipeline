@@ -32,6 +32,12 @@ APPLICATIONINSIGHTS_CONNECTION_STRING_ENV = "APPLICATIONINSIGHTS_CONNECTION_STRI
 TRACER_NAME = "study_article_pipeline"
 PIPELINE_RUN_SPAN = "pipeline.run"
 PIPELINE_STAGE_SPAN_PREFIX = "pipeline.stage"
+ANTHROPIC_CALL_SPAN = "anthropic.messages.create"
+
+# Approximate USD per 1M tokens (input, output). Rates go stale — estimates only.
+_ANTHROPIC_USD_PER_MTOK: dict[str, tuple[float, float]] = {
+    "claude-sonnet-4-6": (3.0, 15.0),
+}
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +47,23 @@ _telemetry_configured = False
 def get_tracer() -> Tracer:
     """Return the process tracer (no-op until a real TracerProvider is configured)."""
     return trace.get_tracer(TRACER_NAME)
+
+
+def estimate_anthropic_cost_usd(
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+) -> float | None:
+    """
+    Rough USD cost from a static price table, or None when the model is unknown.
+
+    Prices are intentionally approximate and must be updated when Anthropic rates change.
+    """
+    rates = _ANTHROPIC_USD_PER_MTOK.get(model)
+    if rates is None:
+        return None
+    input_rate, output_rate = rates
+    return (input_tokens * input_rate + output_tokens * output_rate) / 1_000_000.0
 
 
 @contextmanager

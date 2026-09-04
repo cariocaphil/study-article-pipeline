@@ -18,6 +18,7 @@ from src.utils.observability import (
     StageTimer,
     UsageTracker,
     configure_observability,
+    estimate_anthropic_cost_usd,
     pipeline_run_span,
     reset_observability_for_tests,
     user_facing_pipeline_error,
@@ -108,6 +109,15 @@ def test_stage_timer_records_elapsed_seconds():
 
     assert stages == ["search"]
     assert timer.seconds["search"] >= 0
+
+
+def test_estimate_anthropic_cost_usd_for_known_model() -> None:
+    cost = estimate_anthropic_cost_usd("claude-sonnet-4-6", 1_000_000, 500_000)
+    assert cost == pytest.approx(3.0 + 7.5)
+
+
+def test_estimate_anthropic_cost_usd_unknown_model_returns_none() -> None:
+    assert estimate_anthropic_cost_usd("unknown-model", 100, 50) is None
 
 
 def test_pipeline_run_span_sets_safe_attributes(memory_spans: InMemorySpanExporter) -> None:
