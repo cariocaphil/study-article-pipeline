@@ -5,7 +5,7 @@ Tests for src/utils/observability.py.
 import logging
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
@@ -17,8 +17,11 @@ from src.utils.observability import (
     PIPELINE_RUN_SPAN,
     StageTimer,
     UsageTracker,
+    configure_logging,
     configure_observability,
     estimate_anthropic_cost_usd,
+    get_tracer,
+    new_run_id,
     pipeline_run_span,
     reset_observability_for_tests,
     user_facing_pipeline_error,
@@ -197,6 +200,11 @@ def test_user_facing_pipeline_error_keeps_filter_stop_message():
     assert message == "Pipeline stopped: only 1 article(s) passed the filter."
 
 
+def test_user_facing_pipeline_error_keeps_topic_validation_message():
+    message = user_facing_pipeline_error(ValueError("Please enter a topic."))
+    assert message == "Please enter a topic."
+
+
 def test_user_facing_pipeline_error_sanitizes_parse_failures():
     message = user_facing_pipeline_error(
         ValueError("Extract agent could not parse phrase list.\nsubstring not found")
@@ -205,9 +213,44 @@ def test_user_facing_pipeline_error_sanitizes_parse_failures():
     assert "substring not found" not in message
 
 
+def test_user_facing_pipeline_error_sanitizes_agent_failures():
+    message = user_facing_pipeline_error(ValueError("Search agent failed: boom"))
+    assert "finding or processing articles" in message
+    assert "boom" not in message
+
+
+def test_user_facing_pipeline_error_keeps_other_value_errors():
+    message = user_facing_pipeline_error(ValueError("Custom validation failed"))
+    assert message == "Custom validation failed"
+
+
 def test_user_facing_pipeline_error_generic_for_unexpected():
     message = user_facing_pipeline_error(RuntimeError("boom"))
     assert message == "An unexpected error occurred. Please try again later."
+
+
+def test_user_facing_pipeline_error_for_rate_limit():
+    import httpx2 as httpx
+    from anthropic import RateLimitError
+
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx.Response(429, request=request)
+    error = RateLimitError("rate limited", response=response, body={})
+
+    message = user_facing_pipeline_error(error)
+    assert "temporarily unavailable" in message
+
+
+def test_user_facing_pipeline_error_for_connection_error():
+    import httpx2 as httpx
+    from anthropic import APIConnectionError
+
+    error = APIConnectionError(
+        message="offline",
+        request=httpx.Request("POST", "https://api.anthropic.com/v1/messages"),
+    )
+    message = user_facing_pipeline_error(error)
+    assert "temporarily unavailable" in message
 
 
 def test_user_facing_pipeline_error_for_transient_api_status():
@@ -221,6 +264,55 @@ def test_user_facing_pipeline_error_for_transient_api_status():
     message = user_facing_pipeline_error(error)
 
     assert message == ("The language service encountered a temporary error. Please try again.")
+
+
+def test_configure_logging_configures_when_root_has_no_handlers() -> None:
+    root = logging.getLogger()
+    saved = list(root.handlers)
+    try:
+        for handler in saved:
+            root.removeHandler(handler)
+        assert not root.handlers
+        configure_logging()
+        assert root.handlers
+    finally:
+        for handler in list(root.handlers):
+            root.removeHandler(handler)
+        for handler in saved:
+            root.addHandler(handler)
+
+
+def test_configure_logging_is_noop_when_handlers_exist() -> None:
+    root = logging.getLogger()
+    assert root.handlers
+    before = list(root.handlers)
+    configure_logging()
+    assert list(root.handlers) == before
+
+
+def test_configure_azure_monitor_calls_sdk() -> None:
+    from src.utils import observability as obs
+
+    fake_configure = MagicMock()
+    fake_module = MagicMock()
+    fake_module.configure_azure_monitor = fake_configure
+
+    with patch("importlib.import_module", return_value=fake_module) as mock_import:
+        obs._configure_azure_monitor("InstrumentationKey=test")
+
+    mock_import.assert_called_once_with("azure.monitor.opentelemetry")
+    fake_configure.assert_called_once_with(connection_string="InstrumentationKey=test")
+
+
+def test_new_run_id_is_twelve_hex_chars() -> None:
+    run_id = new_run_id()
+    assert len(run_id) == 12
+    assert int(run_id, 16) >= 0
+
+
+def test_get_tracer_returns_tracer() -> None:
+    tracer = get_tracer()
+    assert tracer is not None
 
 
 def test_record_api_usage_logs_and_accumulates(

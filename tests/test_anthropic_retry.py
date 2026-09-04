@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import httpx2 as httpx
 import pytest
-from anthropic import APIStatusError, InternalServerError, RateLimitError
+from anthropic import APIConnectionError, APIStatusError, InternalServerError, RateLimitError
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -46,6 +46,18 @@ def test_is_retryable_api_error_for_transient_status_codes():
 def test_is_retryable_api_error_rejects_client_errors():
     assert is_retryable_api_error(_api_status_error(400)) is False
     assert is_retryable_api_error(_api_status_error(404)) is False
+
+
+def test_is_retryable_api_error_rejects_non_api_errors():
+    assert is_retryable_api_error(ValueError("nope")) is False
+
+
+def test_is_retryable_api_error_for_connection_error():
+    error = APIConnectionError(
+        message="offline",
+        request=httpx.Request("GET", "https://api.anthropic.com/v1/messages"),
+    )
+    assert is_retryable_api_error(error) is True
 
 
 def test_create_message_with_retry_returns_first_successful_response():
@@ -232,3 +244,49 @@ def test_create_message_with_retry_marks_span_error_on_failure(
     attrs = dict(span.attributes or {})
     assert attrs["http.response.status_code"] == 400
     assert attrs["anthropic.retry_count"] == 0
+
+
+def test_create_message_with_retry_omits_cost_when_model_missing(
+    memory_spans: InMemorySpanExporter,
+) -> None:
+    client = MagicMock()
+    client.messages.create.return_value = mock_message(
+        [],
+        "end_turn",
+        input_tokens=10,
+        output_tokens=5,
+    )
+
+    create_message_with_retry(
+        client,
+        max_tokens=10,
+        messages=[{"role": "user", "content": "hi"}],
+    )
+
+    attrs = dict(memory_spans.get_finished_spans()[0].attributes or {})
+    assert attrs["gen_ai.usage.input_tokens"] == 10
+    assert "gen_ai.request.model" not in attrs
+    assert "anthropic.estimated_cost_usd" not in attrs
+
+
+def test_create_message_with_retry_omits_cost_for_unknown_model(
+    memory_spans: InMemorySpanExporter,
+) -> None:
+    client = MagicMock()
+    client.messages.create.return_value = mock_message(
+        [],
+        "end_turn",
+        input_tokens=10,
+        output_tokens=5,
+    )
+
+    create_message_with_retry(
+        client,
+        model="claude-unknown-model",
+        max_tokens=10,
+        messages=[{"role": "user", "content": "hi"}],
+    )
+
+    attrs = dict(memory_spans.get_finished_spans()[0].attributes or {})
+    assert attrs["gen_ai.request.model"] == "claude-unknown-model"
+    assert "anthropic.estimated_cost_usd" not in attrs

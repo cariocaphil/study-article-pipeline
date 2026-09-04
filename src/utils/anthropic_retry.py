@@ -125,5 +125,5 @@ def create_message_with_retry(
                 )
                 sleep_fn(delay)
 
-        assert last_error is not None
-        raise last_error
+        assert last_error is not None  # pragma: no cover
+        raise last_error  # pragma: no cover
