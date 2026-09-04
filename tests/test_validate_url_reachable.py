@@ -28,7 +28,7 @@ from src.tools.validate_url_reachable import validate_url_reachable
         (500, False),
     ],
 )
-def test_validate_url_reachable_status_codes(status, expected):
+def test_validate_url_reachable_status_codes(status: int, expected: bool) -> None:
     response = SimpleNamespace(status=status)
 
     with patch("src.tools.validate_url_reachable.urllib.request.urlopen") as mock_urlopen:
@@ -78,21 +78,23 @@ def test_validate_url_reachable_returns_false_for_malformed_url():
         "file:///etc/passwd",
     ],
 )
-def test_validate_url_reachable_blocks_unsafe_urls_without_network(url):
+def test_validate_url_reachable_blocks_unsafe_urls_without_network(url: str) -> None:
     with patch("src.tools.validate_url_reachable.urllib.request.urlopen") as mock_urlopen:
         assert validate_url_reachable(url) is False
 
     mock_urlopen.assert_not_called()
 
 
-def test_validate_url_reachable_logs_blocked_url(caplog):
+def test_validate_url_reachable_logs_blocked_url(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     with caplog.at_level(logging.INFO, logger="src.tools.validate_url_reachable"):
         assert validate_url_reachable("http://127.0.0.1") is False
 
     assert "http://127.0.0.1 → blocked" in caplog.text
 
 
-def test_validate_url_reachable_logs_result(caplog):
+def test_validate_url_reachable_logs_result(caplog: pytest.LogCaptureFixture) -> None:
     response = SimpleNamespace(status=200)
 
     with patch("src.tools.validate_url_reachable.urllib.request.urlopen") as mock_urlopen:

@@ -10,6 +10,7 @@ import logging
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import anthropic
 import pytest
 
 from src.agents.review_agent import review_phrases
@@ -119,7 +120,9 @@ def test_review_raises_when_verdicts_are_not_a_list():
 
 
 @pytest.mark.slow
-def test_review_removes_proper_nouns(anthropic_client, sample_phrases):
+def test_review_removes_proper_nouns(
+    anthropic_client: anthropic.Anthropic, sample_phrases: list[ExtractedPhrase]
+):
     reviewed = review_phrases(sample_phrases, topic="Entroncamento", client=anthropic_client)
 
     reviewed_text = [p.phrase for p in reviewed]
@@ -128,11 +131,17 @@ def test_review_removes_proper_nouns(anthropic_client, sample_phrases):
 
 
 @pytest.mark.slow
-def test_review_flags_duplicates(anthropic_client, sample_phrases, caplog):
+def test_review_flags_duplicates(
+    anthropic_client: anthropic.Anthropic,
+    sample_phrases: list[ExtractedPhrase],
+    caplog: pytest.LogCaptureFixture,
+):
     with caplog.at_level(logging.INFO, logger="src.agents.review_agent"):
         review_phrases(sample_phrases, topic="Entroncamento", client=anthropic_client)
 
-    flagged_lines = [line for line in caplog.text.splitlines() if "Flagged for review" in line]
+    flagged_lines: list[str] = [
+        line for line in caplog.text.splitlines() if "Flagged for review" in line
+    ]
 
     assert len(flagged_lines) >= 1
     assert any(

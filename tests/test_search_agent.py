@@ -9,6 +9,7 @@ Run `uv run pytest -m "not slow"` to skip the integration tests.
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import anthropic
 import pytest
 
 from src.agents.search_agent import search_articles
@@ -31,7 +32,7 @@ def _tool_use(tool_id: str, url: str):
 
 class TestSearchArticlesToolLoop:
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_returns_only_reachable_urls_validated_via_tool(self, mock_validate):
+    def test_returns_only_reachable_urls_validated_via_tool(self, mock_validate: MagicMock):
         good_url = "https://example.com/good"
         bad_url = "https://example.com/bad"
         mock_validate.side_effect = lambda url: url == good_url
@@ -57,7 +58,7 @@ class TestSearchArticlesToolLoop:
         assert mock_validate.call_count == 2
 
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_drops_urls_not_validated_by_tool(self, mock_validate):
+    def test_drops_urls_not_validated_by_tool(self, mock_validate: MagicMock):
         validated_url = "https://example.com/validated"
         mock_validate.return_value = True
 
@@ -76,7 +77,7 @@ class TestSearchArticlesToolLoop:
         mock_validate.assert_called_once_with(validated_url)
 
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_raises_when_all_validated_urls_are_unreachable(self, mock_validate):
+    def test_raises_when_all_validated_urls_are_unreachable(self, mock_validate: MagicMock):
         bad_url = "https://example.com/bad"
         mock_validate.return_value = False
 
@@ -90,7 +91,7 @@ class TestSearchArticlesToolLoop:
             search_articles("Entroncamento", "portuguese", 1, client)
 
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_handles_pause_turn_before_tool_validation(self, mock_validate):
+    def test_handles_pause_turn_before_tool_validation(self, mock_validate: MagicMock):
         good_url = "https://example.com/good"
         mock_validate.return_value = True
 
@@ -107,7 +108,7 @@ class TestSearchArticlesToolLoop:
         assert client.messages.create.call_count == 3
 
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_raises_when_final_response_is_not_parseable_json(self, mock_validate):
+    def test_raises_when_final_response_is_not_parseable_json(self, mock_validate: MagicMock):
         good_url = "https://example.com/good"
         mock_validate.return_value = True
 
@@ -121,7 +122,7 @@ class TestSearchArticlesToolLoop:
             search_articles("Entroncamento", "portuguese", 1, client)
 
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_includes_theatre_guidance_in_search_prompt(self, mock_validate):
+    def test_includes_theatre_guidance_in_search_prompt(self, mock_validate: MagicMock):
         good_url = "https://example.com/theatre-review"
         mock_validate.return_value = True
 
@@ -144,7 +145,9 @@ class TestSearchArticlesToolLoop:
         assert "not the film, TV series" in prompt
 
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_includes_year_disambiguation_for_film_with_release_year(self, mock_validate):
+    def test_includes_year_disambiguation_for_film_with_release_year(
+        self, mock_validate: MagicMock
+    ):
         good_url = "https://example.com/madre-review"
         mock_validate.return_value = True
 
@@ -169,7 +172,9 @@ class TestSearchArticlesToolLoop:
         assert "Do not substitute a different work" in prompt
 
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_includes_year_disambiguation_for_series_with_release_year(self, mock_validate):
+    def test_includes_year_disambiguation_for_series_with_release_year(
+        self, mock_validate: MagicMock
+    ):
         good_url = "https://example.com/series-review"
         mock_validate.return_value = True
 
@@ -193,7 +198,7 @@ class TestSearchArticlesToolLoop:
         assert "TV series" in prompt
 
     @patch("src.agents.search_agent.validate_url_reachable")
-    def test_omits_year_disambiguation_for_topics_without_year(self, mock_validate):
+    def test_omits_year_disambiguation_for_topics_without_year(self, mock_validate: MagicMock):
         good_url = "https://example.com/review"
         mock_validate.return_value = True
 
@@ -210,7 +215,7 @@ class TestSearchArticlesToolLoop:
 
 
 @pytest.mark.slow
-def test_search_articles_returns_urls(anthropic_client):
+def test_search_articles_returns_urls(anthropic_client: anthropic.Anthropic):
     urls = search_articles("Entroncamento", "portuguese", 3, anthropic_client)
 
     assert isinstance(urls, list)
@@ -219,7 +224,7 @@ def test_search_articles_returns_urls(anthropic_client):
 
 
 @pytest.mark.slow
-def test_search_articles_empty_result(anthropic_client):
+def test_search_articles_empty_result(anthropic_client: anthropic.Anthropic):
     # A nonsense topic should yield no reachable URLs — either because Claude
     # finds nothing, validation filters everything out, or the response can't
     # be parsed as JSON.

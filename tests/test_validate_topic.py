@@ -4,6 +4,8 @@ Tests for src/tools/validate_topic.py.
 
 import logging
 
+import pytest
+
 from src.tools.validate_topic import (
     MAX_TOPIC_LENGTH,
     topic_validation_error,
@@ -67,21 +69,21 @@ def test_validate_topic_rejects_script_markup_as_unsafe_characters():
     assert topic_validation_error(topic) == ("Topic contains characters that are not allowed.")
 
 
-def test_validate_topic_logs_valid(caplog):
+def test_validate_topic_logs_valid(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO, logger="src.tools.validate_topic"):
         validate_topic("Entroncamento")
 
     assert "'Entroncamento' → valid" in caplog.text
 
 
-def test_validate_topic_logs_invalid(caplog):
+def test_validate_topic_logs_invalid(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO, logger="src.tools.validate_topic"):
         validate_topic("")
 
     assert "'' → invalid" in caplog.text
 
 
-def test_validate_topic_quiet_mode(caplog):
+def test_validate_topic_quiet_mode(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO, logger="src.tools.validate_topic"):
         validate_topic("Entroncamento", quiet=True)
 

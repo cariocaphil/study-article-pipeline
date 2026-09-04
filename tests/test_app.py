@@ -24,7 +24,7 @@ APP_TITLE = app_module.APP_TITLE
 
 
 @pytest.fixture(autouse=True)
-def quota_dev_mode(monkeypatch):
+def quota_dev_mode(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("QUOTA_DEV_MODE", "1")
     monkeypatch.setenv("QUOTA_DEV_USER", "test-user")
     monkeypatch.setenv("DAILY_QUOTA", "3")
@@ -59,20 +59,20 @@ def _pipeline_result(output_path: str) -> PipelineRunResult:
 
 
 @pytest.fixture
-def app():
+def app() -> AppTest:
     at = AppTest.from_file(str(APP_PATH))
     at.run(timeout=30)
     return at
 
 
 class TestAppLayout:
-    def test_loads_without_exceptions(self, app):
+    def test_loads_without_exceptions(self, app: AppTest):
         assert not app.exception
 
-    def test_title(self, app):
+    def test_title(self, app: AppTest):
         assert app.title[0].value == APP_TITLE
 
-    def test_intro_copy_present(self, app):
+    def test_intro_copy_present(self, app: AppTest):
         body = " ".join(m.value for m in app.markdown)
         assert "Prepare for language lessons through real-world reading." in body
         assert (
@@ -85,7 +85,7 @@ class TestAppLayout:
         assert "appear directly after the article they come from" in body
         assert "come to your language lesson with both ideas" in body
 
-    def test_input_widgets_present_with_expected_defaults(self, app):
+    def test_input_widgets_present_with_expected_defaults(self, app: AppTest):
         assert app.text_input[0].label == "Topic"
         assert app.text_input[0].value == ""
 
@@ -111,7 +111,9 @@ class TestAppLayout:
 
 
 class TestLoginLanding:
-    def test_unauthenticated_shows_login_landing_not_pipeline_form(self, monkeypatch):
+    def test_unauthenticated_shows_login_landing_not_pipeline_form(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
         monkeypatch.delenv("QUOTA_DEV_MODE", raising=False)
         monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "prodaccount")
 
@@ -151,7 +153,7 @@ class TestLoginLanding:
 
 
 class TestGenerateButton:
-    def test_blank_topic_shows_error_without_entering_confirmation(self, app):
+    def test_blank_topic_shows_error_without_entering_confirmation(self, app: AppTest):
         with patch("src.orchestrator.run_pipeline") as mock_run:
             app.button[0].click().run(timeout=30)
 
@@ -159,7 +161,7 @@ class TestGenerateButton:
         assert [e.value for e in app.error] == ["Please enter a topic."]
         assert "Review your request" not in " ".join(m.value for m in app.markdown)
 
-    def test_whitespace_only_topic_shows_error(self, app):
+    def test_whitespace_only_topic_shows_error(self, app: AppTest):
         app.text_input[0].input("   ")
         with patch("src.orchestrator.run_pipeline") as mock_run:
             app.button[0].click().run(timeout=30)
@@ -167,7 +169,7 @@ class TestGenerateButton:
         mock_run.assert_not_called()
         assert [e.value for e in app.error] == ["Please enter a topic."]
 
-    def test_unsafe_topic_shows_error_without_entering_confirmation(self, app):
+    def test_unsafe_topic_shows_error_without_entering_confirmation(self, app: AppTest):
         app.text_input[0].input("Entroncamento/Film")
         with patch("src.orchestrator.run_pipeline") as mock_run:
             app.button[0].click().run(timeout=30)
@@ -175,7 +177,7 @@ class TestGenerateButton:
         mock_run.assert_not_called()
         assert [e.value for e in app.error] == ["Topic contains characters that are not allowed."]
 
-    def test_valid_topic_shows_summary_before_running_pipeline(self, app):
+    def test_valid_topic_shows_summary_before_running_pipeline(self, app: AppTest):
         app.text_input[0].input("Amadeus")
         app.selectbox[0].select("Theatre production")
 
@@ -192,7 +194,7 @@ class TestGenerateButton:
         assert all(selectbox.disabled for selectbox in app.selectbox)
         assert app.slider[0].disabled is True
 
-    def test_successful_run_shows_success_and_download_button(self, app):
+    def test_successful_run_shows_success_and_download_button(self, app: AppTest):
         app.text_input[0].input("Entroncamento")
 
         tmp_path = _sample_pdf_path()
@@ -222,7 +224,7 @@ class TestGenerateButton:
         finally:
             os.remove(tmp_path)
 
-    def test_selected_topic_type_is_passed_to_pipeline(self, app):
+    def test_selected_topic_type_is_passed_to_pipeline(self, app: AppTest):
         app.text_input[0].input("Amadeus")
         app.selectbox[0].select("Theatre production")
 
@@ -239,7 +241,7 @@ class TestGenerateButton:
         finally:
             os.remove(tmp_path)
 
-    def test_value_error_from_pipeline_shown_as_error(self, app):
+    def test_value_error_from_pipeline_shown_as_error(self, app: AppTest):
         app.text_input[0].input("Entroncamento")
 
         message = "Pipeline stopped: only 1 article(s) passed the filter."
@@ -251,7 +253,7 @@ class TestGenerateButton:
         assert [e.value for e in app.error] == [message]
         assert app.text_input[0].disabled is False
 
-    def test_unexpected_error_from_pipeline_shown_with_prefix(self, app):
+    def test_unexpected_error_from_pipeline_shown_with_prefix(self, app: AppTest):
         app.text_input[0].input("Entroncamento")
 
         with patch("src.orchestrator.run_pipeline", side_effect=RuntimeError("boom")):
@@ -264,7 +266,7 @@ class TestGenerateButton:
         ]
         assert app.text_input[0].disabled is False
 
-    def test_topic_is_stripped_before_being_passed_to_pipeline(self, app):
+    def test_topic_is_stripped_before_being_passed_to_pipeline(self, app: AppTest):
         app.text_input[0].input("  Entroncamento  ")
 
         tmp_path = _sample_pdf_path()
@@ -280,7 +282,7 @@ class TestGenerateButton:
         finally:
             os.remove(tmp_path)
 
-    def test_go_back_returns_to_generate_step_without_running_pipeline(self, app):
+    def test_go_back_returns_to_generate_step_without_running_pipeline(self, app: AppTest):
         app.text_input[0].input("Entroncamento")
 
         with patch("src.orchestrator.run_pipeline") as mock_run:
@@ -291,7 +293,9 @@ class TestGenerateButton:
         assert app.button[0].label == "Generate study document"
         assert app.text_input[0].disabled is False
 
-    def test_quota_exceeded_blocks_pipeline_run(self, app, monkeypatch):
+    def test_quota_exceeded_blocks_pipeline_run(
+        self, app: AppTest, monkeypatch: pytest.MonkeyPatch
+    ):
         monkeypatch.setenv("DAILY_QUOTA", "1")
         from src.utils.quota import consume_generation, reset_dev_quota_for_tests
 

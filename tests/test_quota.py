@@ -16,7 +16,7 @@ from src.utils.quota import (
 
 
 @pytest.fixture(autouse=True)
-def dev_quota_env(monkeypatch):
+def dev_quota_env(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("QUOTA_DEV_MODE", "1")
     monkeypatch.setenv("QUOTA_DEV_USER", "quota-user")
     monkeypatch.setenv("DAILY_QUOTA", "2")
@@ -51,13 +51,13 @@ def test_quota_is_per_user():
     assert get_remaining("user-d") == 2
 
 
-def test_quota_enabled_in_dev_mode(monkeypatch):
+def test_quota_enabled_in_dev_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("AZURE_STORAGE_ACCOUNT", raising=False)
 
     assert quota_enabled() is True
 
 
-def test_invalid_daily_quota_raises(monkeypatch):
+def test_invalid_daily_quota_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DAILY_QUOTA", "0")
 
     with pytest.raises(QuotaUnavailableError):
@@ -79,11 +79,13 @@ def test_invalid_daily_quota_raises(monkeypatch):
         ([], 0),
     ],
 )
-def test_as_int_coerces_table_entity_values(value, expected):
+def test_as_int_coerces_table_entity_values(value: object, expected: int) -> None:
     assert _as_int(value) == expected
 
 
-def test_get_remaining_uses_as_int_for_table_entity(monkeypatch):
+def test_get_remaining_uses_as_int_for_table_entity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("QUOTA_DEV_MODE", raising=False)
     monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "acct")
     monkeypatch.setenv("QUOTA_TABLE_NAME", "quota")
@@ -96,7 +98,9 @@ def test_get_remaining_uses_as_int_for_table_entity(monkeypatch):
     assert get_remaining("user-a") == 3
 
 
-def test_consume_generation_uses_as_int_for_table_entity(monkeypatch):
+def test_consume_generation_uses_as_int_for_table_entity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("QUOTA_DEV_MODE", raising=False)
     monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "acct")
     monkeypatch.setenv("QUOTA_TABLE_NAME", "quota")

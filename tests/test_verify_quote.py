@@ -4,6 +4,8 @@ Tests for src/tools/verify_quote.py.
 
 import logging
 
+import pytest
+
 from src.tools.verify_quote import verify_quote
 
 ARTICLE_TEXT = """
@@ -33,7 +35,7 @@ def test_verify_quote_returns_false_for_empty_sentence():
     assert verify_quote("", ARTICLE_TEXT) is False
 
 
-def test_verify_quote_logs_result(caplog):
+def test_verify_quote_logs_result(caplog: pytest.LogCaptureFixture) -> None:
     sentence = "começa a entrar em pequenos esquemas e crimes."
     with caplog.at_level(logging.INFO, logger="src.tools.verify_quote"):
         verify_quote(sentence, ARTICLE_TEXT)
@@ -41,7 +43,7 @@ def test_verify_quote_logs_result(caplog):
     assert f"{sentence} → verified" in caplog.text
 
 
-def test_verify_quote_logs_not_found(caplog):
+def test_verify_quote_logs_not_found(caplog: pytest.LogCaptureFixture) -> None:
     sentence = "Esta frase não está no artigo."
     with caplog.at_level(logging.INFO, logger="src.tools.verify_quote"):
         verify_quote(sentence, ARTICLE_TEXT)
