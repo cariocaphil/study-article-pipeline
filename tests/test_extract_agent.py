@@ -69,8 +69,15 @@ class TestExtractPhrasesToolLoop:
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
         unverified_sentence = "Laura foge de um passado calmo."
-        mock_verify.side_effect = lambda sentence, _: sentence == verified_sentence
-        mock_validate.side_effect = lambda phrase, translation: translation != phrase
+
+        def verify_side_effect(sentence: object, _: object) -> bool:
+            return sentence == verified_sentence
+
+        def validate_side_effect(phrase: object, translation: object) -> bool:
+            return translation != phrase
+
+        mock_verify.side_effect = verify_side_effect
+        mock_validate.side_effect = validate_side_effect
 
         client = MagicMock()
         client.messages.create.side_effect = [
@@ -189,7 +196,11 @@ class TestExtractPhrasesToolLoop:
         article = "Laura foge de um passado turbulento."
         verified_sentence = "Laura foge de um passado turbulento."
         mock_verify.return_value = True
-        mock_validate.side_effect = lambda phrase, translation: translation == "turbulent"
+
+        def validate_side_effect(phrase: object, translation: object) -> bool:
+            return translation == "turbulent"
+
+        mock_validate.side_effect = validate_side_effect
 
         client = MagicMock()
         client.messages.create.side_effect = [

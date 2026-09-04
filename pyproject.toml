@@ -45,20 +45,21 @@ exclude = [
     "evals/results",
     "**/__pycache__",
 ]
-typeCheckingMode = "standard"
+typeCheckingMode = "strict"
 pythonVersion = "3.11"
 venvPath = "."
 venv = ".venv"
-# Incremental path toward strict (option C): enable selected strict-mode rules
-# under standard before flipping typeCheckingMode.
+# Option C complete: full strict mode. Selected rules below remain explicit
+# for clarity; strict already enables them.
 reportMissingTypeArgument = true
 reportMissingParameterType = true
 reportUnknownParameterType = true
 reportUnknownVariableType = true
 reportUnknownArgumentType = true
 
-# Tests share the same unknown-type / missing-parameter rules as src and evals.
+# Tests may exercise private helpers; keep private-usage checks for src/evals.
 # extraPaths keeps repo-root imports resolvable under the tests/ environment.
 [[tool.pyright.executionEnvironments]]
 root = "tests"
 extraPaths = ["."]
+reportPrivateUsage = false

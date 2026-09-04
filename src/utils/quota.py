@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
-from typing import cast
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def quota_enabled() -> bool:
     )
 
 
-def _table_client():
+def _table_client() -> Any:
     from azure.data.tables import TableClient
     from azure.identity import DefaultAzureCredential
 

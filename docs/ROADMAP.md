@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 52**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 53**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -371,3 +371,10 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Annotate pytest fixtures, `@patch` mocks, and parametrize args across the test suite
 - [x] Keep `typeCheckingMode = "standard"` (full `strict` deferred)
 - [x] Document the third incremental step toward stricter typing
+
+### PR 52 — Pyright strict mode ✅
+
+- [x] Set `typeCheckingMode = "strict"`
+- [x] Fix remaining strict-only issues (unknown lambdas, ReportLab/Azure member stubs, font registration flag)
+- [x] Allow `reportPrivateUsage` under `tests/` so unit tests can call private helpers
+- [x] Document completion of the option-C path toward stricter typing

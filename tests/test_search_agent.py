@@ -35,7 +35,11 @@ class TestSearchArticlesToolLoop:
     def test_returns_only_reachable_urls_validated_via_tool(self, mock_validate: MagicMock):
         good_url = "https://example.com/good"
         bad_url = "https://example.com/bad"
-        mock_validate.side_effect = lambda url: url == good_url
+
+        def validate_side_effect(url: object) -> bool:
+            return url == good_url
+
+        mock_validate.side_effect = validate_side_effect
 
         client = MagicMock()
         client.messages.create.side_effect = [
