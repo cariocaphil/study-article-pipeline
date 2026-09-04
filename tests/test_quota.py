@@ -1,10 +1,13 @@
 """Tests for src/utils/quota.py."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from src.utils.quota import (
     QuotaExceededError,
     QuotaUnavailableError,
+    _as_int,
     consume_generation,
     get_remaining,
     quota_enabled,
@@ -59,3 +62,54 @@ def test_invalid_daily_quota_raises(monkeypatch):
 
     with pytest.raises(QuotaUnavailableError):
         get_remaining("user-e")
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (True, 0),
+        (False, 0),
+        (3, 3),
+        (True, 0),
+        (False, 0),
+        ("7", 7),
+        ("not-a-number", 0),
+        (3.5, 0),
+        (None, 0),
+        ([], 0),
+    ],
+)
+def test_as_int_coerces_table_entity_values(value, expected):
+    assert _as_int(value) == expected
+
+
+def test_get_remaining_uses_as_int_for_table_entity(monkeypatch):
+    monkeypatch.delenv("QUOTA_DEV_MODE", raising=False)
+    monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "acct")
+    monkeypatch.setenv("QUOTA_TABLE_NAME", "quota")
+    monkeypatch.setenv("DAILY_QUOTA", "5")
+
+    table = MagicMock()
+    table.get_entity.return_value = {"count": "2"}
+    monkeypatch.setattr("src.utils.quota._table_client", lambda: table)
+
+    assert get_remaining("user-a") == 3
+
+
+def test_consume_generation_uses_as_int_for_table_entity(monkeypatch):
+    monkeypatch.delenv("QUOTA_DEV_MODE", raising=False)
+    monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "acct")
+    monkeypatch.setenv("QUOTA_TABLE_NAME", "quota")
+    monkeypatch.setenv("DAILY_QUOTA", "5")
+
+    entity = MagicMock()
+    entity.get.side_effect = lambda key, default=0: True if key == "count" else default
+    entity.metadata = {"etag": "etag-1"}
+    table = MagicMock()
+    table.get_entity.return_value = entity
+    monkeypatch.setattr("src.utils.quota._table_client", lambda: table)
+
+    consume_generation("user-a")
+
+    entity.__setitem__.assert_called_with("count", 1)
+    table.update_entity.assert_called_once()
