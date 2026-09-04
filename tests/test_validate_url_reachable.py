@@ -16,7 +16,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.tools.validate_url_reachable import MAX_REDIRECTS, validate_url_reachable
+from src.tools.validate_url_reachable import (
+    MAX_REDIRECTS,
+    _head_opener,
+    _NoRedirectHandler,
+    validate_url_reachable,
+)
 
 
 def _public_resolve(_: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
@@ -260,3 +265,66 @@ def test_resolves_relative_redirect_location():
         assert validate_url_reachable("https://example.com/start") is True
 
     assert opener.open.call_args_list[1].args[0].full_url == "https://example.com/final"
+
+
+def test_uses_getcode_when_response_has_no_status_attribute():
+    response = MagicMock(spec=["getcode"])
+    response.getcode.return_value = 204
+    context = MagicMock()
+    context.__enter__.return_value = response
+    context.__exit__.return_value = None
+    opener = MagicMock()
+    opener.open.return_value = context
+
+    with patch("src.tools.validate_url_reachable._head_opener", return_value=opener):
+        assert validate_url_reachable("https://example.com") is True
+
+    response.getcode.assert_called_once()
+
+
+def test_redirect_without_location_is_unreachable(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    headers = http.client.HTTPMessage()
+    redirect = urllib.error.HTTPError(
+        url="https://example.com/start",
+        code=302,
+        msg="Found",
+        hdrs=headers,
+        fp=None,
+    )
+    opener = MagicMock()
+    opener.open.side_effect = redirect
+
+    with patch("src.tools.validate_url_reachable._head_opener", return_value=opener):
+        with caplog.at_level(logging.INFO, logger="src.tools.validate_url_reachable"):
+            assert validate_url_reachable("https://example.com/start") is False
+
+    assert "https://example.com/start → unreachable" in caplog.text
+    assert opener.open.call_count == 1
+
+
+def test_head_opener_returns_opener_director():
+    opener = _head_opener()
+    assert isinstance(opener, urllib.request.OpenerDirector)
+
+
+def test_no_redirect_handler_raises_http_error_for_redirects():
+    handler = _NoRedirectHandler()
+    request = urllib.request.Request("https://example.com/start", method="HEAD")
+    headers = http.client.HTTPMessage()
+    headers["Location"] = "https://example.com/next"
+    fp = MagicMock()
+
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        handler.redirect_request(
+            request,
+            fp=fp,
+            code=302,
+            msg="Found",
+            headers=headers,
+            newurl="https://example.com/next",
+        )
+
+    assert exc_info.value.code == 302
+    assert exc_info.value.geturl() == "https://example.com/start"
