@@ -49,3 +49,16 @@ typeCheckingMode = "standard"
 pythonVersion = "3.11"
 venvPath = "."
 venv = ".venv"
+# Incremental path toward strict (option C): enable selected strict-mode rules
+# under standard before flipping typeCheckingMode.
+reportMissingTypeArgument = true
+reportMissingParameterType = true
+reportUnknownParameterType = true
+
+# Keep parameter-unknown noise out of tests for this step; still require typed
+# generics project-wide via reportMissingTypeArgument.
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+extraPaths = ["."]
+reportMissingParameterType = false
+reportUnknownParameterType = false

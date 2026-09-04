@@ -39,7 +39,7 @@ def _validate_translation_tool_use(tool_id: str, phrase: str, translation: str):
     )
 
 
-def _phrases_json(*items: dict) -> str:
+def _phrases_json(*items: dict[str, str]) -> str:
     return json.dumps(list(items))
 
 
@@ -49,7 +49,7 @@ def _phrase_item(
     translation: str = "translation",
     category: str = "vocab",
     estimated_level: str = "C1",
-) -> dict:
+) -> dict[str, str]:
     return {
         "phrase": phrase,
         "sentence_context": sentence_context,

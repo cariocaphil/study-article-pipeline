@@ -14,6 +14,7 @@ import anthropic
 
 from evals.evaluators.base import EvalFailure, EvalResult
 from evals.evaluators.utils import safe_divide
+from src.schemas.article import FilteredArticle
 
 DEFAULT_PASS_THRESHOLD = 1.0
 
@@ -130,7 +131,9 @@ def collect_live_predictions(
     cases: list[FilterCase],
     client: anthropic.Anthropic,
     *,
-    filter_fn: Callable[[list[str], str, anthropic.Anthropic], list[dict]] | None = None,
+    filter_fn: (
+        Callable[[list[str], str, anthropic.Anthropic], list[FilteredArticle]] | None
+    ) = None,
 ) -> dict[str, bool]:
     from src.agents.filter_agent import filter_articles
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 from typing import TypedDict
 
@@ -12,11 +14,15 @@ class CEFRLevel(str, Enum):
     C1 = "C1"
     C2 = "C2"
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
+        if not isinstance(other, CEFRLevel):
+            return NotImplemented
         order = list(CEFRLevel)
         return order.index(self) >= order.index(other)
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
+        if not isinstance(other, CEFRLevel):
+            return NotImplemented
         order = list(CEFRLevel)
         return order.index(self) > order.index(other)
 
