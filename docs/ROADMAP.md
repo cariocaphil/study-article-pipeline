@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 54**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 55**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -385,3 +385,9 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Preserve input URL order among accepted articles
 - [x] Make `UsageTracker.add` thread-safe for concurrent filter workers
 - [x] Add unit tests for ordering, worker cap, and concurrent usage accumulation
+
+### PR 54 — Lock controls during pipeline run ✅
+
+- [x] Rerun after Confirm so inputs and Confirm/Go back repaint as disabled before work starts
+- [x] Disable form controls whenever `inputs_locked` or `pipeline_running`
+- [x] Assert locks remain set while `run_pipeline` executes

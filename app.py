@@ -181,6 +181,7 @@ st.divider()
 
 inputs_locked = st.session_state.inputs_locked
 pipeline_running = st.session_state.pipeline_running
+controls_disabled = inputs_locked or pipeline_running
 
 if st.session_state.display_error:
     st.error(st.session_state.display_error)
@@ -194,13 +195,13 @@ topic = st.text_input(
         "Include a release, publication, or premiere year when it helps disambiguate "
         "the work (for example, Madre (2017)). The year is optional."
     ),
-    disabled=inputs_locked,
+    disabled=controls_disabled,
 )
 
 topic_type = st.selectbox(
     "Topic type",
     list(TOPIC_TYPE_OPTIONS.keys()),
-    disabled=inputs_locked,
+    disabled=controls_disabled,
 )
 
 col1, col2 = st.columns(2)
@@ -209,14 +210,14 @@ with col1:
     source_language = st.selectbox(
         "Source language",
         ["portuguese", "spanish", "catalan", "french", "italian", "german"],
-        disabled=inputs_locked,
+        disabled=controls_disabled,
     )
 
 with col2:
     translation_language = st.selectbox(
         "Translation language",
         ["german", "english", "french", "spanish", "portuguese", "italian"],
-        disabled=inputs_locked,
+        disabled=controls_disabled,
     )
 
 col3, col4 = st.columns(2)
@@ -226,7 +227,7 @@ with col3:
         "Your CEFR level",
         ["A1", "A2", "B1", "B2", "C1", "C2"],
         index=4,  # default to C1
-        disabled=inputs_locked,
+        disabled=controls_disabled,
     )
 
 with col4:
@@ -235,7 +236,7 @@ with col4:
         min_value=3,
         max_value=8,
         value=DEFAULT_N_ARTICLES,
-        disabled=inputs_locked,
+        disabled=controls_disabled,
     )
 
 st.divider()
@@ -252,7 +253,7 @@ run_config = (
 )
 
 pending_run_config = st.session_state.get("pending_run_config")
-if st.session_state.inputs_locked and pending_run_config is not None:
+if (inputs_locked or pipeline_running) and pending_run_config is not None:
     (
         stripped_topic,
         topic_type,
@@ -297,17 +298,21 @@ if st.session_state.awaiting_confirmation and not topic_error:
             disabled=pipeline_running,
         )
 
-    if back_clicked:
+    if back_clicked and not pipeline_running:
         st.session_state.awaiting_confirmation = False
         st.session_state.pending_run_config = None
         st.session_state.inputs_locked = False
         st.rerun()
 
-    if confirm_clicked:
+    # Phase 1: mark running and rerun so controls repaint as disabled before work starts.
+    if confirm_clicked and not pipeline_running:
         st.session_state.pipeline_running = True
         st.session_state.last_run_result = None
         st.session_state.display_error = None
+        st.rerun()
 
+    # Phase 2: execute after the disabled UI has been rendered.
+    if pipeline_running:
         if authenticated_user is not None and quota_enabled():
             try:
                 consume_generation(authenticated_user.user_id)
@@ -346,7 +351,7 @@ else:
         "Generate study document",
         type="primary",
         use_container_width=True,
-        disabled=inputs_locked,
+        disabled=controls_disabled,
     ):
         if topic_error:
             st.error(topic_error)
