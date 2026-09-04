@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 55**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 56**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -391,3 +391,10 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Rerun after Confirm so inputs and Confirm/Go back repaint as disabled before work starts
 - [x] Disable form controls whenever `inputs_locked` or `pipeline_running`
 - [x] Assert locks remain set while `run_pipeline` executes
+
+### PR 55 — SSRF DNS and redirect hardening ✅
+
+- [x] Resolve hostnames before fetch and reject any non-public IPv4/IPv6 result via `url_safety`
+- [x] Manually follow HEAD redirects with a max hop count; validate every target with the same checks
+- [x] Add tests for public/private/mixed DNS, metadata, IPv6, redirect-to-private, and resolution failures
+- [x] Document DNS rebinding / TOCTOU as a residual trust-boundary risk

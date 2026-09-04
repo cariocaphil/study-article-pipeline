@@ -61,7 +61,7 @@ that pass:
 
 | Tool | Agent | What it checks |
 |------|-------|----------------|
-| `validate_url_reachable` | Search | SSRF-safe URL; HTTP HEAD 2xx/3xx |
+| `validate_url_reachable` | Search | SSRF-safe URL (DNS + redirect hops); HTTP HEAD 2xx |
 | `verify_quote` | Extract | `sentence_context` is verbatim in the article |
 | `validate_translation` | Extract | Translation non-empty and not a lazy copy of the source |
 
@@ -741,10 +741,11 @@ under `standard` landed in **PR 50**. The same unknown/parameter Pyright rules
 were enabled under `tests/` in **PR 51**. Full Pyright `strict` mode landed in
 **PR 52**. Bounded concurrent filter-stage URL checks landed in **PR 53**.
 Controls stay locked for the full Confirm → pipeline run in **PR 54**.
+SSRF checks resolve DNS and validate each redirect hop in **PR 55**.
 
 **What's next**
 
-- Further product work continues from **PR 55** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 56** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 
