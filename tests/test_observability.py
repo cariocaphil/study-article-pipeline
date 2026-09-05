@@ -138,7 +138,7 @@ def test_pipeline_run_span_sets_safe_attributes(memory_spans: InMemorySpanExport
     finished = _finished_by_name(memory_spans)
     run = finished[PIPELINE_RUN_SPAN]
     attrs = dict(run.attributes or {})
-    assert run.kind == SpanKind.SERVER
+    assert run.kind == SpanKind.CLIENT
     assert attrs["pipeline.run_id"] == "abc123def456"
     assert attrs["pipeline.source_language"] == "portuguese"
     assert attrs["pipeline.translation_language"] == "german"
@@ -173,7 +173,7 @@ def test_stage_spans_nest_under_pipeline_run(memory_spans: InMemorySpanExporter)
     assert search.parent is not None
     assert filter_span.parent is not None
     assert run.context is not None
-    assert run.kind == SpanKind.SERVER
+    assert run.kind == SpanKind.CLIENT
     assert search.kind == SpanKind.CLIENT
     assert filter_span.kind == SpanKind.CLIENT
     assert search.parent.span_id == run.context.span_id

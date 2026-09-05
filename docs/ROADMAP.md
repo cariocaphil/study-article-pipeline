@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 58**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 59**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -406,8 +406,13 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Instrument `create_message_with_retry` with call/retry/error spans, tokens, and estimated cost
 - [x] Document ACA App Insights secret/env setup, verification queries, and a privacy note in README/CLAUDE
 
-### PR 57 — OpenTelemetry span kinds for App Insights export
+### PR 57 — OpenTelemetry span kinds for App Insights export ✅
 
 - [x] Use `SpanKind.SERVER` for `pipeline.run` so Azure Monitor exports it as a request
 - [x] Use `SpanKind.CLIENT` for `pipeline.stage.*` and Anthropic call spans (dependencies)
 - [x] Update App Insights verify queries and tests for span kinds
+
+### PR 58 — Export pipeline.run as a dependency span
+
+- [x] Change `pipeline.run` from `SpanKind.SERVER` to `SpanKind.CLIENT` (dependencies table)
+- [x] Update docs and tests for the dependency-based verify path

@@ -102,7 +102,7 @@ optional Azure Monitor OpenTelemetry:
   `APPLICATIONINSIGHTS_CONNECTION_STRING` is set (no-op otherwise)
 - `new_run_id()`, `StageTimer`, `UsageTracker` — per-run ID, stage timing, token totals
 - `pipeline_run_span` / stage spans from `StageTimer.track` — `pipeline.run`
-  (SERVER) and `pipeline.stage.*` (CLIENT)
+  and `pipeline.stage.*` (CLIENT dependencies)
 - Anthropic call spans from `create_message_with_retry()` — CLIENT kind with
   retries, tokens, optional estimated cost
 - `record_api_usage()` — log Anthropic `Message.usage` after each API call

@@ -494,7 +494,7 @@ the env var, telemetry is a no-op so local/CI stays quiet.
 
 | Span / signal | Purpose |
 |---------------|---------|
-| `pipeline.run` | One pipeline execution (SERVER → App Insights **requests**; `run_id`, languages, CEFR level, `topic_type`, counts) |
+| `pipeline.run` | One pipeline execution (CLIENT → App Insights **dependencies**; `run_id`, languages, CEFR level, `topic_type`, counts) |
 | `pipeline.stage.*` | `search` / `filter` / `extract` / `compile` timing (CLIENT → **dependencies**) |
 | `anthropic.messages.create` | API call latency, retries, token usage, approximate USD cost (CLIENT → **dependencies**) |
 
@@ -540,16 +540,15 @@ above (`azure-monitor-opentelemetry`).
 After a pipeline run, in App Insights **Logs**:
 
 ```kusto
-union requests, dependencies
+dependencies
 | where timestamp > ago(2h)
 | where name startswith "pipeline." or name startswith "anthropic."
-| summarize count() by itemType, name
-| order by itemType asc, name asc
+| summarize count() by name
+| order by name asc
 ```
 
-Expect `pipeline.run` under **requests** (SERVER kind) and
-`pipeline.stage.*` / `anthropic.messages.create` under **dependencies**
-(CLIENT kind).
+Expect `pipeline.run`, `pipeline.stage.*`, and `anthropic.messages.create` as
+**dependencies** (all CLIENT kind).
 
 ## Testing
 
@@ -813,11 +812,12 @@ Controls stay locked for the full Confirm → pipeline run in **PR 54**.
 SSRF checks resolve DNS and validate each redirect hop in **PR 55**.
 Optional Application Insights OpenTelemetry (pipeline/stage/Anthropic spans,
 privacy-scoped attributes) landed in **PR 56**. Span kinds tuned for Azure
-Monitor export (`pipeline.run` as SERVER, stages/API as CLIENT) in **PR 57**.
+Monitor export in **PR 57**. `pipeline.run` exported as a CLIENT dependency in
+**PR 58**.
 
 **What's next**
 
-- Further product work continues from **PR 58** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 59** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 
