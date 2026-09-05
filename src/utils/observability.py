@@ -17,7 +17,7 @@ from types import TracebackType
 from anthropic import APIConnectionError, APIStatusError, RateLimitError
 from anthropic.types import Message
 from opentelemetry import trace
-from opentelemetry.trace import Span, Status, StatusCode, Tracer
+from opentelemetry.trace import Span, SpanKind, Status, StatusCode, Tracer
 
 StageCallback = Callable[[str], None]
 
@@ -81,8 +81,14 @@ def pipeline_run_span(
 
     Omits the raw topic string from attributes (privacy); callers may set
     aggregate outcome attributes on the yielded span before exit.
+
+    Uses SERVER kind so Azure Monitor exports the root run as a request
+    (INTERNAL roots were missing from App Insights dependencies in practice).
     """
-    with get_tracer().start_as_current_span(PIPELINE_RUN_SPAN) as span:
+    with get_tracer().start_as_current_span(
+        PIPELINE_RUN_SPAN,
+        kind=SpanKind.SERVER,
+    ) as span:
         span.set_attribute("pipeline.run_id", run_id)
         span.set_attribute("pipeline.source_language", source_language)
         span.set_attribute("pipeline.translation_language", translation_language)
@@ -193,6 +199,7 @@ class _StageContext:
         self._start = time.perf_counter()
         span_cm = get_tracer().start_as_current_span(
             f"{PIPELINE_STAGE_SPAN_PREFIX}.{self._stage}",
+            kind=SpanKind.CLIENT,
             attributes={"pipeline.stage": self._stage},
         )
         self._span_cm = span_cm

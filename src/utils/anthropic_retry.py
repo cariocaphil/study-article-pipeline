@@ -13,7 +13,7 @@ from typing import Any, cast
 import anthropic
 from anthropic import APIConnectionError, APIStatusError, RateLimitError
 from anthropic.types import Message
-from opentelemetry.trace import Span, Status, StatusCode
+from opentelemetry.trace import Span, SpanKind, Status, StatusCode
 
 from src.utils.observability import (
     ANTHROPIC_CALL_SPAN,
@@ -77,7 +77,10 @@ def create_message_with_retry(
     model_raw = create_kwargs.get("model")
     model = model_raw if isinstance(model_raw, str) else None
 
-    with get_tracer().start_as_current_span(ANTHROPIC_CALL_SPAN) as span:
+    with get_tracer().start_as_current_span(
+        ANTHROPIC_CALL_SPAN,
+        kind=SpanKind.CLIENT,
+    ) as span:
         span.set_attribute("gen_ai.system", "anthropic")
         span.set_attribute("gen_ai.operation.name", "chat")
         if model is not None:
