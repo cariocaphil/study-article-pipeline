@@ -11,6 +11,7 @@ import pytest
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import SpanKind
 
 from src.utils.observability import (
     APPLICATIONINSIGHTS_CONNECTION_STRING_ENV,
@@ -137,6 +138,7 @@ def test_pipeline_run_span_sets_safe_attributes(memory_spans: InMemorySpanExport
     finished = _finished_by_name(memory_spans)
     run = finished[PIPELINE_RUN_SPAN]
     attrs = dict(run.attributes or {})
+    assert run.kind == SpanKind.SERVER
     assert attrs["pipeline.run_id"] == "abc123def456"
     assert attrs["pipeline.source_language"] == "portuguese"
     assert attrs["pipeline.translation_language"] == "german"
@@ -171,6 +173,9 @@ def test_stage_spans_nest_under_pipeline_run(memory_spans: InMemorySpanExporter)
     assert search.parent is not None
     assert filter_span.parent is not None
     assert run.context is not None
+    assert run.kind == SpanKind.SERVER
+    assert search.kind == SpanKind.CLIENT
+    assert filter_span.kind == SpanKind.CLIENT
     assert search.parent.span_id == run.context.span_id
     assert filter_span.parent.span_id == run.context.span_id
     assert dict(search.attributes or {})["pipeline.stage"] == "search"

@@ -11,6 +11,7 @@ from anthropic import APIConnectionError, APIStatusError, InternalServerError, R
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import SpanKind
 
 from src.utils.anthropic_retry import (
     create_message_with_retry,
@@ -183,6 +184,7 @@ def test_create_message_with_retry_emits_token_and_cost_span_attrs(
     assert len(spans) == 1
     span = spans[0]
     assert span.name == ANTHROPIC_CALL_SPAN
+    assert span.kind == SpanKind.CLIENT
     attrs = dict(span.attributes or {})
     assert attrs["gen_ai.system"] == "anthropic"
     assert attrs["gen_ai.request.model"] == "claude-sonnet-4-6"

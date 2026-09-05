@@ -101,10 +101,10 @@ optional Azure Monitor OpenTelemetry:
 - `configure_observability()` — enables Azure Monitor when
   `APPLICATIONINSIGHTS_CONNECTION_STRING` is set (no-op otherwise)
 - `new_run_id()`, `StageTimer`, `UsageTracker` — per-run ID, stage timing, token totals
-- `pipeline_run_span` / stage spans from `StageTimer.track` — `pipeline.run` and
-  `pipeline.stage.*`
-- Anthropic call spans from `create_message_with_retry()` — retries, tokens,
-  optional estimated cost
+- `pipeline_run_span` / stage spans from `StageTimer.track` — `pipeline.run`
+  (SERVER) and `pipeline.stage.*` (CLIENT)
+- Anthropic call spans from `create_message_with_retry()` — CLIENT kind with
+  retries, tokens, optional estimated cost
 - `record_api_usage()` — log Anthropic `Message.usage` after each API call
 - `user_facing_pipeline_error()` — map internal exceptions to Streamlit-safe messages
 
