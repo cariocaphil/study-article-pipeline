@@ -49,18 +49,6 @@ def get_tracer() -> Tracer:
     return trace.get_tracer(TRACER_NAME)
 
 
-def force_flush_traces(timeout_millis: int = 5000) -> None:
-    """
-    Flush pending spans to the exporter when the provider supports it.
-
-    No-op for the default ProxyTracerProvider (local/CI without Azure Monitor).
-    """
-    provider = trace.get_tracer_provider()
-    force_flush = getattr(provider, "force_flush", None)
-    if callable(force_flush):
-        force_flush(timeout_millis)
-
-
 def estimate_anthropic_cost_usd(
     model: str,
     input_tokens: int,
@@ -96,28 +84,24 @@ def pipeline_run_span(
 
     Uses CLIENT kind so Azure Monitor exports the run as a dependency alongside
     stages (SERVER mapped to requests but was not reliably ingested for this
-    long-lived, non-HTTP root). Forces a trace flush after the span closes so
-    the batch exporter sends the root promptly under Streamlit.
+    long-lived, non-HTTP root).
     """
-    try:
-        with get_tracer().start_as_current_span(
-            PIPELINE_RUN_SPAN,
-            kind=SpanKind.CLIENT,
-        ) as span:
-            span.set_attribute("pipeline.run_id", run_id)
-            span.set_attribute("pipeline.source_language", source_language)
-            span.set_attribute("pipeline.translation_language", translation_language)
-            span.set_attribute("pipeline.user_level", user_level)
-            span.set_attribute("pipeline.n_articles", n_articles)
-            span.set_attribute("pipeline.topic_type", topic_type)
-            try:
-                yield span
-            except Exception as exc:
-                span.set_status(Status(StatusCode.ERROR, type(exc).__name__))
-                span.record_exception(exc)
-                raise
-    finally:
-        force_flush_traces()
+    with get_tracer().start_as_current_span(
+        PIPELINE_RUN_SPAN,
+        kind=SpanKind.CLIENT,
+    ) as span:
+        span.set_attribute("pipeline.run_id", run_id)
+        span.set_attribute("pipeline.source_language", source_language)
+        span.set_attribute("pipeline.translation_language", translation_language)
+        span.set_attribute("pipeline.user_level", user_level)
+        span.set_attribute("pipeline.n_articles", n_articles)
+        span.set_attribute("pipeline.topic_type", topic_type)
+        try:
+            yield span
+        except Exception as exc:
+            span.set_status(Status(StatusCode.ERROR, type(exc).__name__))
+            span.record_exception(exc)
+            raise
 
 
 def configure_logging() -> None:

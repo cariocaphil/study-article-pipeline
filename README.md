@@ -548,9 +548,7 @@ dependencies
 ```
 
 Expect `pipeline.run`, `pipeline.stage.*`, and `anthropic.messages.create` as
-**dependencies** (all CLIENT kind). The run span is flushed explicitly when the
-pipeline context exits so the long-lived root is not left pending in the batch
-exporter.
+**dependencies** (all CLIENT kind).
 
 ## Testing
 
@@ -814,8 +812,8 @@ Controls stay locked for the full Confirm → pipeline run in **PR 54**.
 SSRF checks resolve DNS and validate each redirect hop in **PR 55**.
 Optional Application Insights OpenTelemetry (pipeline/stage/Anthropic spans,
 privacy-scoped attributes) landed in **PR 56**. Span kinds tuned for Azure
-Monitor export in **PR 57**. `pipeline.run` exported as a CLIENT dependency with
-an explicit trace flush in **PR 58**.
+Monitor export in **PR 57**. `pipeline.run` exported as a CLIENT dependency in
+**PR 58**.
 
 **What's next**
 

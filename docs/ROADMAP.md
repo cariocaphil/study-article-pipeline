@@ -415,5 +415,4 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 ### PR 58 — Export pipeline.run as a dependency span
 
 - [x] Change `pipeline.run` from `SpanKind.SERVER` to `SpanKind.CLIENT` (dependencies table)
-- [x] Force-flush traces when the pipeline run span exits (Streamlit/long-run reliability)
 - [x] Update docs and tests for the dependency-based verify path
