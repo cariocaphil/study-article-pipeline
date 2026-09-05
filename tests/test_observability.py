@@ -138,7 +138,7 @@ def test_pipeline_run_span_sets_safe_attributes(memory_spans: InMemorySpanExport
     finished = _finished_by_name(memory_spans)
     run = finished[PIPELINE_RUN_SPAN]
     attrs = dict(run.attributes or {})
-    assert run.kind == SpanKind.SERVER
+    assert run.kind == SpanKind.CLIENT
     assert attrs["pipeline.run_id"] == "abc123def456"
     assert attrs["pipeline.source_language"] == "portuguese"
     assert attrs["pipeline.translation_language"] == "german"
@@ -173,13 +173,60 @@ def test_stage_spans_nest_under_pipeline_run(memory_spans: InMemorySpanExporter)
     assert search.parent is not None
     assert filter_span.parent is not None
     assert run.context is not None
-    assert run.kind == SpanKind.SERVER
+    assert run.kind == SpanKind.CLIENT
     assert search.kind == SpanKind.CLIENT
     assert filter_span.kind == SpanKind.CLIENT
     assert search.parent.span_id == run.context.span_id
     assert filter_span.parent.span_id == run.context.span_id
     assert dict(search.attributes or {})["pipeline.stage"] == "search"
     assert dict(filter_span.attributes or {})["pipeline.stage"] == "filter"
+
+
+def test_pipeline_run_span_force_flushes_traces() -> None:
+    with patch("src.utils.observability.force_flush_traces") as mock_flush:
+        with pipeline_run_span(
+            "flushrun0001",
+            source_language="portuguese",
+            translation_language="german",
+            user_level="C1",
+            n_articles=5,
+            topic_type="film",
+        ):
+            pass
+    mock_flush.assert_called_once_with()
+
+
+def test_pipeline_run_span_force_flushes_traces_on_error() -> None:
+    with patch("src.utils.observability.force_flush_traces") as mock_flush:
+        with pytest.raises(ValueError, match="stopped"):
+            with pipeline_run_span(
+                "flusherr0001",
+                source_language="portuguese",
+                translation_language="german",
+                user_level="C1",
+                n_articles=5,
+                topic_type="film",
+            ):
+                raise ValueError("Pipeline stopped: only 1 article(s) passed the filter.")
+    mock_flush.assert_called_once_with()
+
+
+def test_force_flush_traces_calls_provider_when_supported() -> None:
+    provider = MagicMock()
+    with patch("src.utils.observability.trace.get_tracer_provider", return_value=provider):
+        from src.utils.observability import force_flush_traces
+
+        force_flush_traces(timeout_millis=1234)
+
+    provider.force_flush.assert_called_once_with(1234)
+
+
+def test_force_flush_traces_is_noop_without_force_flush() -> None:
+    provider = object()
+    with patch("src.utils.observability.trace.get_tracer_provider", return_value=provider):
+        from src.utils.observability import force_flush_traces
+
+        force_flush_traces()
 
 
 def test_pipeline_run_span_records_errors(memory_spans: InMemorySpanExporter) -> None:
