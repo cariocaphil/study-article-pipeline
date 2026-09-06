@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 61**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 62**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -424,12 +424,18 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Add `require_parsed_output` helper and review schema models
 - [x] Update review prompt, unit tests, and docs
 
-### PR 60 — Structured outputs for quality judges
+### PR 60 — Structured outputs for quality judges ✅
 
-- [ ] Use `messages.parse` with `TranslationJudgeVerdict` / `DocumentQualityVerdict`
-- [ ] Add judge Pydantic schemas under `src/schemas/judges.py`
-- [ ] Update judge prompts, eval unit tests, and docs
+- [x] Use `messages.parse` with `TranslationJudgeVerdict` / `DocumentQualityVerdict`
+- [x] Add judge Pydantic schemas under `src/schemas/judges.py`
+- [x] Update judge prompts, eval unit tests, and docs
+
+### PR 61 — Structured outputs for filter agent
+
+- [ ] Use `messages.parse` with `FilterArticleVerdict` (keep `web_search` tool)
+- [ ] Add filter schema under `src/schemas/filter.py`
+- [ ] Update filter prompt, unit tests, and docs
 
 ### Future — Structured outputs for remaining agent JSON call sites
 
-- [ ] Migrate filter / extract / search agents off prompt-JSON + `extract_json` where feasible
+- [ ] Migrate extract / search agents off prompt-JSON + `extract_json` where feasible

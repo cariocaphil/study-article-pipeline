@@ -1,4 +1,3 @@
-
 You are helping a language learner collect review articles for study.
 
 ## Article Acceptance Criteria
@@ -21,12 +20,10 @@ Answer these questions:
 6. What is the full article text? Return the complete body text, preserving
    paragraphs. Do not summarise. Do not include navigation, ads, or comments.
 
-Return ONLY a JSON object with these exact keys, no other text:
-{{
-  "is_review": true or false,
-  "is_correct_language": true or false,
-  "title": "...",
-  "author": "..." or null,
-  "source_name": "...",
-  "full_text": "..."
-}}
+Return a structured object with:
+- is_review: boolean
+- is_correct_language: boolean
+- title: string
+- author: string or null
+- source_name: string
+- full_text: string
