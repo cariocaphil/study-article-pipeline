@@ -90,6 +90,7 @@ Inter-agent data passes through typed models in `src/schemas/`:
 | `Article`, `ExtractedPhrase`, `PipelineOutput`, … | `src/schemas/article.py` | Pydantic models between agents |
 | `FilteredArticle` | `src/schemas/article.py` | TypedDict returned by `filter_agent` before `Article` construction |
 | `ReviewAction`, `ReviewVerdict`, `ReviewVerdicts` | `src/schemas/review.py` | Structured output for `review_agent` (`messages.parse`) |
+| `TranslationJudgeVerdict`, `DocumentQualityVerdict`, … | `src/schemas/judges.py` | Structured outputs for translation / document quality judges |
 | `PipelineRunResult` | `src/schemas/pipeline_result.py` | Orchestrator return value (path, run ID, timings, token counts) |
 
 Prefer Pydantic models or TypedDicts over raw `dict` at agent boundaries.

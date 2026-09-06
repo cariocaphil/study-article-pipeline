@@ -817,7 +817,7 @@ Monitor export in **PR 57**. `pipeline.run` exported as a CLIENT dependency in
 
 **What's next**
 
-- Further product work continues from **PR 60** — see [docs/ROADMAP.md](docs/ROADMAP.md)
+- Further product work continues from **PR 61** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 
 Full PR checklist: [docs/ROADMAP.md](docs/ROADMAP.md)
 

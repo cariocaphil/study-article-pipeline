@@ -18,10 +18,10 @@ from evals.evaluators.base import EvalFailure, EvalResult
 from evals.evaluators.utils import safe_divide
 from src.prompts import load_prompt
 from src.schemas.article import TOPIC_TYPE_LABELS, PipelineOutput
+from src.schemas.judges import DocumentQualityVerdict
 from src.utils import load_skill
-from src.utils.anthropic_retry import create_message_with_retry
-from src.utils.anthropic_utils import message_text
-from src.utils.json_utils import extract_json
+from src.utils.anthropic_retry import parse_message_with_retry
+from src.utils.anthropic_utils import require_parsed_output
 
 DEFAULT_PASS_THRESHOLD = 0.6
 SCORE_MIN = 1.0
@@ -230,22 +230,22 @@ def judge_document_quality(
         document_json=json.dumps(document_for_judge(document), ensure_ascii=False, indent=2),
     )
 
-    response = create_message_with_retry(
+    response = parse_message_with_retry(
         client,
+        output_format=DocumentQualityVerdict,
         model="claude-sonnet-4-6",
         max_tokens=800,
         messages=[{"role": "user", "content": prompt}],
     )
-    raw_text = message_text(response)
-    parsed = extract_json(raw_text, "{", "}")
-
-    if not isinstance(parsed, dict):
+    try:
+        verdict = require_parsed_output(response)
+    except ValueError as exc:
         raise ValueError(
-            f"Document quality judge could not parse verdict for {case.id}: {raw_text}"
-        )
+            f"Document quality judge could not parse verdict for {case.id}: {exc}"
+        ) from exc
 
     try:
-        return parse_document_quality_judgment(cast(dict[str, Any], parsed))
+        return parse_document_quality_judgment(verdict.model_dump())
     except ValueError as exc:
         raise ValueError(
             f"Document quality judge returned invalid verdict for {case.id}: {exc}"
