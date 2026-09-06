@@ -21,10 +21,10 @@ from anthropic.types import ToolUnionParam
 
 from src.prompts import load_prompt
 from src.schemas.article import FilteredArticle
+from src.schemas.filter import FilterArticleVerdict
 from src.utils import load_skill
-from src.utils.anthropic_retry import create_message_with_retry
-from src.utils.anthropic_utils import message_text
-from src.utils.json_utils import extract_json
+from src.utils.anthropic_retry import parse_message_with_retry
+from src.utils.anthropic_utils import require_parsed_output
 from src.utils.observability import UsageTracker, record_api_usage
 from src.utils.untrusted_content import UNTRUSTED_CONTENT_PREAMBLE
 
@@ -56,8 +56,9 @@ def _filter_one_url(
         source_language=source_language,
     )
 
-    response = create_message_with_retry(
+    response = parse_message_with_retry(
         client,
+        output_format=FilterArticleVerdict,
         model="claude-sonnet-4-6",
         max_tokens=4000,
         tools=[WEB_SEARCH_TOOL],
@@ -65,37 +66,24 @@ def _filter_one_url(
     )
     record_api_usage(response, agent="filter_agent", usage=usage, logger=logger)
 
-    full_text = message_text(response)
-
     try:
-        data = extract_json(full_text, "{", "}")
+        verdict = require_parsed_output(response)
     except ValueError as e:
         logger.warning("Could not parse response for %s: %s", url, e)
         return None
 
-    if not isinstance(data, dict):
-        logger.warning("Could not parse response for %s: expected JSON object", url)
-        return None
-
-    parsed = cast(dict[str, object], data)
-
-    if not parsed.get("is_review") or not parsed.get("is_correct_language"):
+    if not verdict.is_review or not verdict.is_correct_language:
         logger.info("Rejected URL: %s", url)
         return None
 
-    title = parsed.get("title", "")
-    author = parsed.get("author")
-    source_name = parsed.get("source_name", "")
-    article_text = parsed.get("full_text", "")
-
     article: FilteredArticle = {
-        "title": title if isinstance(title, str) else "",
-        "author": author if isinstance(author, str) else None,
+        "title": verdict.title,
+        "author": verdict.author,
         "url": url,
-        "source_name": source_name if isinstance(source_name, str) else "",
-        "full_text": article_text if isinstance(article_text, str) else "",
+        "source_name": verdict.source_name,
+        "full_text": verdict.full_text,
     }
-    accepted_title = title if isinstance(title, str) else url
+    accepted_title = verdict.title or url
     logger.info("Accepted article: %s", accepted_title)
     return article
 

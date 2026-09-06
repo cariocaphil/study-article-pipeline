@@ -58,7 +58,8 @@ def test_filter_article_prompt_renders_literal_json_braces():
 
     assert "Accept genuine reviews." in prompt
     assert "Fetch this URL and assess it: https://example.com/review" in prompt
-    assert '"is_review": true or false' in prompt
+    assert "is_review: boolean" in prompt
+    assert "is_correct_language: boolean" in prompt
     assert "{{" not in prompt
 
 
