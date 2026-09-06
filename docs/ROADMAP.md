@@ -438,9 +438,9 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 
 ### PR 62 — Language-agnostic CEFR extraction guide
 
-- [ ] Rewrite `cefr-extraction-guide` around CEFR patterns, not Portuguese word lists
-- [ ] Keep B2/C1/C2 indicators and extract-agent notes (floor filter, loanwords)
-- [ ] Update ROADMAP / status pointers
+- [x] Rewrite `cefr-extraction-guide` around CEFR patterns, not Portuguese word lists
+- [x] Keep B2/C1/C2 indicators and extract-agent notes (floor filter, loanwords)
+- [x] Update ROADMAP / status pointers
 
 ### Future — Structured outputs for remaining agent JSON call sites
 
