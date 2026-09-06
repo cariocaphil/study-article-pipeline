@@ -1,37 +1,49 @@
-# CEFR Extraction Guide for Portuguese
+# CEFR Extraction Guide
 
 ## Purpose
-A rubric for estimating CEFR levels when extracting phrases from Portuguese
-articles. Apply this when the extract agent assigns estimated_level to phrases.
+A language-agnostic rubric for estimating CEFR levels when extracting phrases
+from source-language articles. Apply this when the extract agent assigns
+`estimated_level` to phrases. Judge difficulty relative to the article's
+source language and domain — not relative to English glosses.
+
+Examples below are illustrative only; prefer the same *kind* of signal in
+whatever language you are reading.
 
 ## Level indicators
 
 ### B2
-- Common connectors used in formal writing: "contudo", "todavia", "porém"
-- Reflexive constructions: "refugiando-se", "debruçando-se"
-- Common abstract nouns: "desigualdade", "marginalização"
-- Standard film vocabulary: "realizador", "longa-metragem", "argumento"
+- Common formal connectors (contrast, cause, concession) that advanced
+  learners still mix up or underuse
+- Frequent reflexive / pronominal / clitic patterns typical of formal prose
+- Abstract nouns common in news and cultural writing (inequality,
+  marginalization, representation, and language-equivalent forms)
+- Standard domain vocabulary for the topic type (e.g. film: director,
+  feature-length film, screenplay — in the source language)
 
 ### C1
-- Register-specific vocabulary: "cineastas", "cinematografia", "deveras"
-- Fixed expressions not deducible word-for-word: "trilhar um caminho",
-  "entrar em esquemas", "dar visibilidade a"
-- Nominalizations: "o indizível", "o não-dito", "o devir"
-- Constructions with subjunctive in embedded clauses
-- Compound nouns specific to a domain: "cidade-dormitório",
-  "eleições autárquicas", "direção fotográfica"
+- Register-specific or specialist vocabulary beyond everyday educated speech
+- Fixed expressions and collocations not recoverable word-for-word
+- Nominalizations and dense noun phrases typical of criticism or analysis
+- Complex embedded clauses (subjunctive, conditional, or equivalent mood /
+  modality markers where the language has them)
+- Domain compound nouns or multi-word terms that encode cultural or
+  institutional concepts
 
 ### C2
-- Rare or literary vocabulary: "chispava", "mortalha", "bravata"
-- Philosophical or technical terms used in cultural criticism: "devir",
-  "tessitura", "opacidade"
-- Highly idiomatic expressions: "pelo na venta", "au jour le jour"
-- Archaic or regional forms uncommon in standard European Portuguese
+- Rare, literary, archaic, or strongly regional vocabulary uncommon in
+  standard contemporary writing of that language
+- Dense philosophical or technical terms used in cultural criticism
+- Highly idiomatic expressions that resist literal translation
+- Marked stylistic forms (archaic morphology, dialectal spellings, or
+  cultivated foreignisms kept untranslated in the source text)
 
 ## Notes
 - When in doubt between two levels, assign the higher one — the floor
   filter will remove anything below the user's level anyway
-- Loanwords from English or French that exist in Portuguese dictionaries
-  count as Portuguese vocabulary (e.g. "gangsta", "low cost") but flag
-  them as REVIEW in the phrase quality step since the user may already
-  know them from their native language
+- Internationalisms and loanwords that are established in the source
+  language still count as source-language vocabulary, but flag them for
+  REVIEW in the phrase-quality step when learners may already know them
+  from another language they speak
+- Do not treat cognates with the user's translation language as
+  automatically "easy"; difficulty is about the source-language form and
+  usage in context

@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 62**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 63**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -430,11 +430,17 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Add judge Pydantic schemas under `src/schemas/judges.py`
 - [x] Update judge prompts, eval unit tests, and docs
 
-### PR 61 — Structured outputs for filter agent
+### PR 61 — Structured outputs for filter agent ✅
 
-- [ ] Use `messages.parse` with `FilterArticleVerdict` (keep `web_search` tool)
-- [ ] Add filter schema under `src/schemas/filter.py`
-- [ ] Update filter prompt, unit tests, and docs
+- [x] Use `messages.parse` with `FilterArticleVerdict` (keep `web_search` tool)
+- [x] Add filter schema under `src/schemas/filter.py`
+- [x] Update filter prompt, unit tests, and docs
+
+### PR 62 — Language-agnostic CEFR extraction guide
+
+- [x] Rewrite `cefr-extraction-guide` around CEFR patterns, not Portuguese word lists
+- [x] Keep B2/C1/C2 indicators and extract-agent notes (floor filter, loanwords)
+- [x] Update ROADMAP / status pointers
 
 ### Future — Structured outputs for remaining agent JSON call sites
 

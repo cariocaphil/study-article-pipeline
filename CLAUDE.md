@@ -202,7 +202,7 @@ Skills are located in `.claude/skills/`. Claude Code should load them when relev
 |---|---|---|
 | Document formatter | `.claude/skills/pdf-formatted.md` | Any time the compile agent or document layout is discussed or modified |
 | Article filter criteria | `.claude/skills/article-filter-criteria.md` | Already injected at runtime in filter_agent.py |
-| CEFR extraction guide | `.claude/skills/cefr-extraction-guide.md` | Already injected at runtime in extract_agent.py |
+| CEFR extraction guide | `.claude/skills/cefr-extraction-guide.md` | Language-agnostic CEFR rubric; injected at runtime in extract_agent.py |
 | Phrase quality reviewer | `.claude/skills/phrase-quality-reviewer.md` | Already injected at runtime in review_agent.py |
 | Translation adequacy rubric | `.claude/skills/translation-adequacy-rubric.md` | Already injected at runtime in translation quality judge |
 | Document quality rubric | `.claude/skills/document-quality-rubric.md` | Already injected at runtime in document quality judge |
