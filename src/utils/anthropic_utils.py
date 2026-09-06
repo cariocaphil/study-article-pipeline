@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import cast
+from typing import TypeVar, cast
 
 from anthropic.types import Message, ToolParam
+from anthropic.types.parsed_message import ParsedMessage
+
+T = TypeVar("T")
 
 
 def message_text(response: Message) -> str:
@@ -27,3 +30,11 @@ def require_str_field(data: object, field: str) -> str:
 def as_tool_param(schema: dict[str, object]) -> ToolParam:
     """Cast a client-side tool schema to Anthropic's ToolParam type."""
     return cast(ToolParam, schema)
+
+
+def require_parsed_output(response: ParsedMessage[T]) -> T:
+    """Return the structured output from a ParsedMessage, or raise if missing."""
+    parsed = response.parsed_output
+    if parsed is None:
+        raise ValueError("Anthropic response did not include a parsed structured output.")
+    return parsed

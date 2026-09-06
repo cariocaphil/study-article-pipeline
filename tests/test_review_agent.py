@@ -5,22 +5,17 @@ Fast unit tests mock the Anthropic client. Slow tests make real API calls.
 Run `uv run pytest -m "not slow"` to skip the integration tests.
 """
 
-import json
 import logging
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import anthropic
 import pytest
 
 from src.agents.review_agent import review_phrases
 from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
+from src.schemas.review import ReviewAction, ReviewVerdict, ReviewVerdicts
 from src.utils.untrusted_content import UNTRUSTED_CONTENT_PREAMBLE
-from tests.anthropic_mocks import mock_message
-
-
-def _text_block(text: str):
-    return SimpleNamespace(type="text", text=text)
+from tests.anthropic_mocks import mock_parsed_message
 
 
 def test_prompt_wraps_phrase_list_as_untrusted_content():
@@ -34,24 +29,28 @@ def test_prompt_wraps_phrase_list_as_untrusted_content():
         )
     ]
     client = MagicMock()
-    client.messages.create.return_value = mock_message(
-        [
-            _text_block(
-                json.dumps([{"phrase": "teia de cumplicidades", "action": "keep", "reason": "ok"}])
-            )
-        ],
-        "end_turn",
+    client.messages.parse.return_value = mock_parsed_message(
+        ReviewVerdicts(
+            verdicts=[
+                ReviewVerdict(
+                    phrase="teia de cumplicidades",
+                    action=ReviewAction.keep,
+                    reason="ok",
+                )
+            ]
+        )
     )
 
     review_phrases(phrases, topic="Entroncamento", client=client)
 
-    prompt = client.messages.create.call_args.kwargs["messages"][0]["content"]
+    prompt = client.messages.parse.call_args.kwargs["messages"][0]["content"]
+    assert client.messages.parse.call_args.kwargs["output_format"] is ReviewVerdicts
     assert UNTRUSTED_CONTENT_PREAMBLE in prompt
     assert "<untrusted_extracted_phrases>" in prompt
     assert "teia de cumplicidades" in prompt
 
 
-def test_review_skips_malformed_verdicts_and_applies_actions():
+def test_review_applies_keep_review_and_remove_actions():
     keep = ExtractedPhrase(
         phrase="keep-me",
         sentence_context="keep me in context",
@@ -74,21 +73,26 @@ def test_review_skips_malformed_verdicts_and_applies_actions():
         estimated_level=CEFRLevel.C1,
     )
     client = MagicMock()
-    client.messages.create.return_value = mock_message(
-        [
-            _text_block(
-                json.dumps(
-                    [
-                        "not-an-object",
-                        {"phrase": 1, "action": "remove"},
-                        {"phrase": "remove-me", "action": "remove", "reason": 12},
-                        {"phrase": "flag-me", "action": "review", "reason": "near duplicate"},
-                        {"phrase": "keep-me", "action": "keep", "reason": "ok"},
-                    ]
-                )
-            )
-        ],
-        "end_turn",
+    client.messages.parse.return_value = mock_parsed_message(
+        ReviewVerdicts(
+            verdicts=[
+                ReviewVerdict(
+                    phrase="remove-me",
+                    action=ReviewAction.remove,
+                    reason="topic derivative",
+                ),
+                ReviewVerdict(
+                    phrase="flag-me",
+                    action=ReviewAction.review,
+                    reason="near duplicate",
+                ),
+                ReviewVerdict(
+                    phrase="keep-me",
+                    action=ReviewAction.keep,
+                    reason="ok",
+                ),
+            ]
+        )
     )
 
     reviewed = review_phrases([keep, remove, flag], topic="Entroncamento", client=client)
@@ -96,7 +100,23 @@ def test_review_skips_malformed_verdicts_and_applies_actions():
     assert [phrase.phrase for phrase in reviewed] == ["keep-me", "flag-me"]
 
 
-def test_review_raises_when_verdicts_are_not_a_list():
+def test_review_keeps_phrases_missing_from_verdicts():
+    phrase = ExtractedPhrase(
+        phrase="orphan",
+        sentence_context="orphan in context",
+        translation="Waise",
+        category=PhraseCategory.vocab,
+        estimated_level=CEFRLevel.C1,
+    )
+    client = MagicMock()
+    client.messages.parse.return_value = mock_parsed_message(ReviewVerdicts(verdicts=[]))
+
+    reviewed = review_phrases([phrase], topic="Entroncamento", client=client)
+
+    assert [p.phrase for p in reviewed] == ["orphan"]
+
+
+def test_review_raises_when_parsed_output_missing():
     phrases = [
         ExtractedPhrase(
             phrase="keep-me",
@@ -107,15 +127,9 @@ def test_review_raises_when_verdicts_are_not_a_list():
         )
     ]
     client = MagicMock()
-    client.messages.create.return_value = mock_message(
-        [_text_block("irrelevant")],
-        "end_turn",
-    )
+    client.messages.parse.return_value = mock_parsed_message(None)
 
-    with (
-        patch("src.agents.review_agent.extract_json", return_value={"phrase": "keep-me"}),
-        pytest.raises(ValueError, match="expected JSON array"),
-    ):
+    with pytest.raises(ValueError, match="could not parse review verdicts"):
         review_phrases(phrases, topic="Entroncamento", client=client)
 
 

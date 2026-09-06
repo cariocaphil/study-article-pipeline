@@ -2,7 +2,7 @@
 
 Build history for the Study Article Collection pipeline.
 
-PR numbers match merged GitHub pull requests. Future work continues from **PR 59**.
+PR numbers match merged GitHub pull requests. Future work continues from **PR 60**.
 
 The README keeps a short **Status** summary; this file holds the full checklist.
 
@@ -412,7 +412,18 @@ The README keeps a short **Status** summary; this file holds the full checklist.
 - [x] Use `SpanKind.CLIENT` for `pipeline.stage.*` and Anthropic call spans (dependencies)
 - [x] Update App Insights verify queries and tests for span kinds
 
-### PR 58 — Export pipeline.run as a dependency span
+### PR 58 — Export pipeline.run as a dependency span ✅
 
 - [x] Change `pipeline.run` from `SpanKind.SERVER` to `SpanKind.CLIENT` (dependencies table)
 - [x] Update docs and tests for the dependency-based verify path
+
+### PR 59 — Structured outputs for review agent
+
+- [ ] Use `client.messages.parse` with Pydantic `ReviewVerdicts` in `review_agent`
+- [ ] Add `parse_message_with_retry` (same retry/OTel behavior as `create_message_with_retry`)
+- [ ] Add `require_parsed_output` helper and review schema models
+- [ ] Update review prompt, unit tests, and docs
+
+### Future — Structured outputs for remaining LLM JSON call sites
+
+- [ ] Migrate filter / extract / search agents and quality judges off prompt-JSON + `extract_json` where feasible
