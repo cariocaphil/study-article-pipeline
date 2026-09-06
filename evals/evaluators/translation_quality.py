@@ -9,17 +9,17 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 import anthropic
 
 from evals.evaluators.base import EvalFailure, EvalResult
 from evals.evaluators.utils import safe_divide
 from src.prompts import load_prompt
+from src.schemas.judges import TranslationJudgeVerdict
 from src.utils import load_skill
-from src.utils.anthropic_retry import create_message_with_retry
-from src.utils.anthropic_utils import message_text
-from src.utils.json_utils import extract_json
+from src.utils.anthropic_retry import parse_message_with_retry
+from src.utils.anthropic_utils import require_parsed_output
 
 DEFAULT_PASS_THRESHOLD = 1.0
 
@@ -156,22 +156,21 @@ def judge_translation(
         translation=case.translation,
     )
 
-    response = create_message_with_retry(
+    response = parse_message_with_retry(
         client,
+        output_format=TranslationJudgeVerdict,
         model="claude-sonnet-4-6",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
     )
-    raw_text = message_text(response)
-    parsed = extract_json(raw_text, "{", "}")
+    try:
+        verdict = require_parsed_output(response)
+    except ValueError as exc:
+        raise ValueError(f"Translation judge could not parse verdict for {case.id}: {exc}") from exc
 
-    if not isinstance(parsed, dict) or "adequate" not in parsed:
-        raise ValueError(f"Translation judge could not parse verdict for {case.id}: {raw_text}")
-
-    verdict = cast(dict[str, object], parsed)
     return TranslationJudgment(
-        adequate=bool(verdict["adequate"]),
-        reason=str(verdict.get("reason", "")),
+        adequate=verdict.adequate,
+        reason=verdict.reason,
     )
 
 

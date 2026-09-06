@@ -4,7 +4,6 @@ Tests for the evaluation harness (deterministic, no API calls).
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -335,7 +334,8 @@ class TestTranslationQualityEvaluator:
 
     def test_judge_translation_parses_verdict(self, monkeypatch: pytest.MonkeyPatch):
         from evals.evaluators.translation_quality import TranslationCase, judge_translation
-        from tests.anthropic_mocks import mock_message
+        from src.schemas.judges import TranslationJudgeVerdict
+        from tests.anthropic_mocks import mock_parsed_message
 
         case = TranslationCase(
             id="translation-judge-1",
@@ -348,16 +348,10 @@ class TestTranslationQualityEvaluator:
         )
         client = MagicMock()
         monkeypatch.setattr(
-            "evals.evaluators.translation_quality.create_message_with_retry",
+            "evals.evaluators.translation_quality.parse_message_with_retry",
             MagicMock(
-                return_value=mock_message(
-                    [
-                        SimpleNamespace(
-                            type="text",
-                            text='{"adequate": true, "reason": "ok"}',
-                        )
-                    ],
-                    "end_turn",
+                return_value=mock_parsed_message(
+                    TranslationJudgeVerdict(adequate=True, reason="ok")
                 )
             ),
         )
@@ -578,26 +572,24 @@ class TestDocumentQualityEvaluator:
             DocumentQualityCase,
             judge_document_quality,
         )
-        from tests.anthropic_mocks import mock_message
+        from src.schemas.judges import DocumentQualityDimensions, DocumentQualityVerdict
+        from tests.anthropic_mocks import mock_parsed_message
 
         case = DocumentQualityCase(
             id="doc-judge-1",
             document=load_pipeline_output(GOOD_PIPELINE_FIXTURE_PATH),
         )
-        verdict: dict[str, object] = {
-            "overall": 4,
-            "dimensions": {name: 4 for name in DOCUMENT_QUALITY_DIMENSIONS},
-            "summary": "Solid study pack",
-            "defects": [],
-        }
-        monkeypatch.setattr(
-            "evals.evaluators.document_quality.create_message_with_retry",
-            MagicMock(
-                return_value=mock_message(
-                    [SimpleNamespace(type="text", text=json.dumps(verdict))],
-                    "end_turn",
-                )
+        verdict = DocumentQualityVerdict(
+            overall=4,
+            dimensions=DocumentQualityDimensions.model_validate(
+                {name: 4.0 for name in DOCUMENT_QUALITY_DIMENSIONS}
             ),
+            summary="Solid study pack",
+            defects=[],
+        )
+        monkeypatch.setattr(
+            "evals.evaluators.document_quality.parse_message_with_retry",
+            MagicMock(return_value=mock_parsed_message(verdict)),
         )
 
         judgment = judge_document_quality(case, MagicMock())
