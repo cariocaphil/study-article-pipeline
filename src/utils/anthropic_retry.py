@@ -8,11 +8,12 @@ import logging
 import random
 import time
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import anthropic
 from anthropic import APIConnectionError, APIStatusError, RateLimitError
 from anthropic.types import Message
+from anthropic.types.parsed_message import ParsedMessage
 from opentelemetry.trace import Span, SpanKind, Status, StatusCode
 
 from src.utils.observability import (
@@ -26,6 +27,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_BASE_DELAY_SECONDS = 1.0
 RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 529})
+
+T = TypeVar("T")
 
 
 def is_retryable_api_error(exc: Exception) -> bool:
@@ -59,24 +62,15 @@ def _set_usage_attributes(span: Span, *, model: str | None, response: Message) -
         span.set_attribute("anthropic.estimated_cost_usd", cost)
 
 
-def create_message_with_retry(
-    client: anthropic.Anthropic,
+def _run_with_retry(
     *,
-    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
-    base_delay_seconds: float = DEFAULT_BASE_DELAY_SECONDS,
-    sleep_fn: Callable[[float], None] = time.sleep,
-    random_fn: Callable[[], float] = random.random,
-    **create_kwargs: Any,
+    call: Callable[[], Message],
+    model: str | None,
+    max_attempts: int,
+    base_delay_seconds: float,
+    sleep_fn: Callable[[float], None],
+    random_fn: Callable[[], float],
 ) -> Message:
-    """
-    Call client.messages.create with retries on transient API failures.
-
-    Emits an OpenTelemetry span (no-op without a TracerProvider) covering the
-    full retry loop, with token usage and optional estimated cost on success.
-    """
-    model_raw = create_kwargs.get("model")
-    model = model_raw if isinstance(model_raw, str) else None
-
     with get_tracer().start_as_current_span(
         ANTHROPIC_CALL_SPAN,
         kind=SpanKind.CLIENT,
@@ -90,7 +84,7 @@ def create_message_with_retry(
 
         for attempt in range(1, max_attempts + 1):
             try:
-                response = cast(Message, client.messages.create(**create_kwargs))
+                response = call()
                 span.set_attribute("anthropic.attempt", attempt)
                 span.set_attribute("anthropic.retry_count", attempt - 1)
                 _set_usage_attributes(span, model=model, response=response)
@@ -130,3 +124,71 @@ def create_message_with_retry(
 
         assert last_error is not None  # pragma: no cover
         raise last_error  # pragma: no cover
+
+
+def create_message_with_retry(
+    client: anthropic.Anthropic,
+    *,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    base_delay_seconds: float = DEFAULT_BASE_DELAY_SECONDS,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    random_fn: Callable[[], float] = random.random,
+    **create_kwargs: Any,
+) -> Message:
+    """
+    Call client.messages.create with retries on transient API failures.
+
+    Emits an OpenTelemetry span (no-op without a TracerProvider) covering the
+    full retry loop, with token usage and optional estimated cost on success.
+    """
+    model_raw = create_kwargs.get("model")
+    model = model_raw if isinstance(model_raw, str) else None
+
+    def call() -> Message:
+        return cast(Message, client.messages.create(**create_kwargs))
+
+    return _run_with_retry(
+        call=call,
+        model=model,
+        max_attempts=max_attempts,
+        base_delay_seconds=base_delay_seconds,
+        sleep_fn=sleep_fn,
+        random_fn=random_fn,
+    )
+
+
+def parse_message_with_retry(
+    client: anthropic.Anthropic,
+    *,
+    output_format: type[T],
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    base_delay_seconds: float = DEFAULT_BASE_DELAY_SECONDS,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    random_fn: Callable[[], float] = random.random,
+    **parse_kwargs: Any,
+) -> ParsedMessage[T]:
+    """
+    Call client.messages.parse with retries on transient API failures.
+
+    Same observability and retry behavior as create_message_with_retry.
+    """
+    model_raw = parse_kwargs.get("model")
+    model = model_raw if isinstance(model_raw, str) else None
+
+    def call() -> Message:
+        return cast(
+            Message,
+            client.messages.parse(output_format=output_format, **parse_kwargs),
+        )
+
+    return cast(
+        ParsedMessage[T],
+        _run_with_retry(
+            call=call,
+            model=model,
+            max_attempts=max_attempts,
+            base_delay_seconds=base_delay_seconds,
+            sleep_fn=sleep_fn,
+            random_fn=random_fn,
+        ),
+    )

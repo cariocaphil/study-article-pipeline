@@ -13,12 +13,14 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import SpanKind
 
+from src.schemas.review import ReviewVerdicts
 from src.utils.anthropic_retry import (
     create_message_with_retry,
     is_retryable_api_error,
+    parse_message_with_retry,
 )
 from src.utils.observability import ANTHROPIC_CALL_SPAN
-from tests.anthropic_mocks import mock_message
+from tests.anthropic_mocks import mock_message, mock_parsed_message
 
 
 @pytest.fixture
@@ -292,3 +294,47 @@ def test_create_message_with_retry_omits_cost_for_unknown_model(
     attrs = dict(memory_spans.get_finished_spans()[0].attributes or {})
     assert attrs["gen_ai.request.model"] == "claude-unknown-model"
     assert "anthropic.estimated_cost_usd" not in attrs
+
+
+def test_parse_message_with_retry_returns_first_successful_response():
+    client = MagicMock()
+    expected = mock_parsed_message(ReviewVerdicts(verdicts=[]))
+    client.messages.parse.return_value = expected
+
+    response = parse_message_with_retry(
+        client,
+        output_format=ReviewVerdicts,
+        model="claude-sonnet-4-6",
+        max_tokens=10,
+        messages=[{"role": "user", "content": "hi"}],
+    )
+
+    assert response is expected
+    client.messages.parse.assert_called_once()
+    assert client.messages.parse.call_args.kwargs["output_format"] is ReviewVerdicts
+
+
+def test_parse_message_with_retry_retries_then_succeeds():
+    client = MagicMock()
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx.Response(500, request=request)
+    error = InternalServerError("boom", response=response, body={})
+    expected = mock_parsed_message(ReviewVerdicts(verdicts=[]))
+    client.messages.parse.side_effect = [error, expected]
+    sleeps: list[float] = []
+
+    result = parse_message_with_retry(
+        client,
+        output_format=ReviewVerdicts,
+        max_attempts=3,
+        base_delay_seconds=1.0,
+        sleep_fn=sleeps.append,
+        random_fn=lambda: 0.5,
+        model="claude-sonnet-4-6",
+        max_tokens=10,
+        messages=[{"role": "user", "content": "hi"}],
+    )
+
+    assert result is expected
+    assert client.messages.parse.call_count == 2
+    assert sleeps == [1.0]

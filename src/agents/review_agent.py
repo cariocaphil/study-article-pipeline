@@ -8,16 +8,15 @@ sentence_context quotes from the article — those are wrapped as untrusted data
 
 import json
 import logging
-from typing import cast
 
 import anthropic
 
 from src.prompts import load_prompt
 from src.schemas.article import CEFRLevel, ExtractedPhrase, PhraseCategory
+from src.schemas.review import ReviewAction, ReviewVerdicts
 from src.utils import load_skill
-from src.utils.anthropic_retry import create_message_with_retry
-from src.utils.anthropic_utils import message_text
-from src.utils.json_utils import extract_json
+from src.utils.anthropic_retry import parse_message_with_retry
+from src.utils.anthropic_utils import require_parsed_output
 from src.utils.observability import UsageTracker, record_api_usage
 from src.utils.untrusted_content import UNTRUSTED_CONTENT_PREAMBLE, wrap_untrusted_content
 
@@ -50,54 +49,36 @@ def review_phrases(
         wrapped_phrase_list=wrapped_phrase_list,
     )
 
-    response = create_message_with_retry(
+    response = parse_message_with_retry(
         client,
+        output_format=ReviewVerdicts,
         model="claude-sonnet-4-6",
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
     )
     record_api_usage(response, agent="review_agent", usage=usage, logger=logger)
 
-    full_response = message_text(response)
-
     try:
-        raw_verdicts = extract_json(full_response, "[", "]")
+        verdicts = require_parsed_output(response)
     except ValueError as e:
-        raise ValueError(f"Review agent could not parse review verdicts.\n{e}")
+        raise ValueError(f"Review agent could not parse review verdicts.\n{e}") from e
 
-    if not isinstance(raw_verdicts, list):
-        raise ValueError("Review agent could not parse review verdicts: expected JSON array.")
-
-    verdicts_by_phrase: dict[str, tuple[str, str]] = {}
-    for raw_item in cast(list[object], raw_verdicts):
-        if not isinstance(raw_item, dict):
-            logger.warning("Skipping malformed verdict: %r", raw_item)
-            continue
-        item = cast(dict[str, object], raw_item)
-        try:
-            phrase_raw = item["phrase"]
-            action_raw = item["action"]
-            if not isinstance(phrase_raw, str) or not isinstance(action_raw, str):
-                raise TypeError("phrase and action must be strings")
-            reason_raw = item.get("reason", "")
-            reason = reason_raw if isinstance(reason_raw, str) else ""
-            verdicts_by_phrase[phrase_raw] = (action_raw, reason)
-        except (KeyError, TypeError) as e:
-            logger.warning("Skipping malformed verdict: %r — %s", item, e)
-            continue
+    verdicts_by_phrase: dict[str, tuple[ReviewAction, str]] = {
+        verdict.phrase: (verdict.action, verdict.reason) for verdict in verdicts.verdicts
+    }
 
     kept: list[ExtractedPhrase] = []
     n_flagged = 0
     n_removed = 0
     for phrase in phrases:
-        action, reason = verdicts_by_phrase.get(phrase.phrase, ("keep", ""))
+        action, reason = verdicts_by_phrase.get(phrase.phrase, (ReviewAction.keep, ""))
 
-        if action == "remove":
+        if action == ReviewAction.remove:
             n_removed += 1
             logger.info("Removed phrase %r: %s", phrase.phrase, reason)
             continue
 
-        if action == "review":
+        if action == ReviewAction.review:
             n_flagged += 1
             logger.info("Flagged for review %r: %s", phrase.phrase, reason)
 

@@ -108,7 +108,8 @@ def test_review_and_judge_prompts_render():
     )
 
     assert 'topic of the article this phrase list was extracted from is: "Entroncamento"' in review
-    assert '"action": "keep"' in review
+    assert '"verdicts"' in review
+    assert "action (keep | review | remove)" in review
     assert "Proposed translation: Sehnsucht" in judge
     assert '{"adequate": true' in judge
     assert "Document rubric" in document_judge

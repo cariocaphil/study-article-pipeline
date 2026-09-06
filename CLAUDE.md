@@ -57,9 +57,9 @@ parse attempts) before raising. Apply the same pattern if another agent's tool
 loop can end with planning text rather than structured output.
 
 Agents that call the Anthropic API should use `create_message_with_retry()` from
-`src/utils/anthropic_retry.py` and call `record_api_usage()` from
-`src/utils/observability.py` after each response when a `UsageTracker` is
-available (passed from the orchestrator).
+`src/utils/anthropic_retry.py` (or `parse_message_with_retry()` for structured
+outputs) and call `record_api_usage()` from `src/utils/observability.py` after
+each response when a `UsageTracker` is available (passed from the orchestrator).
 
 ### Anthropic API typing
 
@@ -69,7 +69,9 @@ Agent tool loops use typed Anthropic SDK types. Shared helpers live in
 | Helper | Use for |
 |--------|---------|
 | `create_message_with_retry(client, ...)` | Retry transient Anthropic API failures |
+| `parse_message_with_retry(client, output_format=..., ...)` | Structured outputs via `messages.parse` with the same retry/OTel behavior |
 | `message_text(response)` | Extract joined text from a `Message` (check `block.type == "text"`) |
+| `require_parsed_output(response)` | Read `ParsedMessage.parsed_output` or raise |
 | `as_tool_param(schema)` | Cast client-side tool JSON schemas to `ToolParam` |
 | `require_str_field(data, field)` | Safely read string fields from `tool_use` block inputs |
 
@@ -87,6 +89,7 @@ Inter-agent data passes through typed models in `src/schemas/`:
 |-------|------|---------|
 | `Article`, `ExtractedPhrase`, `PipelineOutput`, … | `src/schemas/article.py` | Pydantic models between agents |
 | `FilteredArticle` | `src/schemas/article.py` | TypedDict returned by `filter_agent` before `Article` construction |
+| `ReviewAction`, `ReviewVerdict`, `ReviewVerdicts` | `src/schemas/review.py` | Structured output for `review_agent` (`messages.parse`) |
 | `PipelineRunResult` | `src/schemas/pipeline_result.py` | Orchestrator return value (path, run ID, timings, token counts) |
 
 Prefer Pydantic models or TypedDicts over raw `dict` at agent boundaries.
@@ -103,8 +106,9 @@ optional Azure Monitor OpenTelemetry:
 - `new_run_id()`, `StageTimer`, `UsageTracker` — per-run ID, stage timing, token totals
 - `pipeline_run_span` / stage spans from `StageTimer.track` — `pipeline.run`
   and `pipeline.stage.*` (CLIENT dependencies)
-- Anthropic call spans from `create_message_with_retry()` — CLIENT kind with
-  retries, tokens, optional estimated cost
+- Anthropic call spans from `create_message_with_retry()` /
+  `parse_message_with_retry()` — CLIENT kind with retries, tokens, optional
+  estimated cost
 - `record_api_usage()` — log Anthropic `Message.usage` after each API call
 - `user_facing_pipeline_error()` — map internal exceptions to Streamlit-safe messages
 
